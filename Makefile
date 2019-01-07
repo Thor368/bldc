@@ -106,7 +106,6 @@ include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 # Other files
 include hwconf/hwconf.mk
 include applications/applications.mk
-include nrf/nrf.mk
 
 # Define linker script file here
 LDSCRIPT= ld_eeprom_emu.ld
@@ -131,7 +130,6 @@ CSRC = $(STARTUPSRC) \
        digital_filter.c \
        ledpwm.c \
        mcpwm.c \
-       servo_dec.c \
        utils.c \
        servo_simple.c \
        packet.c \
@@ -148,8 +146,7 @@ CSRC = $(STARTUPSRC) \
        mc_interface.c \
        mcpwm_foc.c \
        $(HWSRC) \
-       $(APPSRC) \
-       $(NRFSRC)
+       $(APPSRC)
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.

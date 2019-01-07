@@ -44,9 +44,6 @@
 #include "encoder.h"
 #include "servo_simple.h"
 #include "utils.h"
-#include "nrf_driver.h"
-#include "rfhelp.h"
-#include "spi_sw.h"
 
 /*
  * Timers used:

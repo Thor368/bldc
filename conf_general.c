@@ -50,7 +50,6 @@
 
 // Global variables
 uint16_t VirtAddVarTab[NB_OF_VAR];
-bool conf_general_permanent_nrf_found = false;
 
 // Private variables
 mc_configuration mcconf, mcconf_old;

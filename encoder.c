@@ -28,36 +28,6 @@
 #define AS5047P_READ_ANGLECOM		(0x3FFF | 0x4000 | 0x8000) // This is just ones
 #define AS5047_SAMPLE_RATE_HZ		20000
 
-#if AS5047_USE_HW_SPI_PINS
-#ifdef HW_SPI_DEV
-#define SPI_SW_MISO_GPIO			HW_SPI_PORT_MISO
-#define SPI_SW_MISO_PIN				HW_SPI_PIN_MISO
-#define SPI_SW_MOSI_GPIO			HW_SPI_PORT_MOSI
-#define SPI_SW_MOSI_PIN				HW_SPI_PIN_MOSI
-#define SPI_SW_SCK_GPIO				HW_SPI_PORT_SCK
-#define SPI_SW_SCK_PIN				HW_SPI_PIN_SCK
-#define SPI_SW_CS_GPIO				HW_SPI_PORT_NSS
-#define SPI_SW_CS_PIN				HW_SPI_PIN_NSS
-#else
-// Note: These values are hardcoded.
-#define SPI_SW_MISO_GPIO			GPIOB
-#define SPI_SW_MISO_PIN				4
-#define SPI_SW_MOSI_GPIO			GPIOB
-#define SPI_SW_MOSI_PIN				5
-#define SPI_SW_SCK_GPIO				GPIOB
-#define SPI_SW_SCK_PIN				3
-#define SPI_SW_CS_GPIO				GPIOB
-#define SPI_SW_CS_PIN				0
-#endif
-#else
-#define SPI_SW_MISO_GPIO			HW_HALL_ENC_GPIO2
-#define SPI_SW_MISO_PIN				HW_HALL_ENC_PIN2
-#define SPI_SW_SCK_GPIO				HW_HALL_ENC_GPIO1
-#define SPI_SW_SCK_PIN				HW_HALL_ENC_PIN1
-#define SPI_SW_CS_GPIO				HW_HALL_ENC_GPIO3
-#define SPI_SW_CS_PIN				HW_HALL_ENC_PIN3
-#endif
-
 // Private types
 typedef enum {
 	ENCODER_MODE_NONE = 0,
@@ -72,23 +42,11 @@ static encoder_mode mode = ENCODER_MODE_NONE;
 static float last_enc_angle = 0.0;
 
 // Private functions
-static void spi_transfer(uint16_t *in_buf, const uint16_t *out_buf, int length);
-static void spi_begin(void);
-static void spi_end(void);
-static void spi_delay(void);
 
 void encoder_deinit(void) {
-	nvicDisableVector(HW_ENC_EXTI_CH);
 	nvicDisableVector(HW_ENC_TIM_ISR_CH);
 
 	TIM_DeInit(HW_ENC_TIM);
-
-	palSetPadMode(SPI_SW_MISO_GPIO, SPI_SW_MISO_PIN, PAL_MODE_INPUT_PULLUP);
-	palSetPadMode(SPI_SW_SCK_GPIO, SPI_SW_SCK_PIN, PAL_MODE_INPUT_PULLUP);
-	palSetPadMode(SPI_SW_CS_GPIO, SPI_SW_CS_PIN, PAL_MODE_INPUT_PULLUP);
-
-	palSetPadMode(HW_HALL_ENC_GPIO1, HW_HALL_ENC_PIN1, PAL_MODE_INPUT_PULLUP);
-	palSetPadMode(HW_HALL_ENC_GPIO2, HW_HALL_ENC_PIN2, PAL_MODE_INPUT_PULLUP);
 
 	index_found = false;
 	mode = ENCODER_MODE_NONE;
@@ -96,15 +54,9 @@ void encoder_deinit(void) {
 }
 
 void encoder_init_abi(uint32_t counts) {
-	EXTI_InitTypeDef   EXTI_InitStructure;
-
 	// Initialize variables
 	index_found = false;
 	enc_counts = counts;
-
-	palSetPadMode(HW_HALL_ENC_GPIO1, HW_HALL_ENC_PIN1, PAL_MODE_ALTERNATE(HW_ENC_TIM_AF));
-	palSetPadMode(HW_HALL_ENC_GPIO2, HW_HALL_ENC_PIN2, PAL_MODE_ALTERNATE(HW_ENC_TIM_AF));
-//	palSetPadMode(HW_HALL_ENC_GPIO3, HW_HALL_ENC_PIN3, PAL_MODE_ALTERNATE(HW_ENC_TIM_AF));
 
 	// Enable timer clock
 	HW_ENC_TIM_CLK_EN();
@@ -123,30 +75,11 @@ void encoder_init_abi(uint32_t counts) {
 
 	TIM_Cmd(HW_ENC_TIM, ENABLE);
 
-	// Interrupt on index pulse
-
-	// Connect EXTI Line to pin
-	SYSCFG_EXTILineConfig(HW_ENC_EXTI_PORTSRC, HW_ENC_EXTI_PINSRC);
-
-	// Configure EXTI Line
-	EXTI_InitStructure.EXTI_Line = HW_ENC_EXTI_LINE;
-	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
-	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
-	EXTI_Init(&EXTI_InitStructure);
-
-	// Enable and set EXTI Line Interrupt to the highest priority
-	nvicEnableVector(HW_ENC_EXTI_CH, 0);
-
 	mode = ENCODER_MODE_ABI;
 }
 
 void encoder_init_as5047p_spi(void) {
 	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
-
-	palSetPadMode(SPI_SW_MISO_GPIO, SPI_SW_MISO_PIN, PAL_MODE_INPUT);
-	palSetPadMode(SPI_SW_SCK_GPIO, SPI_SW_SCK_PIN, PAL_MODE_OUTPUT_PUSHPULL | PAL_STM32_OSPEED_HIGHEST);
-	palSetPadMode(SPI_SW_CS_GPIO, SPI_SW_CS_PIN, PAL_MODE_OUTPUT_PUSHPULL | PAL_STM32_OSPEED_HIGHEST);
 
 	// Set MOSI to 1
 #if AS5047_USE_HW_SPI_PINS
@@ -210,28 +143,27 @@ void encoder_reset(void) {
 	__NOP();
 	__NOP();
 	__NOP();
-	if (palReadPad(HW_HALL_ENC_GPIO3, HW_HALL_ENC_PIN3)) {
-		const unsigned int cnt = HW_ENC_TIM->CNT;
-		static int bad_pulses = 0;
-		const unsigned int lim = enc_counts / 20;
 
-		if (index_found) {
-			// Some plausibility filtering.
-			if (cnt > (enc_counts - lim) || cnt < lim) {
-				HW_ENC_TIM->CNT = 0;
-				bad_pulses = 0;
-			} else {
-				bad_pulses++;
+	const unsigned int cnt = HW_ENC_TIM->CNT;
+	static int bad_pulses = 0;
+	const unsigned int lim = enc_counts / 20;
 
-				if (bad_pulses > 5) {
-					index_found = 0;
-				}
-			}
-		} else {
+	if (index_found) {
+		// Some plausibility filtering.
+		if (cnt > (enc_counts - lim) || cnt < lim) {
 			HW_ENC_TIM->CNT = 0;
-			index_found = true;
 			bad_pulses = 0;
+		} else {
+			bad_pulses++;
+
+			if (bad_pulses > 5) {
+				index_found = 0;
+			}
 		}
+	} else {
+		HW_ENC_TIM->CNT = 0;
+		index_found = true;
+		bad_pulses = 0;
 	}
 }
 
@@ -239,14 +171,7 @@ void encoder_reset(void) {
  * Timer interrupt
  */
 void encoder_tim_isr(void) {
-	uint16_t pos;
-
-	spi_begin();
-	spi_transfer(&pos, 0, 1);
-	spi_end();
-
-	pos &= 0x3FFF;
-	last_enc_angle = ((float)pos * 360.0) / 16384.0;
+	last_enc_angle = 0;
 }
 
 /**
@@ -274,52 +199,3 @@ bool encoder_index_found(void) {
 }
 
 // Software SPI
-static void spi_transfer(uint16_t *in_buf, const uint16_t *out_buf, int length) {
-	for (int i = 0;i < length;i++) {
-		uint16_t send = out_buf ? out_buf[i] : 0xFFFF;
-		uint16_t recieve = 0;
-
-		for (int bit = 0;bit < 16;bit++) {
-			//palWritePad(HW_SPI_PORT_MOSI, HW_SPI_PIN_MOSI, send >> 15);
-			send <<= 1;
-
-			spi_delay();
-			palSetPad(SPI_SW_SCK_GPIO, SPI_SW_SCK_PIN);
-			spi_delay();
-
-			int r1, r2, r3;
-			r1 = palReadPad(SPI_SW_MISO_GPIO, SPI_SW_MISO_PIN);
-			__NOP();
-			r2 = palReadPad(SPI_SW_MISO_GPIO, SPI_SW_MISO_PIN);
-			__NOP();
-			r3 = palReadPad(SPI_SW_MISO_GPIO, SPI_SW_MISO_PIN);
-
-			recieve <<= 1;
-			if (utils_middle_of_3_int(r1, r2, r3)) {
-				recieve |= 1;
-			}
-
-			palClearPad(SPI_SW_SCK_GPIO, SPI_SW_SCK_PIN);
-			spi_delay();
-		}
-
-		if (in_buf) {
-			in_buf[i] = recieve;
-		}
-	}
-}
-
-static void spi_begin(void) {
-	palClearPad(SPI_SW_CS_GPIO, SPI_SW_CS_PIN);
-}
-
-static void spi_end(void) {
-	palSetPad(SPI_SW_CS_GPIO, SPI_SW_CS_PIN);
-}
-
-static void spi_delay(void) {
-	__NOP();
-	__NOP();
-	__NOP();
-	__NOP();
-}

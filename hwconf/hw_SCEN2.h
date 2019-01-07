@@ -1,12 +1,14 @@
 /*
-	Copyright 2015 Benjamin Vedder	benjamin@vedder.se
+	Copyright 2016 Benjamin Vedder	benjamin@vedder.se
 
-	This program is free software: you can redistribute it and/or modify
+	This file is part of the VESC firmware.
+
+	The VESC firmware is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    The VESC firmware is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
@@ -20,51 +22,66 @@
 
 #define HW_NAME					"SCEN2"
 
+// HW properties
+#define HW_HAS_3_SHUNTS
+#define APP_CUSTOM_TO_USE		"app_SCEN2.c"
+
 // Macros
-#define ENABLE_GATE()			palClearPad(GPIOC, 10)
-#define DISABLE_GATE()			palSetPad(GPIOC, 10)
+#define ENABLE_GATE()
+#define DISABLE_GATE()
 #define DCCAL_ON()
 #define DCCAL_OFF()
 #define IS_DRV_FAULT()			0
 
-#define LED_GREEN_ON()			palSetPad(GPIOC, 4)
-#define LED_GREEN_OFF()			palClearPad(GPIOC, 4)
-#define LED_RED_ON()			palSetPad(GPIOC, 5)
-#define LED_RED_OFF()			palClearPad(GPIOC, 5)
+#define LED_GREEN_ON()
+#define LED_GREEN_OFF()
+#define LED_RED_ON()			palSetPad(GPIOE, 2)
+#define LED_RED_OFF()			palClearPad(GPIOE, 2)
 
 /*
  * ADC Vector
  *
- * 0:	IN0		SENS3
+ * 0:	IN0		SENS1
  * 1:	IN1		SENS2
- * 2:	IN2		SENS1
- * 3:	IN8		CURR2
- * 4:	IN9		CURR1
- * 5:	IN3		TEMP_MOSFET
- * 6:	Vrefint
+ * 2:	IN2		SENS3
+ * 3:	IN10	CURR1
+ * 4:	IN11	CURR2
+ * 5:	IN12	CURR3
+ * 6:	IN5		ADC_EXT1
  * 7:	IN6		ADC_EXT2
- * 8:	IN12	AN_IN
- * 9:	IN4		TX_SDA_NSS
- * 10:	IN5     ADC_EXT
- * 11:	IN3 	TEMP_MOTOR
+ * 8:	IN3		TEMP_PCB
+ * 9:	IN14	TEMP_MOTOR
+ * 10:	IN15	ADC_EXT3
+ * 11:	IN13	AN_IN
+ * 12:	Vrefint
+ * 13:	IN0		SENS1
+ * 14:	IN1		SENS2
  */
 
-#define HW_ADC_CHANNELS			12
-#define HW_ADC_INJ_CHANNELS		2
-#define HW_ADC_NBR_CONV			4
+#define HW_ADC_CHANNELS			15
+#define HW_ADC_INJ_CHANNELS		3
+#define HW_ADC_NBR_CONV			5
 
 // ADC Indexes
-#define ADC_IND_SENS1			2
+#define ADC_IND_SENS1			0
 #define ADC_IND_SENS2			1
-#define ADC_IND_SENS3			0
-#define ADC_IND_CURR1			4
-#define ADC_IND_CURR2			3
-#define ADC_IND_VIN_SENS		8
-#define ADC_IND_EXT				10
-#define ADC_IND_EXT2			7
-#define ADC_IND_TEMP_MOS		5
-#define ADC_IND_TEMP_MOTOR		11
-#define ADC_IND_VREFINT			6
+#define ADC_IND_SENS3			2
+
+#define ADC_IND_CURR1			3
+#define ADC_IND_CURR2			4
+#define ADC_IND_CURR3			5
+
+#define ADC_IND_TEMP_W			6
+#define ADC_IND_PRES			7
+#define ADC_IND_TEMP_MOS		8
+
+#define ADC_IND_TEMP_MOTOR		9
+#define ADC_IND_U_CHG			10
+#define ADC_IND_VIN_SENS		11
+
+#define ADC_IND_VREFINT			12
+#define ADC_IND_ING				13
+#define ADC_IND_I_CHG			14
 
 // ADC macros and settings
 
@@ -73,30 +90,30 @@
 #define V_REG					3.3
 #endif
 #ifndef VIN_R1
-#define VIN_R1					220000
+#define VIN_R1					39000.0
 #endif
 #ifndef VIN_R2
-#define VIN_R2					3300
+#define VIN_R2					2200.0
 #endif
 #ifndef CURRENT_AMP_GAIN
-#define CURRENT_AMP_GAIN		-20.0
+#define CURRENT_AMP_GAIN		20.0
 #endif
 #ifndef CURRENT_SHUNT_RES
-#define CURRENT_SHUNT_RES		0.0005
+#define CURRENT_SHUNT_RES		0.0003
 #endif
 
 // Input voltage
 #define GET_INPUT_VOLTAGE()		((V_REG / 4095.0) * (float)ADC_Value[ADC_IND_VIN_SENS] * ((VIN_R1 + VIN_R2) / VIN_R2))
 
-// Voltage on ADC channel
-#define ADC_VOLTS(ch)			((float)ADC_Value[ch] / 4095.0 * V_REG)
-
 // NTC Termistors
 #define NTC_RES(adc_val)		((4095.0 * 10000.0) / adc_val - 10000.0)
-#define NTC_TEMP(adc_ind)		(1.0 / ((logf(NTC_RES(ADC_Value[adc_ind]) / 10000.0) / 3434.0) + (1.0 / 298.15)) - 273.15)
+#define NTC_TEMP(adc_ind)		(1.0 / ((logf(NTC_RES(ADC_Value[adc_ind]) / 10000.0) / 3380.0) + (1.0 / 298.15)) - 273.15)
 
 #define NTC_RES_MOTOR(adc_val)	(10000.0 / ((4095.0 / (float)adc_val) - 1.0)) // Motor temp sensor on low side
 #define NTC_TEMP_MOTOR(beta)	(1.0 / ((logf(NTC_RES_MOTOR(ADC_Value[ADC_IND_TEMP_MOTOR]) / 10000.0) / beta) + (1.0 / 298.15)) - 273.15)
+
+// Voltage on ADC channel
+#define ADC_VOLTS(ch)			((float)ADC_Value[ch] / 4096.0 * V_REG)
 
 // Double samples in beginning and end for positive current measurement.
 // Useful when the shunt sense traces have noise that causes offset.
@@ -106,26 +123,9 @@
 #ifndef CURR2_DOUBLE_SAMPLE
 #define CURR2_DOUBLE_SAMPLE		0
 #endif
-
-// Number of servo outputs
-#define HW_SERVO_NUM			2
-
-// UART Peripheral
-#define HW_UART_DEV				UARTD6
-#define HW_UART_GPIO_AF			GPIO_AF_USART6
-#define HW_UART_TX_PORT			GPIOC
-#define HW_UART_TX_PIN			6
-#define HW_UART_RX_PORT			GPIOC
-#define HW_UART_RX_PIN			7
-
-// ICU Peripheral for servo decoding
-#define HW_ICU_TIMER			TIM3
-#define HW_ICU_TIM_CLK_EN()		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE)
-#define HW_ICU_DEV				ICUD3
-#define HW_ICU_CHANNEL			ICU_CHANNEL_2
-#define HW_ICU_GPIO_AF			GPIO_AF_TIM3
-#define HW_ICU_GPIO				GPIOB
-#define HW_ICU_PIN				5
+#ifndef CURR3_DOUBLE_SAMPLE
+#define CURR3_DOUBLE_SAMPLE		0
+#endif
 
 // I2C Peripheral
 #define HW_I2C_DEV				I2CD2
@@ -136,44 +136,11 @@
 #define HW_I2C_SDA_PIN			11
 
 // Hall/encoder pins
-#define HW_HALL_ENC_GPIO1		GPIOB
-#define HW_HALL_ENC_PIN1		6
-#define HW_HALL_ENC_GPIO2		GPIOB
-#define HW_HALL_ENC_PIN2		7
-#define HW_HALL_ENC_GPIO3		GPIOC
-#define HW_HALL_ENC_PIN3		11
-#define HW_ENC_TIM				TIM4
-#define HW_ENC_TIM_AF			GPIO_AF_TIM4
-#define HW_ENC_TIM_CLK_EN()		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE)
-#define HW_ENC_EXTI_PORTSRC		EXTI_PortSourceGPIOC
-#define HW_ENC_EXTI_PINSRC		EXTI_PinSource11
-#define HW_ENC_EXTI_CH			EXTI15_10_IRQn
-#define HW_ENC_EXTI_LINE		EXTI_Line11
-#define HW_ENC_EXTI_ISR_VEC		EXTI15_10_IRQHandler
-#define HW_ENC_TIM_ISR_CH		TIM4_IRQn
-#define HW_ENC_TIM_ISR_VEC		TIM4_IRQHandler
-
-// NRF pins
-#define NRF_PORT_CSN			GPIOA
-#define NRF_PIN_CSN				4
-#define NRF_PORT_SCK			GPIOA
-#define NRF_PIN_SCK				5
-#define NRF_PORT_MOSI			GPIOA
-#define NRF_PIN_MOSI			7
-#define NRF_PORT_MISO			GPIOA
-#define NRF_PIN_MISO			6
-
-// SPI pins
-#define HW_SPI_DEV				SPID1
-#define HW_SPI_GPIO_AF			GPIO_AF_SPI1
-#define HW_SPI_PORT_NSS			GPIOA
-#define HW_SPI_PIN_NSS			4
-#define HW_SPI_PORT_SCK			GPIOA
-#define HW_SPI_PIN_SCK			5
-#define HW_SPI_PORT_MOSI		GPIOA
-#define HW_SPI_PIN_MOSI			7
-#define HW_SPI_PORT_MISO		GPIOA
-#define HW_SPI_PIN_MISO			6
+#define HW_ENC_TIM				TIM3
+#define HW_ENC_TIM_AF			GPIO_AF_TIM3
+#define HW_ENC_TIM_CLK_EN()		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE)
+#define HW_ENC_TIM_ISR_CH		TIM3_IRQn
+#define HW_ENC_TIM_ISR_VEC		TIM3_IRQHandler
 
 // Measurement macros
 #define ADC_V_L1				ADC_Value[ADC_IND_SENS1]
@@ -182,18 +149,29 @@
 #define ADC_V_ZERO				(ADC_Value[ADC_IND_VIN_SENS] / 2)
 
 // Macros
-#define READ_HALL1()			palReadPad(HW_HALL_ENC_GPIO1, HW_HALL_ENC_PIN1)
-#define READ_HALL2()			palReadPad(HW_HALL_ENC_GPIO2, HW_HALL_ENC_PIN2)
-#define READ_HALL3()			palReadPad(HW_HALL_ENC_GPIO3, HW_HALL_ENC_PIN3)
+#define READ_HALL1()			0
+#define READ_HALL2()			0
+#define READ_HALL3()			0
+
+// Default setting overrides
+#ifndef MCCONF_DEFAULT_MOTOR_TYPE
+#define MCCONF_DEFAULT_MOTOR_TYPE		MOTOR_TYPE_FOC
+#endif
+#ifndef MCCONF_L_MAX_ABS_CURRENT
+#define MCCONF_L_MAX_ABS_CURRENT		150.0	// The maximum absolute current above which a fault is generated
+#endif
+#ifndef MCCONF_FOC_SAMPLE_V0_V7
+#define MCCONF_FOC_SAMPLE_V0_V7			true	// Run control loop in both v0 and v7 (requires phase shunts)
+#endif
 
 // Setting limits
-#define HW_LIM_CURRENT			-100.0, 100.0
-#define HW_LIM_CURRENT_IN		-100.0, 100.0
-#define HW_LIM_CURRENT_ABS		0.0, 150.0
-#define HW_LIM_VIN				6.0, 200.0
+#define HW_LIM_CURRENT			-120.0, 120.0
+#define HW_LIM_CURRENT_IN		-120.0, 120.0
+#define HW_LIM_CURRENT_ABS		0.0, 160.0
+#define HW_LIM_VIN				6.0, 57.0
 #define HW_LIM_ERPM				-200e3, 200e3
 #define HW_LIM_DUTY_MIN			0.0, 0.1
-#define HW_LIM_DUTY_MAX			0.0, 0.95
+#define HW_LIM_DUTY_MAX			0.0, 0.99
 #define HW_LIM_TEMP_FET			-40.0, 110.0
 
 #endif /* HW_SCEN2_H_ */
