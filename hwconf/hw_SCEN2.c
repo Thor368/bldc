@@ -16,7 +16,7 @@
  */
 
 #include "hw.h"
-#ifdef HW_VERSION_HSWR2
+#ifdef HW_VERSION_SCEN2
 
 #include "ch.h"
 #include "hal.h"

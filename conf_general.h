@@ -72,7 +72,7 @@
 //#define HW_VERSION_75_300
 //#define HW_VERSION_MINI4
 //#define HW_VERSION_DAS_MINI
-#define HW_VERSION_HSWR2
+#define HW_VERSION_SCEN2
 #endif
 
 /*

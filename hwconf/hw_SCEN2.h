@@ -15,10 +15,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     */
 
-#ifndef HW_HSWR2_H_
-#define HW_HSWR2_H_
+#ifndef HW_SCEN2_H_
+#define HW_SCEN2_H_
 
-#define HW_NAME					"HSWR2"
+#define HW_NAME					"SCEN2"
 
 // Macros
 #define ENABLE_GATE()			palClearPad(GPIOC, 10)
@@ -196,4 +196,4 @@
 #define HW_LIM_DUTY_MAX			0.0, 0.95
 #define HW_LIM_TEMP_FET			-40.0, 110.0
 
-#endif /* HW_HSWR2_H_ */
+#endif /* HW_SCEN2_H_ */
