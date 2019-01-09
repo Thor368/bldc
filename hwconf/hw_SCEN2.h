@@ -33,10 +33,10 @@
 #define DCCAL_OFF()
 #define IS_DRV_FAULT()			0
 
-#define LED_GREEN_ON()
-#define LED_GREEN_OFF()
-#define LED_RED_ON()			palSetPad(GPIOE, 2)
-#define LED_RED_OFF()			palClearPad(GPIOE, 2)
+#define LED_GREEN_ON()			palSetPad(GPIOE, 2)
+#define LED_GREEN_OFF()			palClearPad(GPIOE, 2)
+#define LED_RED_ON()
+#define LED_RED_OFF()
 
 /*
  * ADC Vector
@@ -63,23 +63,23 @@
 #define HW_ADC_NBR_CONV			5
 
 // ADC Indexes
-#define ADC_IND_SENS1			0
+#define ADC_IND_SENS3			0
 #define ADC_IND_SENS2			1
-#define ADC_IND_SENS3			2
+#define ADC_IND_SENS1			2
 
 #define ADC_IND_CURR1			3
 #define ADC_IND_CURR2			4
 #define ADC_IND_CURR3			5
 
-#define ADC_IND_TEMP_W			6
-#define ADC_IND_PRES			7
-#define ADC_IND_TEMP_MOS		8
+#define ADC_IND_TEMP_MOS		6
+#define ADC_IND_VEE				7
+#define ADC_IND_TEMP_W			8
 
-#define ADC_IND_TEMP_MOTOR		9
-#define ADC_IND_U_CHG			10
-#define ADC_IND_VIN_SENS		11
+#define ADC_IND_PREASSURE		9
+#define ADC_IND_VIN_SENS		10
+#define ADC_IND_U_CHG			11
 
-#define ADC_IND_VREFINT			12
+#define ADC_IND_TEMP_MOTOR		12
 #define ADC_IND_ING				13
 #define ADC_IND_I_CHG			14
 
@@ -96,7 +96,7 @@
 #define VIN_R2					2200.0
 #endif
 #ifndef CURRENT_AMP_GAIN
-#define CURRENT_AMP_GAIN		20.0
+#define CURRENT_AMP_GAIN		-20.0
 #endif
 #ifndef CURRENT_SHUNT_RES
 #define CURRENT_SHUNT_RES		0.0003
