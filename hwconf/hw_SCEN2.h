@@ -38,6 +38,19 @@
 #define LED_RED_ON()
 #define LED_RED_OFF()
 
+#define CAN_STB_HI()			palSetPad(GPIOE, 0)
+#define CAN_STB_LO()			palClearPad(GPIOE, 0)
+
+#define TRIG_SPLY_ON()			palSetPad(GPIOE, 3)
+#define TRIG_SPLY_OFF()			palClearPad(GPIOE, 3)
+#define TRIG_SPLY_TOG()			palTogglePad(GPIOE, 3)
+
+#define BAT_SB_SPLY_ON()		palSetPad(GPIOE, 4)
+#define BAT_SB_SPLY_OFF()		padClearPad(GPIOE, 4)
+
+#define BAT_BB_SPLY_ON()		palSetPad(GPIOE, 5)
+#define BAT_BB_SPLY_OFF()		padClearPad(GPIOE, 5)
+
 /*
  * ADC Vector
  *
@@ -96,7 +109,7 @@
 #define VIN_R2					2200.0
 #endif
 #ifndef CURRENT_AMP_GAIN
-#define CURRENT_AMP_GAIN		-132.0
+#define CURRENT_AMP_GAIN		-100.0
 #endif
 #ifndef CURRENT_SHUNT_RES
 #define CURRENT_SHUNT_RES		0.0003

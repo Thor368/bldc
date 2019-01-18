@@ -27,10 +27,11 @@
 #include "utils.h"
 #include "comm_can.h"
 #include "hw.h"
+#include "SCEN2_CAN_IDs.h"
 #include <math.h>
 
 // Settings
-#define CYCLE_RATE		100
+#define CYCLE_RATE		10
 
 // Threads
 static THD_FUNCTION(custom_thread, arg);
@@ -40,6 +41,8 @@ static THD_WORKING_AREA(custom_thread_wa, 1024);
 static volatile app_configuration config;
 static volatile bool stop_now = true;
 static volatile bool is_running = false;
+static volatile rtcnt_t speed_keep_alive = 0;
+static volatile float speed_save = 0;
 
 void app_custom_configure(app_configuration *conf) {
 	config = *conf;
@@ -57,12 +60,74 @@ void app_custom_stop(void) {
 	}
 }
 
+void tx_BATTVOLTAGE(void)
+{
+	uint16_t data[2];
+	data[0] = ADC_Value[ADC_IND_VIN_SENS];
+	data[1] = (uint16_t) (GET_INPUT_VOLTAGE()*1000);
+	comm_can_transmit_eid(ID_MCL_BATTVOLTAGE, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_CURRENTS_01(void)
+{
+	uint16_t data[1];
+	data[0] = (uint16_t) (1000*mc_interface_get_tot_current_filtered());
+	comm_can_transmit_eid(ID_MCL_CURRENTS_01, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_TEMPERATURE(void)
+{
+	uint16_t data[3];
+	data[0] = (uint16_t) (100*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOS]));
+	data[1] = 0;
+	data[2] = (uint16_t) (100*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOTOR]));
+	comm_can_transmit_eid(ID_MCL_TEMPERATURE, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_RPS(void)
+{
+	uint16_t data[3];
+	data[0] = (uint16_t) (mc_interface_get_rpm()*60);
+	data[1] = 0;
+	data[2] = (uint16_t) mc_interface_get_rpm();
+	comm_can_transmit_eid(ID_MCL_RPS, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_INPUTPOWER(void)
+{
+	uint16_t data[1];
+	data[0] = (uint16_t) (mc_interface_get_tot_current_in_filtered()*GET_INPUT_VOLTAGE());
+	comm_can_transmit_eid(ID_MCL_INPUTPOWER, (uint8_t *) &data, sizeof(data));
+}
+
+static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
+{
+	TRIG_SPLY_TOG();
+	float speed = 0;
+	(void) len;
+
+	switch (id)
+	{
+		case ID_MCL_TARGET_PRM:
+			speed = *((int16_t *) data);
+
+			if (speed != speed_save)
+				mc_interface_set_pid_speed(speed_save);
+
+			speed_save = speed;
+			speed_keep_alive = chSysGetRealtimeCounterX() + 200;
+		break;
+	}
+}
+
 static THD_FUNCTION(custom_thread, arg) {
 	(void)arg;
 
-	chRegSetThreadName("APP_ADC");
+	chRegSetThreadName("APP_CUSTOM");
 
 	is_running = true;
+
+	comm_can_set_sid_rx_callback(&rx_callback);
 
 	for(;;)
 	{
@@ -80,5 +145,16 @@ static THD_FUNCTION(custom_thread, arg) {
 			return;
 		}
 
+		if (chSysGetRealtimeCounterX() > speed_keep_alive)
+		{
+			speed_save = 0;
+			mc_interface_set_pid_speed(0);
+		}
+
+		tx_BATTVOLTAGE();
+		tx_CURRENTS_01();
+		tx_TEMPERATURE();
+		tx_RPS();
+		tx_INPUTPOWER();
 	}
 }

@@ -41,8 +41,29 @@ void hw_init_gpio(void) {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
 
+	// CAN_STB
+	palSetPadMode(GPIOE, 0,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
+	CAN_STB_LO();
+
 	// LED
 	palSetPadMode(GPIOE, 2,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
+
+	// Trigger power
+	palSetPadMode(GPIOE, 3,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
+
+	// Battery starbord power
+	palSetPadMode(GPIOE, 4,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
+
+	// Battery portside power
+	palSetPadMode(GPIOE, 5,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
 

@@ -33,7 +33,7 @@
 #include "packet.h"
 
 // Settings
-#define CANDx			CAND1
+#define CANDx			CAND2
 #define RX_FRAMES_SIZE	100
 #define RX_BUFFER_SIZE	PACKET_MAX_PL_LEN
 
@@ -48,7 +48,6 @@ static THD_FUNCTION(cancom_process_thread, arg);
 // Variables
 static can_status_msg stat_msgs[CAN_STATUS_MSGS_TO_STORE];
 static mutex_t can_mtx;
-static uint8_t rx_buffer[RX_BUFFER_SIZE];
 static unsigned int rx_buffer_last_id;
 static CANRxFrame rx_frames[RX_FRAMES_SIZE];
 static int rx_frame_read;
@@ -83,16 +82,17 @@ void comm_can_init(void) {
 
 	chMtxObjectInit(&can_mtx);
 
-	palSetPadMode(GPIOB, 8,
-			PAL_MODE_ALTERNATE(GPIO_AF_CAN1) |
+	palSetPadMode(GPIOB, 5,
+			PAL_MODE_ALTERNATE(GPIO_AF_CAN2) |
 			PAL_STM32_OTYPE_PUSHPULL |
 			PAL_STM32_OSPEED_MID1);
-	palSetPadMode(GPIOB, 9,
-			PAL_MODE_ALTERNATE(GPIO_AF_CAN1) |
+	palSetPadMode(GPIOB, 6,
+			PAL_MODE_ALTERNATE(GPIO_AF_CAN2) |
 			PAL_STM32_OTYPE_PUSHPULL |
 			PAL_STM32_OSPEED_MID1);
 
-	canStart(&CANDx, &cancfg);
+	canStart(&CAND1, &cancfg);
+	canStart(&CAND2, &cancfg);
 
 	chThdCreateStatic(cancom_read_thread_wa, sizeof(cancom_read_thread_wa), NORMALPRIO + 1,
 			cancom_read_thread, NULL);
@@ -149,159 +149,22 @@ static THD_FUNCTION(cancom_process_thread, arg) {
 	chRegSetThreadName("Cancom process");
 	process_tp = chThdGetSelfX();
 
-	int32_t ind = 0;
-	unsigned int rxbuf_len;
-	unsigned int rxbuf_ind;
-	uint8_t crc_low;
-	uint8_t crc_high;
-	bool commands_send;
-
 	for(;;) {
 		chEvtWaitAny((eventmask_t) 1);
 
 		while (rx_frame_read != rx_frame_write) {
 			CANRxFrame rxmsg = rx_frames[rx_frame_read++];
 
-			if (rxmsg.IDE == CAN_IDE_EXT) {
-				uint8_t id = rxmsg.EID & 0xFF;
-				CAN_PACKET_ID cmd = rxmsg.EID >> 8;
-				can_status_msg *stat_tmp;
-
-				if (id == 255 || id == app_get_configuration()->controller_id) {
-					switch (cmd) {
-					case CAN_PACKET_SET_DUTY:
-						ind = 0;
-						mc_interface_set_duty(buffer_get_float32(rxmsg.data8, 1e5, &ind));
-						timeout_reset();
-						break;
-
-					case CAN_PACKET_SET_CURRENT:
-						ind = 0;
-						mc_interface_set_current(buffer_get_float32(rxmsg.data8, 1e3, &ind));
-						timeout_reset();
-						break;
-
-					case CAN_PACKET_SET_CURRENT_BRAKE:
-						ind = 0;
-						mc_interface_set_brake_current(buffer_get_float32(rxmsg.data8, 1e3, &ind));
-						timeout_reset();
-						break;
-
-					case CAN_PACKET_SET_RPM:
-						ind = 0;
-						mc_interface_set_pid_speed(buffer_get_float32(rxmsg.data8, 1e0, &ind));
-						timeout_reset();
-						break;
-
-					case CAN_PACKET_SET_POS:
-						ind = 0;
-						mc_interface_set_pid_pos(buffer_get_float32(rxmsg.data8, 1e6, &ind));
-						timeout_reset();
-						break;
-
-					case CAN_PACKET_FILL_RX_BUFFER:
-						memcpy(rx_buffer + rxmsg.data8[0], rxmsg.data8 + 1, rxmsg.DLC - 1);
-						break;
-
-					case CAN_PACKET_FILL_RX_BUFFER_LONG:
-						rxbuf_ind = (unsigned int)rxmsg.data8[0] << 8;
-						rxbuf_ind |= rxmsg.data8[1];
-						if (rxbuf_ind < RX_BUFFER_SIZE) {
-							memcpy(rx_buffer + rxbuf_ind, rxmsg.data8 + 2, rxmsg.DLC - 2);
-						}
-						break;
-
-					case CAN_PACKET_PROCESS_RX_BUFFER:
-						ind = 0;
-						rx_buffer_last_id = rxmsg.data8[ind++];
-						commands_send = rxmsg.data8[ind++];
-						rxbuf_len = (unsigned int)rxmsg.data8[ind++] << 8;
-						rxbuf_len |= (unsigned int)rxmsg.data8[ind++];
-
-						if (rxbuf_len > RX_BUFFER_SIZE) {
-							break;
-						}
-
-						crc_high = rxmsg.data8[ind++];
-						crc_low = rxmsg.data8[ind++];
-
-						if (crc16(rx_buffer, rxbuf_len)
-								== ((unsigned short) crc_high << 8
-										| (unsigned short) crc_low)) {
-
-							if (commands_send) {
-								commands_send_packet(rx_buffer, rxbuf_len);
-							} else {
-								commands_set_send_func(send_packet_wrapper);
-								commands_process_packet(rx_buffer, rxbuf_len);
-							}
-						}
-						break;
-
-					case CAN_PACKET_PROCESS_SHORT_BUFFER:
-						ind = 0;
-						rx_buffer_last_id = rxmsg.data8[ind++];
-						commands_send = rxmsg.data8[ind++];
-
-						if (commands_send) {
-							commands_send_packet(rxmsg.data8 + ind, rxmsg.DLC - ind);
-						} else {
-							commands_set_send_func(send_packet_wrapper);
-							commands_process_packet(rxmsg.data8 + ind, rxmsg.DLC - ind);
-						}
-						break;
-
-					case CAN_PACKET_SET_CURRENT_REL:
-						ind = 0;
-						mc_interface_set_current_rel(buffer_get_float32(rxmsg.data8, 1e5, &ind));
-						timeout_reset();
-						break;
-
-					case CAN_PACKET_SET_CURRENT_BRAKE_REL:
-						ind = 0;
-						mc_interface_set_brake_current_rel(buffer_get_float32(rxmsg.data8, 1e5, &ind));
-						timeout_reset();
-						break;
-
-					case CAN_PACKET_SET_CURRENT_HANDBRAKE:
-						ind = 0;
-						mc_interface_set_handbrake(buffer_get_float32(rxmsg.data8, 1e3, &ind));
-						timeout_reset();
-						break;
-
-					case CAN_PACKET_SET_CURRENT_HANDBRAKE_REL:
-						ind = 0;
-						mc_interface_set_handbrake_rel(buffer_get_float32(rxmsg.data8, 1e5, &ind));
-						timeout_reset();
-						break;
-
-					default:
-						break;
-					}
-				}
-
-				switch (cmd) {
-				case CAN_PACKET_STATUS:
-					for (int i = 0;i < CAN_STATUS_MSGS_TO_STORE;i++) {
-						stat_tmp = &stat_msgs[i];
-						if (stat_tmp->id == id || stat_tmp->id == -1) {
-							ind = 0;
-							stat_tmp->id = id;
-							stat_tmp->rx_time = chVTGetSystemTime();
-							stat_tmp->rpm = (float)buffer_get_int32(rxmsg.data8, &ind);
-							stat_tmp->current = (float)buffer_get_int16(rxmsg.data8, &ind) / 10.0;
-							stat_tmp->duty = (float)buffer_get_int16(rxmsg.data8, &ind) / 1000.0;
-							break;
-						}
-					}
-					break;
-
-				default:
-					break;
-				}
-			} else {
+			if (rxmsg.IDE == CAN_IDE_STD)
+			{
 				if (sid_callback) {
 					sid_callback(rxmsg.SID, rxmsg.data8, rxmsg.DLC);
+				}
+			}
+			else if (rxmsg.IDE == CAN_IDE_EXT)
+			{
+				if (sid_callback) {
+					sid_callback(rxmsg.EID, rxmsg.data8, rxmsg.DLC);
 				}
 			}
 
@@ -361,12 +224,14 @@ void comm_can_transmit_eid(uint32_t id, uint8_t *data, uint8_t len) {
 #endif
 }
 
-void comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
+msg_t comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
 	if (len > 8) {
 		len = 8;
 	}
 
 #if CAN_ENABLE
+	msg_t ret;
+
 	CANTxFrame txmsg;
 	txmsg.IDE = CAN_IDE_STD;
 	txmsg.SID = id;
@@ -375,8 +240,10 @@ void comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
 	memcpy(txmsg.data8, data, len);
 
 	chMtxLock(&can_mtx);
-	canTransmit(&CANDx, CAN_ANY_MAILBOX, &txmsg, MS2ST(20));
+	ret = canTransmit(&CANDx, CAN_ANY_MAILBOX, &txmsg, MS2ST(20));
 	chMtxUnlock(&can_mtx);
+
+	return ret;
 
 #else
 	(void)id;
