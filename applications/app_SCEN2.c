@@ -62,17 +62,17 @@ void app_custom_stop(void) {
 
 void tx_BATTVOLTAGE(void)
 {
-	uint16_t data[2];
-	data[0] = ADC_Value[ADC_IND_VIN_SENS];
-	data[1] = (uint16_t) (GET_INPUT_VOLTAGE()*1000);
-	comm_can_transmit_eid(ID_MCL_BATTVOLTAGE, (uint8_t *) &data, sizeof(data));
+	uint16_t data[4];
+	*((uint16_t *) &data[0]) = (uint16_t) ADC_Value[ADC_IND_VIN_SENS];
+	*((uint16_t *) &data[2]) = (uint16_t) (GET_INPUT_VOLTAGE()*1000);
+	comm_can_transmit_eid(ID_POW_BATTVOLTAGE, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_CURRENTS_01(void)
 {
 	uint16_t data[1];
 	data[0] = (uint16_t) (1000*mc_interface_get_tot_current_filtered());
-	comm_can_transmit_eid(ID_MCL_CURRENTS_01, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(ID_POW_CURRENTS_01, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_TEMPERATURE(void)
@@ -81,7 +81,7 @@ void tx_TEMPERATURE(void)
 	data[0] = (uint16_t) (100*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOS]));
 	data[1] = 0;
 	data[2] = (uint16_t) (100*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOTOR]));
-	comm_can_transmit_eid(ID_MCL_TEMPERATURE, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(ID_POW_TEMPERATURE, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_RPS(void)
@@ -90,25 +90,25 @@ void tx_RPS(void)
 	data[0] = (uint16_t) (mc_interface_get_rpm()*60);
 	data[1] = 0;
 	data[2] = (uint16_t) mc_interface_get_rpm();
-	comm_can_transmit_eid(ID_MCL_RPS, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(ID_POW_RPS, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_INPUTPOWER(void)
 {
 	uint16_t data[1];
 	data[0] = (uint16_t) (mc_interface_get_tot_current_in_filtered()*GET_INPUT_VOLTAGE());
-	comm_can_transmit_eid(ID_MCL_INPUTPOWER, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(ID_POW_INPUTPOWER, (uint8_t *) &data, sizeof(data));
 }
 
 static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 {
-	TRIG_SPLY_TOG();
+	uint8_t tmp[1];
 	float speed = 0;
 	(void) len;
 
 	switch (id)
 	{
-		case ID_MCL_TARGET_PRM:
+		case MCL_WR_Motor_Speed_Set:
 			speed = *((int16_t *) data);
 
 			if (speed != speed_save)
@@ -116,6 +116,11 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 
 			speed_save = speed;
 			speed_keep_alive = chSysGetRealtimeCounterX() + 200;
+		break;
+
+		case MCL_RD_Motor_Speed:
+			*((uint16_t *) &tmp[0]) = (uint16_t) mc_interface_get_rpm();
+			comm_can_transmit_eid(MCL_RD_Motor_Speed, (uint8_t *) &tmp, 2);
 		break;
 	}
 }
@@ -145,7 +150,7 @@ static THD_FUNCTION(custom_thread, arg) {
 			return;
 		}
 
-		if (chSysGetRealtimeCounterX() > speed_keep_alive)
+		if ((chSysGetRealtimeCounterX() > speed_keep_alive) && (speed_save != 0))
 		{
 			speed_save = 0;
 			mc_interface_set_pid_speed(0);
