@@ -51,6 +51,9 @@
 #define BAT_BB_SPLY_ON()		palSetPad(GPIOE, 5)
 #define BAT_BB_SPLY_OFF()		padClearPad(GPIOE, 5)
 
+#define CAN_CP_ON()				palSetPad(GPIOB, 11)
+#define CAN_CP_OFF()			padClearPad(GPIOB, 11)
+
 /*
  * ADC Vector
  *
