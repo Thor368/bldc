@@ -1,22 +1,3 @@
-/*
-	Copyright 2016 - 2017 Benjamin Vedder	benjamin@vedder.se
-
-	This file is part of the VESC firmware.
-
-	The VESC firmware is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    The VESC firmware is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 #include "app.h"
 
 #include "ch.h"
@@ -29,9 +10,11 @@
 #include "hw.h"
 #include "SCEN2_CAN_IDs.h"
 #include <math.h>
+#include <stdlib.h>
 
 // Settings
 #define CYCLE_RATE		10
+#define POLE_PAIR_COUNT	5
 
 // Threads
 static THD_FUNCTION(custom_thread, arg);
@@ -62,34 +45,39 @@ void app_custom_stop(void) {
 
 void tx_BATTVOLTAGE(void)
 {
-	uint16_t data[4];
+	uint16_t data[2];
 	*((uint16_t *) &data[0]) = (uint16_t) ADC_Value[ADC_IND_VIN_SENS];
-	*((uint16_t *) &data[2]) = (uint16_t) (GET_INPUT_VOLTAGE()*1000);
+	*((uint16_t *) &data[1]) = (uint16_t) (GET_INPUT_VOLTAGE()*1000);
 	comm_can_transmit_eid(ID_POW_BATTVOLTAGE, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_CURRENTS_01(void)
 {
-	uint16_t data[1];
-	data[0] = (uint16_t) (1000*mc_interface_get_tot_current_filtered());
+	uint16_t data[3];
+	data[0] = (uint16_t) (ADC_Value[ADC_IND_CURR1]);
+	data[1] = (uint16_t) (ADC_Value[ADC_IND_CURR2]);
+	data[2] = (uint16_t) (ADC_Value[ADC_IND_CURR3]);
 	comm_can_transmit_eid(ID_POW_CURRENTS_01, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_TEMPERATURE(void)
 {
-	uint16_t data[3];
-	data[0] = (uint16_t) (100*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOS]));
-	data[1] = 0;
-	data[2] = (uint16_t) (100*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOTOR]));
+	uint16_t data[4];
+	float temp_max = 1000;
+	utils_truncate_number(&temp_max, HW_LIM_TEMP_FET);
+	data[0] = temp_max + 0.5;
+	data[1] = (uint16_t) (10*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOS]) + 0.05);
+	data[2] = 0;
+	data[3] = (uint16_t) (10*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOTOR]) + 0.05);
 	comm_can_transmit_eid(ID_POW_TEMPERATURE, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_RPS(void)
 {
 	uint16_t data[3];
-	data[0] = (uint16_t) (mc_interface_get_rpm()*60);
 	data[1] = 0;
-	data[2] = (uint16_t) mc_interface_get_rpm();
+	data[2] = (uint16_t) (mc_interface_get_rpm()/POLE_PAIR_COUNT);
+	data[0] = data[2]/60;
 	comm_can_transmit_eid(ID_POW_RPS, (uint8_t *) &data, sizeof(data));
 }
 
@@ -102,16 +90,16 @@ void tx_INPUTPOWER(void)
 
 static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 {
-	uint8_t tmp[1];
+	uint16_t out[4];
 	float speed = 0;
 	(void) len;
 
 	switch (id)
 	{
 		case MCL_WR_Motor_Speed_Set:
-			speed = *((int16_t *) data);
+			speed = *((int16_t *) data)*POLE_PAIR_COUNT;
 
-			if (speed != speed_save)
+			if (abs(speed - speed_save) > 1)  // floats...
 				mc_interface_set_pid_speed(speed_save);
 
 			speed_save = speed;
@@ -119,8 +107,8 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 		break;
 
 		case MCL_RD_Motor_Speed:
-			*((uint16_t *) &tmp[0]) = (uint16_t) mc_interface_get_rpm();
-			comm_can_transmit_eid(MCL_RD_Motor_Speed, (uint8_t *) &tmp, 2);
+			out[0] = (uint16_t) mc_interface_get_rpm()/POLE_PAIR_COUNT;
+			comm_can_transmit_eid(MCL_RD_Motor_Speed, (uint8_t *) &out, 2);
 		break;
 	}
 }
