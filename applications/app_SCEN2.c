@@ -66,9 +66,9 @@ void tx_TEMPERATURE(void)
 	float temp_max = 1000;
 	utils_truncate_number(&temp_max, HW_LIM_TEMP_FET);
 	data[0] = temp_max + 0.5;
-	data[1] = (uint16_t) (10*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOS]) + 0.05);
+	data[1] = (uint16_t) lround(10*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOS]) + 0.05);
 	data[2] = 0;
-	data[3] = (uint16_t) (10*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOTOR]) + 0.05);
+	data[3] = (uint16_t) lround(10*NTC_TEMP(ADC_Value[ADC_IND_TEMP_MOTOR]) + 0.05);
 	comm_can_transmit_eid(ID_POW_TEMPERATURE, (uint8_t *) &data, sizeof(data));
 }
 
@@ -76,7 +76,7 @@ void tx_RPS(void)
 {
 	uint16_t data[3];
 	data[1] = 0;
-	data[2] = (uint16_t) (mc_interface_get_rpm()/POLE_PAIR_COUNT);
+	data[2] = (uint16_t) lround(abs(mc_interface_get_rpm()/POLE_PAIR_COUNT));
 	data[0] = data[2]/60;
 	comm_can_transmit_eid(ID_POW_RPS, (uint8_t *) &data, sizeof(data));
 }
@@ -121,8 +121,6 @@ static THD_FUNCTION(custom_thread, arg) {
 	is_running = true;
 
 	comm_can_set_sid_rx_callback(&rx_callback);
-
-	CAN_CP_ON();
 
 	for(;;)
 	{

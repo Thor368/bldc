@@ -47,6 +47,12 @@ void hw_init_gpio(void) {
 			PAL_STM32_OSPEED_HIGHEST);
 	CAN_STB_LO();
 
+	// CAN_CP_ON
+	palSetPadMode(GPIOB, 11,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
+	CAN_CP_ON();
+
 	// LED
 	palSetPadMode(GPIOE, 2,
 			PAL_MODE_OUTPUT_PUSHPULL |
