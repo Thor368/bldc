@@ -1336,7 +1336,7 @@ static void update_override_limits(volatile mc_configuration *conf) {
 	const float rpm_now = mc_interface_get_rpm();
 
 	UTILS_LP_FAST(m_temp_fet, NTC_TEMP(ADC_IND_TEMP_MOS), 0.1);
-	UTILS_LP_FAST(m_temp_motor, NTC_TEMP_MOTOR(conf->m_ntc_motor_beta), 0.1);
+	UTILS_LP_FAST(m_temp_motor, TEMP_MOTOR(ADC_Value[ADC_IND_TEMP_MOTOR]), 0.1);
 
 	// Temperature MOSFET
 	float lo_min_mos = conf->l_current_min;
