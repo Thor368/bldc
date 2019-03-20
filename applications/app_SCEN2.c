@@ -121,8 +121,6 @@ static THD_FUNCTION(custom_thread, arg) {
 
 	comm_can_set_sid_rx_callback(&rx_callback);
 
-	mc_interface_set_current(5.0);
-
 	for(;;)
 	{
 		// Sleep for a time according to the specified rate
