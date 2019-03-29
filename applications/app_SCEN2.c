@@ -47,16 +47,8 @@ static THD_FUNCTION(custom_thread, arg) {
 
 	for(;;)
 	{
-		// Sleep for a time according to the specified rate
-		systime_t sleep_time = CH_CFG_ST_FREQUENCY / CYCLE_RATE;
-
-		// At least one tick should be slept to not block the other threads
-		if (sleep_time == 0) {
-			sleep_time = 1;
-		}
-		chThdSleep(sleep_time);
-
-		if (stop_now) {
+		if (stop_now)
+		{
 			is_running = false;
 			return;
 		}
@@ -64,5 +56,7 @@ static THD_FUNCTION(custom_thread, arg) {
 		SCEN2_ADC_handler();
 		SCEN2_error_handler();
 		SCEN2_CAN_handler();
+
+		chThdSleep(1);
 	}
 }
