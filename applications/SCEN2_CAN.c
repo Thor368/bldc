@@ -114,8 +114,6 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 
 void SCEN2_CAN_handler(void)
 {
-	tx_BATTVOLTAGE();
-
 	if (chVTTimeElapsedSinceX(can_basic_update) > MS2ST(CAN_DELAY_BASIC))
 	{
 		can_basic_update = chVTGetSystemTime();
@@ -128,5 +126,6 @@ void SCEN2_CAN_handler(void)
 
 void SCEN2_CAN_init(void)
 {
+	can_basic_update = chVTGetSystemTime();
 	comm_can_set_sid_rx_callback(&rx_callback);
 }
