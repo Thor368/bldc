@@ -125,7 +125,7 @@ void hw_setup_adc_channels(void) {
 	// ADC2 regular channels
 	ADC_RegularChannelConfig(ADC2, ADC_Channel_3, 1, ADC_SampleTime_15Cycles);			// U_V ADC123
 	ADC_RegularChannelConfig(ADC2, ADC_Channel_11, 2, ADC_SampleTime_15Cycles);			// I_V ADC123
-	ADC_RegularChannelConfig(ADC2, ADC_Channel_15, 3, ADC_SampleTime_15Cycles);			// U_VEE ADC12
+	ADC_RegularChannelConfig(ADC2, ADC_Channel_15, 3, ADC_SampleTime_15Cycles);			// x ADC12
 	ADC_RegularChannelConfig(ADC2, ADC_Channel_14, 4, ADC_SampleTime_15Cycles);			// U_ZK ADC12
 	ADC_RegularChannelConfig(ADC2, ADC_Channel_13, 5, ADC_SampleTime_15Cycles);			// I_CHARGE ADC123
 

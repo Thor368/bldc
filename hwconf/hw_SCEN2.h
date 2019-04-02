@@ -54,26 +54,7 @@
 #define CAN_CP_ON()				palSetPad(GPIOB, 11)
 #define CAN_CP_OFF()			padClearPad(GPIOB, 11)
 
-/*
- * ADC Vector
- *
- * 0:	IN0		SENS1
- * 1:	IN1		SENS2
- * 2:	IN2		SENS3
- * 3:	IN10	CURR1
- * 4:	IN11	CURR2
- * 5:	IN12	CURR3
- * 6:	IN5		ADC_EXT1
- * 7:	IN6		ADC_EXT2
- * 8:	IN3		TEMP_PCB
- * 9:	IN14	TEMP_MOTOR
- * 10:	IN15	ADC_EXT3
- * 11:	IN13	AN_IN
- * 12:	Vrefint
- * 13:	IN0		SENS1
- * 14:	IN1		SENS2
- */
-
+// ADC
 #define HW_ADC_CHANNELS			15
 #define HW_ADC_INJ_CHANNELS		3
 #define HW_ADC_NBR_CONV			5
@@ -88,10 +69,10 @@
 #define ADC_IND_CURR3			5
 
 #define ADC_IND_TEMP_MOS		6
-#define ADC_IND_VEE				7
+#define ADC_IND_				7
 #define ADC_IND_TEMP_W			8
 
-#define ADC_IND_PREASSURE		9
+#define ADC_IND_PRESSURE		9
 #define ADC_IND_VIN_SENS		10
 #define ADC_IND_U_CHG			11
 
@@ -176,17 +157,17 @@
 #define MCCONF_DEFAULT_MOTOR_TYPE		MOTOR_TYPE_FOC
 #endif
 #ifndef MCCONF_L_MAX_ABS_CURRENT
-#define MCCONF_L_MAX_ABS_CURRENT		60.0	// The maximum absolute current above which a fault is generated
+#define MCCONF_L_MAX_ABS_CURRENT		80.0	// The maximum absolute current above which a fault is generated
 #endif
 #ifndef MCCONF_FOC_SAMPLE_V0_V7
 #define MCCONF_FOC_SAMPLE_V0_V7			true	// Run control loop in both v0 and v7 (requires phase shunts)
 #endif
 
 // Setting limits
-#define HW_LIM_CURRENT			-120.0, 120.0
-#define HW_LIM_CURRENT_IN		-120.0, 120.0
-#define HW_LIM_CURRENT_ABS		0.0, 160.0
-#define HW_LIM_VIN				6.0, 57.0
+#define HW_LIM_CURRENT			-60.0, 60.0
+#define HW_LIM_CURRENT_IN		-60.0, 60.0
+#define HW_LIM_CURRENT_ABS		0.0, 80.0
+#define HW_LIM_VIN				6.0, 75.0
 #define HW_LIM_ERPM				-200e3, 200e3
 #define HW_LIM_DUTY_MIN			0.0, 0.1
 #define HW_LIM_DUTY_MAX			0.0, 0.99
