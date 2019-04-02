@@ -2043,11 +2043,25 @@ static THD_FUNCTION(timer_thread, arg) {
 }
 
 static void do_dc_cal(void) {
-	m_curr0_offset = 2047;
-	m_curr1_offset = 2047;
-#ifdef HW_HAS_3_SHUNTS
-	m_curr2_offset = 2047;
-#endif
+
+	chThdSleepMilliseconds(1000);
+
+	m_curr0_sum = 0;
+	m_curr1_sum = 0;
+	#ifdef HW_HAS_3_SHUNTS
+	m_curr2_sum = 0;
+	#endif
+
+	m_curr_samples = 0;
+	while (m_curr_samples < 4000);
+
+	m_curr0_offset = m_curr0_sum / m_curr_samples;
+	m_curr1_offset = m_curr1_sum / m_curr_samples;
+
+	#ifdef HW_HAS_3_SHUNTS
+	m_curr2_offset = m_curr2_sum / m_curr_samples;
+	#endif
+
 	m_dccal_done = true;
 }
 
