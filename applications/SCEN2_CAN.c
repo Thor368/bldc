@@ -20,8 +20,13 @@
 
 
 #define CAN_DELAY_BASIC		100
+#define START_UP_TIME		1000
 
 systime_t can_basic_update;
+systime_t start_up_timer;
+//mc_configuration *c_conf;
+
+bool starting_up = false;
 
 float speed_save = 0;
 
@@ -83,7 +88,16 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 			speed = *((int16_t *) data)*POLE_PAIR_COUNT;
 
 			if (abs(speed - speed_save) > 1)  // floats...
-				mc_interface_set_pid_speed(speed);
+			{
+				if (speed_save < 1)  // startup
+				{
+					mc_interface_set_current(10);
+					start_up_timer = chVTGetSystemTime();
+					starting_up = true;
+				}
+				else if (!starting_up)
+					mc_interface_set_pid_speed(speed);
+			}
 
 			speed_save = speed;
 			timeout_reset();
@@ -120,6 +134,12 @@ void SCEN2_CAN_handler(void)
 		tx_BATTVOLTAGE();
 	}
 
+	if ((starting_up) && (chVTTimeElapsedSinceX(start_up_timer) > MS2ST(START_UP_TIME)))
+	{
+		starting_up = false;
+		mc_interface_set_pid_speed(speed_save);
+	}
+
 	if (timeout_has_timeout())
 		speed_save = 0;
 }
@@ -127,5 +147,8 @@ void SCEN2_CAN_handler(void)
 void SCEN2_CAN_init(void)
 {
 	can_basic_update = chVTGetSystemTime();
+	start_up_timer = chVTGetSystemTime();
+
 	comm_can_set_sid_rx_callback(&rx_callback);
+//	c_conf = mc_interface_get_configuration();
 }
