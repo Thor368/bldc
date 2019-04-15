@@ -8,6 +8,11 @@
 #ifndef APPLICATIONS_SCEN2_SETTINGS_H_
 #define APPLICATIONS_SCEN2_SETTINGS_H_
 
+#define major_release		0
+#define minor_release		1
+#define branch				2  // alpha dev branch
+
+
 #define POLE_PAIR_COUNT		5
 
 

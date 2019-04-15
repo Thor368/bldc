@@ -92,6 +92,9 @@ endif
 # Define project name here
 PROJECT = BLDC_4_ChibiOS
 
+#git hash of HEAD
+githash=$(shell git rev-parse --short=7 HEAD)
+
 # Imported source files and paths
 CHIBIOS = ChibiOS_3.0.2
 # Startup files
@@ -233,7 +236,7 @@ CPPWARN = -Wall -Wextra -Wundef
 #
 
 # List all user C define here, like -D_DEBUG=1
-UDEFS =
+UDEFS = -DHASH=0x$(githash)
 
 # Define ASM defines here
 UADEFS =
@@ -261,6 +264,9 @@ endif
 build/$(PROJECT).bin: build/$(PROJECT).elf 
 	$(BIN) build/$(PROJECT).elf build/$(PROJECT).bin
 
+getver:
+	@echo GIT_COMMIT=$(githash)
+	
 # Program
 upload: build/$(PROJECT).bin
 #	qstlink2 --cli --erase --write build/$(PROJECT).bin

@@ -45,7 +45,7 @@ void tx_CURRENTS_01(void)
 	data[0] = (uint16_t) (ADC_Value[ADC_IND_CURR1]);
 	data[1] = (uint16_t) (ADC_Value[ADC_IND_CURR2]);
 	data[2] = (uint16_t) (ADC_Value[ADC_IND_CURR3]);
-	comm_can_transmit_eid(ID_POW_CURRENTS_01, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MLC_RD_CURRENTS_01, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_TEMPERATURE(void)
@@ -57,7 +57,7 @@ void tx_TEMPERATURE(void)
 	*((uint16_t *) &data[1]) = (uint16_t) lround(analog.temp_MOS);  // PA temp
 	*((uint16_t *) &data[3]) = (uint16_t) lround(analog.temp_water);  // ToDo: water temp
 	*((uint16_t *) &data[5]) = (uint16_t) lround(analog.temp_motor)*10 + 2732;  // Motor Temp
-	comm_can_transmit_eid(ID_POW_TEMPERATURE, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_RD_TEMPERATURE, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_RPS(void)
@@ -66,14 +66,29 @@ void tx_RPS(void)
 	data[1] = 0;
 	data[2] = (uint16_t) lround(abs(mc_interface_get_rpm()/POLE_PAIR_COUNT));
 	data[0] = data[2]/60;
-	comm_can_transmit_eid(ID_POW_RPS, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_RD_RPS, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_INPUTPOWER(void)
 {
 	uint16_t data[1];
 	data[0] = (uint16_t) (mc_interface_get_tot_current_in_filtered()*GET_INPUT_VOLTAGE());
-	comm_can_transmit_eid(ID_POW_INPUTPOWER, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_RD_INPUTPOWER, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_VERSION(void)
+{
+	uint16_t data[3];
+	data[0] = major_release;
+	data[1] = minor_release;
+	data[2] = branch;
+	comm_can_transmit_eid(MCL_RD_VERSION, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_HASH(void)
+{
+	uint64_t githash = HASH;
+	comm_can_transmit_eid(MCL_RD_VERSION, (uint8_t *) &githash, 7);
 }
 
 static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
@@ -108,20 +123,28 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 			comm_can_transmit_eid(MCL_RD_Motor_Speed, (uint8_t *) &out, 2);
 		break;
 
-		case ID_POW_CURRENTS_01:
+		case MLC_RD_CURRENTS_01:
 			tx_CURRENTS_01();
 		break;
 
-		case ID_POW_TEMPERATURE:
+		case MCL_RD_TEMPERATURE:
 			tx_TEMPERATURE();
 		break;
 
-		case ID_POW_RPS:
+		case MCL_RD_RPS:
 			tx_RPS();
 		break;
 
-		case ID_POW_INPUTPOWER:
+		case MCL_RD_INPUTPOWER:
 			tx_INPUTPOWER();
+		break;
+
+		case MCL_RD_VERSION:
+			tx_VERSION();
+		break;
+
+		case MCL_RD_HASH:
+			tx_HASH();
 		break;
 	}
 }
