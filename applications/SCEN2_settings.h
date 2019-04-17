@@ -12,8 +12,10 @@
 #define minor_release		1
 #define branch				2  // alpha dev branch
 
+#define LEAKAGE_THRESHOLD	1000
 
 #define POLE_PAIR_COUNT		5
 
+#define STM32_UID			((uint32_t *) 0x1FFF7A10)
 
 #endif /* APPLICATIONS_SCEN2_SETTINGS_H_ */

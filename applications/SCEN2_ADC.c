@@ -7,6 +7,7 @@
 
 #include "mc_interface.h"
 #include "SCEN2_types.h"
+#include "SCEN2_settings.h"
 
 struct Analog_t analog;
 
@@ -38,8 +39,9 @@ void SCEN2_ADC_handler(void)
 	analog.U_charge = ADC_VOLTS(ADC_IND_U_CHG)*0.0434142752;
 	analog.I_charge = ADC_VOLTS(ADC_IND_I_CHG)*50;
 
+	analog.water_ingress = ADC_VOLTS(ADC_IND_ING);
 	// check if water ingress is tripped
-	if (ADC_VOLTS(ADC_IND_ING) < 500)
+	if (analog.water_ingress < LEAKAGE_THRESHOLD)
 		errors.water_ingress_error = true;
 	else
 		errors.water_ingress_error = false;

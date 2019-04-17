@@ -30,76 +30,157 @@ bool starting_up = false;
 
 float speed_save = 0;
 
-void tx_BATTVOLTAGE(void)
+void tx_ChargeCurrent(void)
+{
+	float data[1];
+	data[0] = analog.I_charge;
+	comm_can_transmit_eid(MCL_ChargeCurrent, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_LeakageSensor(void)
+{
+	uint8_t data[5];
+	*((float *) &data[0]) = analog.water_ingress;
+	data[4] = errors.water_ingress_error;
+	comm_can_transmit_eid(MCL_LeakageSensor, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_LeakageSensorThreshold(void)
+{
+	float data[1];
+	data[0] = LEAKAGE_THRESHOLD;
+	comm_can_transmit_eid(MCL_LeakageSensorThreshold_rd, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_MC_PID(void)
 {
 	uint16_t data[3];
-	*((uint16_t *) &data[0]) = (uint16_t) ADC_Value[ADC_IND_VIN_SENS];
-	*((uint16_t *) &data[1]) = (uint16_t) lround(analog.U_in*1000);
-	*((uint16_t *) &data[2]) = (uint16_t) lround(mc_interface_get_duty_cycle_now()*100);
-	comm_can_transmit_eid(ID_POW_BATTVOLTAGE, (uint8_t *) &data, sizeof(data));
+	const volatile mc_configuration *conf = mc_interface_get_configuration();
+	data[0] = (uint16_t) lround(conf->p_pid_kp);
+	data[1] = (uint16_t) lround(conf->p_pid_ki);
+	data[2] = (uint16_t) lround(conf->p_pid_kd);
+	comm_can_transmit_eid(MCL_MC_PID_rd, (uint8_t *) &data, sizeof(data));
 }
 
-void tx_CURRENTS_01(void)
+void tx_Voltages(void)
 {
-	uint16_t data[3];
-	data[0] = (uint16_t) (ADC_Value[ADC_IND_CURR1]);
-	data[1] = (uint16_t) (ADC_Value[ADC_IND_CURR2]);
-	data[2] = (uint16_t) (ADC_Value[ADC_IND_CURR3]);
-	comm_can_transmit_eid(MLC_RD_CURRENTS_01, (uint8_t *) &data, sizeof(data));
+	float data[2];
+	data[0] = analog.U_in;
+	data[1] = analog.U_charge;
+	comm_can_transmit_eid(MCL_Voltages, (uint8_t *) &data, sizeof(data));
 }
 
-void tx_TEMPERATURE(void)
+void tx_MotorCurrents(void)
 {
-	uint8_t data[7];
-	float temp_max = 1000;
-	utils_truncate_number(&temp_max, HW_LIM_TEMP_FET);
-	data[0] = (uint8_t) round(temp_max);
-	*((uint16_t *) &data[1]) = (uint16_t) lround(analog.temp_MOS);  // PA temp
-	*((uint16_t *) &data[3]) = (uint16_t) lround(analog.temp_water);  // ToDo: water temp
-	*((uint16_t *) &data[5]) = (uint16_t) lround(analog.temp_motor)*10 + 2732;  // Motor Temp
-	comm_can_transmit_eid(MCL_RD_TEMPERATURE, (uint8_t *) &data, sizeof(data));
+	float data[2];
+	data[0] = mc_interface_get_tot_current_filtered();
+	data[1] = mc_interface_get_duty_cycle_now();
+	comm_can_transmit_eid(MCL_MotorCurrents, (uint8_t *) &data, sizeof(data));
 }
 
-void tx_RPS(void)
+void tx_Temperatures(void)
 {
-	uint16_t data[3];
-	data[1] = 0;
-	data[2] = (uint16_t) lround(abs(mc_interface_get_rpm()/POLE_PAIR_COUNT));
-	data[0] = data[2]/60;
-	comm_can_transmit_eid(MCL_RD_RPS, (uint8_t *) &data, sizeof(data));
+	float data[2];
+	data[0] = analog.temp_MOS;
+	data[1] = analog.temp_water;
+	comm_can_transmit_eid(MCL_Temperatures, (uint8_t *) &data, sizeof(data));
 }
 
-void tx_INPUTPOWER(void)
+void tx_Temperature_Limits(void)
 {
-	uint16_t data[1];
-	data[0] = (uint16_t) (mc_interface_get_tot_current_in_filtered()*GET_INPUT_VOLTAGE());
-	comm_can_transmit_eid(MCL_RD_INPUTPOWER, (uint8_t *) &data, sizeof(data));
+	float data[2];
+	const volatile mc_configuration *conf = mc_interface_get_configuration();
+	data[0] = conf->l_temp_fet_start;
+	data[1] = 0; // Watertemp limit: ToDo
+	comm_can_transmit_eid(MCL_Temperature_Limits_rd, (uint8_t *) &data, sizeof(data));
 }
 
-void tx_VERSION(void)
+void tx_MotorTemp(void)
+{
+	float data[1];
+	data[0] = analog.temp_motor;
+	comm_can_transmit_eid(MCL_MotorTemp, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_MotorTemp_Limit(void)
+{
+	float data[1];
+	const volatile mc_configuration *conf = mc_interface_get_configuration();
+	data[0] = conf->l_temp_motor_start;
+	comm_can_transmit_eid(MCL_MotorTemp_Limit_rd, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_MotorSpeed(void)
+{
+	float data[1];
+	data[0] = mc_interface_get_rpm()/POLE_PAIR_COUNT;
+	comm_can_transmit_eid(MCL_MotorSpeed_rd, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_Preassure(void)
+{
+	float data[1];
+	data[0] = analog.pressure;
+	comm_can_transmit_eid(MCL_Pressure, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_DCPower(void)
+{
+	float data[1];
+	data[0] = mc_interface_get_tot_current_in_filtered()*GET_INPUT_VOLTAGE();
+	comm_can_transmit_eid(MCL_DC_Power, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_Trigger1(void)
+{
+	float data[1];
+	data[0] = 0;
+	comm_can_transmit_eid(MCL_Trigger1, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_Trigger2(void)
+{
+	float data[1];
+	data[0] = 0;
+	comm_can_transmit_eid(MCL_Trigger2, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_Version(void)
 {
 	uint16_t data[3];
 	data[0] = major_release;
 	data[1] = minor_release;
 	data[2] = branch;
-	comm_can_transmit_eid(MCL_RD_VERSION, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_Version, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_HASH(void)
 {
 	uint64_t githash = HASH;
-	comm_can_transmit_eid(MCL_RD_VERSION, (uint8_t *) &githash, 7);
+	comm_can_transmit_eid(MCL_Hash, (uint8_t *) &githash, 7);
+}
+
+void tx_UID(void)
+{
+	uint8_t UID[12];
+	*((uint32_t *) &UID[0]) = STM32_UID[0];  // fetch UID from system memory
+	*((uint32_t *) &UID[4]) = STM32_UID[1];
+	*((uint32_t *) &UID[8]) = STM32_UID[2];
+
+	*((uint64_t *) &UID[0]) += *((uint64_t *) &UID[6]);  // shrink UDI from 96bits to 48bits
+
+	comm_can_transmit_eid(MCL_UID, (uint8_t *) &UID, 6);
 }
 
 static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 {
-	uint16_t out[4];
-	float speed = 0;
+	float speed, limit;
+	static mc_configuration conf;
 	(void) len;
 
 	switch (id)
 	{
-		case MCL_WR_Motor_Speed_Set:
+		case MCL_MotorSpeed_wr:
 			speed = *((int16_t *) data)*POLE_PAIR_COUNT;
 
 			if (abs(speed - speed_save) > 1)  // floats...
@@ -118,33 +199,84 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 			timeout_reset();
 		break;
 
-		case MCL_RD_Motor_Speed:
-			out[0] = (uint16_t) mc_interface_get_rpm()/POLE_PAIR_COUNT;
-			comm_can_transmit_eid(MCL_RD_Motor_Speed, (uint8_t *) &out, 2);
+		case MCL_MotorSpeed_rd:
+			tx_MotorSpeed();
 		break;
 
-		case MLC_RD_CURRENTS_01:
-			tx_CURRENTS_01();
+		case MCL_MotorCurrents:
+			tx_MotorCurrents();
 		break;
 
-		case MCL_RD_TEMPERATURE:
-			tx_TEMPERATURE();
+		case MCL_Temperatures:
+			tx_Temperatures();
 		break;
 
-		case MCL_RD_RPS:
-			tx_RPS();
+		case MCL_Temperature_Limits_wr:
+			conf = *mc_interface_get_configuration();
+
+			limit = *((float *) &data[0]);
+			conf.l_temp_fet_start = limit;
+
+			limit = *((float *) &data[4]);
+			// Watertemp limit: ToDo
+			conf_general_store_mc_configuration(&conf);
+			mc_interface_set_configuration(&conf);
+			chThdSleepMilliseconds(200);
 		break;
 
-		case MCL_RD_INPUTPOWER:
-			tx_INPUTPOWER();
+		case MCL_Temperature_Limits_rd:
+			tx_Temperature_Limits();
 		break;
 
-		case MCL_RD_VERSION:
-			tx_VERSION();
+		case MCL_MotorTemp:
+			tx_MotorTemp();
 		break;
 
-		case MCL_RD_HASH:
+		case MCL_MotorTemp_Limit_wr:
+			conf = *mc_interface_get_configuration();
+
+			limit = *((float *) &data[0]);
+			conf.l_temp_motor_start = limit;
+			conf_general_store_mc_configuration(&conf);
+			mc_interface_set_configuration(&conf);
+			chThdSleepMilliseconds(200);
+		break;
+
+		case MCL_MotorTemp_Limit_rd:
+			tx_MotorTemp_Limit();
+		break;
+
+		case MCL_Pressure:
+			tx_Preassure();
+		break;
+
+		case MCL_Trigger1:
+			tx_Trigger1();
+		break;
+
+		case MCL_Trigger2:
+			tx_Trigger2();
+		break;
+
+		case MCL_Reset:
+			__disable_irq();  // watchdog will reset system
+			while(1);
+		break;
+
+		case MCL_DC_Power:
+			tx_DCPower();
+		break;
+
+		case MCL_Version:
+			tx_Version();
+		break;
+
+		case MCL_Hash:
 			tx_HASH();
+		break;
+
+		case MCL_UID:
+			tx_UID();
 		break;
 	}
 }
@@ -154,7 +286,7 @@ void SCEN2_CAN_handler(void)
 	if (chVTTimeElapsedSinceX(can_basic_update) > MS2ST(CAN_DELAY_BASIC))
 	{
 		can_basic_update = chVTGetSystemTime();
-		tx_BATTVOLTAGE();
+		tx_Voltages();
 	}
 
 	if ((starting_up) && (chVTTimeElapsedSinceX(start_up_timer) > MS2ST(START_UP_TIME)))
