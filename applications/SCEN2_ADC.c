@@ -9,13 +9,13 @@
 #include "SCEN2_types.h"
 #include "SCEN2_settings.h"
 
-struct Analog_t analog;
+struct Analog_IO_t analog_IO;
 
 
 void SCEN2_ADC_handler(void)
 {
 	// Water temperature measurement -> Sensor unknown
-	analog.temp_water = ADC_Value[ADC_IND_TEMP_W];
+	analog_IO.temp_water = ADC_Value[ADC_IND_TEMP_W];
 
 	// Water pressure and diving depth measurement
 	uint32_t tmp_L = ADC_Value[ADC_IND_PRESSURE];
@@ -23,25 +23,25 @@ void SCEN2_ADC_handler(void)
 		errors.water_pressure_error = true;
 	else
 		errors.water_pressure_error = false;
-	analog.pressure = tmp_L*0.00313313802083 - 1.25;
-	analog.depth = analog.pressure*9.807;
+	analog_IO.pressure = tmp_L*0.00313313802083 - 1.25;
+	analog_IO.depth = analog_IO.pressure*9.807;
 
 	// power stage temperature measurement
-	analog.temp_MOS = mc_interface_temp_fet_filtered();
+	analog_IO.temp_MOS = mc_interface_temp_fet_filtered();
 
 	// motor temperature measurement
-	analog.temp_motor = mc_interface_temp_motor_filtered();
+	analog_IO.temp_motor = mc_interface_temp_motor_filtered();
 
 	// intermediate circuit voltage measurement
-	analog.U_in = GET_INPUT_VOLTAGE();
+	analog_IO.U_in = GET_INPUT_VOLTAGE();
 
 	// charge port voltage and current measurement
-	analog.U_charge = ADC_VOLTS(ADC_IND_U_CHG)*0.0434142752;
-	analog.I_charge = ADC_VOLTS(ADC_IND_I_CHG)*50;
+	analog_IO.U_charge = ADC_VOLTS(ADC_IND_U_CHG)*0.0434142752;
+	analog_IO.I_charge = ADC_VOLTS(ADC_IND_I_CHG)*50;
 
-	analog.water_ingress = ADC_VOLTS(ADC_IND_ING);
+	analog_IO.water_ingress = ADC_VOLTS(ADC_IND_ING);
 	// check if water ingress is tripped
-	if (analog.water_ingress < LEAKAGE_THRESHOLD)
+	if (analog_IO.water_ingress < LEAKAGE_THRESHOLD)
 		errors.water_ingress_error = true;
 	else
 		errors.water_ingress_error = false;

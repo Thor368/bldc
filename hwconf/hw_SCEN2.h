@@ -46,13 +46,21 @@
 #define TRIG_SPLY_TOG()			palTogglePad(GPIOE, 3)
 
 #define BAT_SB_SPLY_ON()		palSetPad(GPIOE, 4)
-#define BAT_SB_SPLY_OFF()		padClearPad(GPIOE, 4)
+#define BAT_SB_SPLY_OFF()		palClearPad(GPIOE, 4)
 
 #define BAT_BB_SPLY_ON()		palSetPad(GPIOE, 5)
-#define BAT_BB_SPLY_OFF()		padClearPad(GPIOE, 5)
+#define BAT_BB_SPLY_OFF()		palClearPad(GPIOE, 5)
 
 #define CAN_CP_ON()				palSetPad(GPIOB, 11)
-#define CAN_CP_OFF()			padClearPad(GPIOB, 11)
+#define CAN_CP_OFF()			palClearPad(GPIOB, 11)
+
+#define CHG_ENABLE()			palSetPad(GPIOB, 10)
+#define CHG_DISABLE()			palClearPad(GPIOB, 10)
+
+#define BUTTON_SILVER()			palReadPad(GPIOD, 3)
+#define BUTTON_GREEN()			palReadPad(GPIOD, 2)
+#define BUTTON_BLUE()			palReadPad(GPIOA, 0)
+#define BUTTON_RED()			palReadPad(GPIOE, 15)
 
 // ADC
 #define HW_ADC_CHANNELS			15

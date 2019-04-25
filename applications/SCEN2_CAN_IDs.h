@@ -8,7 +8,7 @@
 #ifndef SCEN2_CAN_IDS_H_
 #define SCEN2_CAN_IDS_H_
 
-#define MCL_CAN_ID_Basic_wr				0x31000
+#define MCL_CAN_ID_base_wr				0x31000
 #define MCL_ThrowBattOff_wr				0x31002
 #define MCL_UID							0x31004
 #define MCL_Version						0x31006
@@ -16,7 +16,7 @@
 #define MCL_Reset						0x3100A
 #define MCL_Jump_Bootloader				0x3100C
 
-#define MCL_Buttons_Basic				0x31011
+#define MCL_Buttons						0x31011
 #define MCL_Trigger1					0x31013
 #define MCL_Trigger2					0x31015
 #define MCL_Voltages					0x31017

@@ -10,8 +10,9 @@
 
 
 #include <stdbool.h>
+#include <stdint.h>
 
-struct Analog_t
+struct Analog_IO_t
 {
 	float temp_water;  // C
 	float temp_MOS;  // C
@@ -23,7 +24,35 @@ struct Analog_t
 	float water_ingress;  // V
 	float depth;  // m
 };
-extern struct Analog_t analog;
+extern struct Analog_IO_t analog_IO;
+
+struct Digital_IO_t
+{
+	union
+	{
+		struct
+		{
+			uint8_t silver;
+			uint8_t green;
+			uint8_t blue;
+			uint8_t red;
+		};
+		uint32_t all;
+	} buttons;
+
+	union
+	{
+		struct
+		{
+			bool T1A;
+			bool T1B;
+			bool T2A;
+			bool T2B;
+		};
+		uint32_t all;
+	} trigger;
+};
+extern struct Digital_IO_t digital_IO, can_IO;
 
 struct Errors_t
 {

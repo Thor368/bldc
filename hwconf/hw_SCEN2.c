@@ -45,13 +45,11 @@ void hw_init_gpio(void) {
 	palSetPadMode(GPIOE, 0,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
-	CAN_STB_LO();
 
 	// CAN_CP_ON
 	palSetPadMode(GPIOB, 11,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
-	CAN_CP_ON();
 
 	// LED
 	palSetPadMode(GPIOE, 2,
@@ -72,6 +70,17 @@ void hw_init_gpio(void) {
 	palSetPadMode(GPIOE, 5,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+
+	// Charge Enable/Disable
+	palSetPadMode(GPIOB, 10,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
+
+	// Button inputs
+	palSetPadMode(GPIOD, 3, PAL_MODE_INPUT_PULLUP);  // silver
+	palSetPadMode(GPIOD, 2, PAL_MODE_INPUT_PULLUP);  // green
+	palSetPadMode(GPIOA, 0, PAL_MODE_INPUT_PULLUP);  // blue
+	palSetPadMode(GPIOE, 15, PAL_MODE_INPUT_PULLUP);  // red
 
 	// GPIOA Configuration: Channel 1 to 3 as alternate function push-pull
 	palSetPadMode(GPIOA, 8, PAL_MODE_ALTERNATE(GPIO_AF_TIM1) |

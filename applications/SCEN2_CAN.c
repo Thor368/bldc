@@ -25,31 +25,33 @@
 systime_t can_basic_update;
 systime_t start_up_timer;
 //mc_configuration *c_conf;
+struct Digital_IO_t can_IO;
 
 bool starting_up = false;
-
 float speed_save = 0;
+
+uint32_t CAN_base = 0;
 
 void tx_ChargeCurrent(void)
 {
 	float data[1];
-	data[0] = analog.I_charge;
-	comm_can_transmit_eid(MCL_ChargeCurrent, (uint8_t *) &data, sizeof(data));
+	data[0] = analog_IO.I_charge;
+	comm_can_transmit_eid(MCL_ChargeCurrent + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_LeakageSensor(void)
 {
 	uint8_t data[5];
-	*((float *) &data[0]) = analog.water_ingress;
+	*((float *) &data[0]) = analog_IO.water_ingress;
 	data[4] = errors.water_ingress_error;
-	comm_can_transmit_eid(MCL_LeakageSensor, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_LeakageSensor + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_LeakageSensorThreshold(void)
 {
 	float data[1];
 	data[0] = LEAKAGE_THRESHOLD;
-	comm_can_transmit_eid(MCL_LeakageSensorThreshold_rd, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_LeakageSensorThreshold_rd + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_MC_PID(void)
@@ -59,15 +61,15 @@ void tx_MC_PID(void)
 	data[0] = (uint16_t) lround(conf->p_pid_kp);
 	data[1] = (uint16_t) lround(conf->p_pid_ki);
 	data[2] = (uint16_t) lround(conf->p_pid_kd);
-	comm_can_transmit_eid(MCL_MC_PID_rd, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_MC_PID_rd + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_Voltages(void)
 {
 	float data[2];
-	data[0] = analog.U_in;
-	data[1] = analog.U_charge;
-	comm_can_transmit_eid(MCL_Voltages, (uint8_t *) &data, sizeof(data));
+	data[0] = analog_IO.U_in;
+	data[1] = analog_IO.U_charge;
+	comm_can_transmit_eid(MCL_Voltages + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_MotorCurrents(void)
@@ -75,15 +77,15 @@ void tx_MotorCurrents(void)
 	float data[2];
 	data[0] = mc_interface_get_tot_current_filtered();
 	data[1] = mc_interface_get_duty_cycle_now();
-	comm_can_transmit_eid(MCL_MotorCurrents, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_MotorCurrents + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_Temperatures(void)
 {
 	float data[2];
-	data[0] = analog.temp_MOS;
-	data[1] = analog.temp_water;
-	comm_can_transmit_eid(MCL_Temperatures, (uint8_t *) &data, sizeof(data));
+	data[0] = analog_IO.temp_MOS;
+	data[1] = analog_IO.temp_water;
+	comm_can_transmit_eid(MCL_Temperatures + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_Temperature_Limits(void)
@@ -92,14 +94,14 @@ void tx_Temperature_Limits(void)
 	const volatile mc_configuration *conf = mc_interface_get_configuration();
 	data[0] = conf->l_temp_fet_start;
 	data[1] = 0; // Watertemp limit: ToDo
-	comm_can_transmit_eid(MCL_Temperature_Limits_rd, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_Temperature_Limits_rd + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_MotorTemp(void)
 {
 	float data[1];
-	data[0] = analog.temp_motor;
-	comm_can_transmit_eid(MCL_MotorTemp, (uint8_t *) &data, sizeof(data));
+	data[0] = analog_IO.temp_motor;
+	comm_can_transmit_eid(MCL_MotorTemp + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_MotorTemp_Limit(void)
@@ -107,42 +109,62 @@ void tx_MotorTemp_Limit(void)
 	float data[1];
 	const volatile mc_configuration *conf = mc_interface_get_configuration();
 	data[0] = conf->l_temp_motor_start;
-	comm_can_transmit_eid(MCL_MotorTemp_Limit_rd, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_MotorTemp_Limit_rd + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_MotorSpeed(void)
 {
 	float data[1];
 	data[0] = mc_interface_get_rpm()/POLE_PAIR_COUNT;
-	comm_can_transmit_eid(MCL_MotorSpeed_rd, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_MotorSpeed_rd + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_Preassure(void)
 {
 	float data[1];
-	data[0] = analog.pressure;
-	comm_can_transmit_eid(MCL_Pressure, (uint8_t *) &data, sizeof(data));
+	data[0] = analog_IO.pressure;
+	comm_can_transmit_eid(MCL_Pressure + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_DCPower(void)
 {
 	float data[1];
 	data[0] = mc_interface_get_tot_current_in_filtered()*GET_INPUT_VOLTAGE();
-	comm_can_transmit_eid(MCL_DC_Power, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_DC_Power + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_Trigger1(void)
 {
-	float data[1];
-	data[0] = 0;
-	comm_can_transmit_eid(MCL_Trigger1, (uint8_t *) &data, sizeof(data));
+	float data[8];
+
+	if (can_IO.trigger.T1A)
+		*(float *) &data[0] = 1;
+	else
+		*(float *) &data[0] = 0;
+
+	if (can_IO.trigger.T1B)
+		*(float *) &data[4] = 1;
+	else
+		*(float *) &data[4] = 0;
+
+	comm_can_transmit_eid(MCL_Trigger1 + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_Trigger2(void)
 {
-	float data[1];
-	data[0] = 0;
-	comm_can_transmit_eid(MCL_Trigger2, (uint8_t *) &data, sizeof(data));
+	float data[8];
+
+	if (can_IO.trigger.T2A)
+		*(float *) &data[0] = 1;
+	else
+		*(float *) &data[0] = 0;
+
+	if (can_IO.trigger.T2B)
+		*(float *) &data[4] = 1;
+	else
+		*(float *) &data[4] = 0;
+
+	comm_can_transmit_eid(MCL_Trigger2 + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_Version(void)
@@ -151,13 +173,13 @@ void tx_Version(void)
 	data[0] = major_release;
 	data[1] = minor_release;
 	data[2] = branch;
-	comm_can_transmit_eid(MCL_Version, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_Version + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_HASH(void)
 {
 	uint64_t githash = HASH;
-	comm_can_transmit_eid(MCL_Hash, (uint8_t *) &githash, 7);
+	comm_can_transmit_eid(MCL_Hash + CAN_base, (uint8_t *) &githash, 7);
 }
 
 void tx_UID(void)
@@ -169,7 +191,21 @@ void tx_UID(void)
 
 	*((uint64_t *) &UID[0]) += *((uint64_t *) &UID[6]);  // shrink UDI from 96bits to 48bits
 
-	comm_can_transmit_eid(MCL_UID, (uint8_t *) &UID, 6);
+	comm_can_transmit_eid(MCL_UID + CAN_base, (uint8_t *) &UID, 6);
+}
+
+void tx_Buttons(void)
+{
+	uint8_t buttons[4];
+
+	buttons[0] = can_IO.buttons.silver;
+	buttons[1] = can_IO.buttons.green;
+	buttons[2] = can_IO.buttons.blue;
+	buttons[3] = can_IO.buttons.red;
+
+	can_IO.buttons.all = 0;
+
+	comm_can_transmit_eid(MCL_Buttons + CAN_base, (uint8_t *) &buttons, 6);
 }
 
 static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
@@ -178,33 +214,70 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 	static mc_configuration conf;
 	(void) len;
 
+	if ((id >=  + CAN_base) && (id <  + (CAN_base + 0x1000)))
+		id -= CAN_base;
+	else
+		return;
+
 	switch (id)
 	{
-		case MCL_MotorSpeed_wr:
-			speed = *((int16_t *) data)*POLE_PAIR_COUNT;
-
-			if (abs(speed - speed_save) > 1)  // floats...
+		case MCL_CAN_ID_base_wr:
+			if (data[0] == 15)
 			{
-				if (speed_save < 1)  // startup
-				{
-					mc_interface_set_current(10);
-					start_up_timer = chVTGetSystemTime();
-					starting_up = true;
-				}
-				else if (!starting_up)
-					mc_interface_set_pid_speed(speed);
+				if (data[1] == 0)
+					CAN_base = 0;
+				else if (data[1] == 1)
+					CAN_base = 0x1000;
+				else if (data[1] == 2)
+					CAN_base = 0x2000;
 			}
-
-			speed_save = speed;
-			timeout_reset();
 		break;
 
-		case MCL_MotorSpeed_rd:
-			tx_MotorSpeed();
+		case MCL_ThrowBattOff_wr:
+			if (*((uint16_t *) &data[0]) == 666)
+			{
+				// disable power to AKKs
+			}
 		break;
 
-		case MCL_MotorCurrents:
-			tx_MotorCurrents();
+		case MCL_UID:
+			tx_UID();
+		break;
+
+		case MCL_Version:
+			tx_Version();
+		break;
+
+		case MCL_Hash:
+			tx_HASH();
+		break;
+
+		case MCL_Reset:
+			__disable_irq();  // watchdog will reset system
+			while(1);
+		break;
+
+		case MCL_Jump_Bootloader:
+			if (*((uint16_t *) &data[0]) == 666)
+			{
+				// jump to bootloader
+			}
+		break;
+
+		case MCL_Buttons:
+			tx_Buttons();
+		break;
+
+		case MCL_Trigger1:
+			tx_Trigger1();
+		break;
+
+		case MCL_Trigger2:
+			tx_Trigger2();
+		break;
+
+		case MCL_Voltages:
+			tx_Voltages();
 		break;
 
 		case MCL_Temperatures:
@@ -250,39 +323,85 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 			tx_Preassure();
 		break;
 
-		case MCL_Trigger1:
-			tx_Trigger1();
+		case MCL_LeakageSensor:
+			tx_LeakageSensor();
 		break;
 
-		case MCL_Trigger2:
-			tx_Trigger2();
+		case MCL_LeakageSensorThreshold_wr:
+			// ToDo: NV memory
 		break;
 
-		case MCL_Reset:
-			__disable_irq();  // watchdog will reset system
-			while(1);
+		case MCL_LeakageSensorThreshold_rd:
+			tx_LeakageSensorThreshold();
 		break;
 
 		case MCL_DC_Power:
 			tx_DCPower();
 		break;
 
-		case MCL_Version:
-			tx_Version();
+		case MCL_MotorSpeed_wr:
+			speed = *((int16_t *) data)*POLE_PAIR_COUNT;
+
+			if (abs(speed - speed_save) > 1)  // floats...
+			{
+				if (speed_save < 1)  // startup
+				{
+					mc_interface_set_current(10);
+					start_up_timer = chVTGetSystemTime();
+					starting_up = true;
+				}
+				else if (!starting_up)
+					mc_interface_set_pid_speed(speed);
+			}
+
+			speed_save = speed;
+			timeout_reset();
 		break;
 
-		case MCL_Hash:
-			tx_HASH();
+		case MCL_MotorSpeed_rd:
+			tx_MotorSpeed();
 		break;
 
-		case MCL_UID:
-			tx_UID();
+		case MCL_MotorCurrents:
+			tx_MotorCurrents();
+		break;
+
+		case MCL_MC_PID_wr:
+			conf = *mc_interface_get_configuration();
+
+//			ToDo:
+//			data[0] = (uint16_t) lround(conf->p_pid_kp);
+//			data[1] = (uint16_t) lround(conf->p_pid_ki);
+//			data[2] = (uint16_t) lround(conf->p_pid_kd);
+
+			conf_general_store_mc_configuration(&conf);
+			mc_interface_set_configuration(&conf);
+			chThdSleepMilliseconds(200);
+		break;
+
+		case MCL_MC_PID_rd:
+			tx_MC_PID();
+		break;
+
+		case MCL_ChargeMode_wr:
+// 			ToDo: Charge Statemachine
+		break;
+
+		case MCL_ChargeMode:
+// 			ToDo: Charge Statemachine
+		break;
+
+		case MCL_ChargeCurrent:
+			tx_ChargeCurrent();
 		break;
 	}
 }
 
 void SCEN2_CAN_handler(void)
 {
+	if (can_IO.buttons.all)
+		tx_Buttons();
+
 	if (chVTTimeElapsedSinceX(can_basic_update) > MS2ST(CAN_DELAY_BASIC))
 	{
 		can_basic_update = chVTGetSystemTime();
