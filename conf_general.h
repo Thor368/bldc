@@ -67,8 +67,8 @@
 // Benjamins first HW60 PCB with PB5 and PB6 swapped
 //#define HW60_VEDDER_FIRST_PCB
 
-#define HW_SOURCE "hw_60.c"
-#define HW_HEADER "hw_60.h"
+//#define HW_SOURCE "hw_60.c"
+//#define HW_HEADER "hw_60.h"
 
 //#define HW_SOURCE "hw_r2.c"
 //#define HW_HEADER "hw_r2.h"
@@ -108,6 +108,9 @@
 
 //#define HW_SOURCE "hw_uavc_basic.c"
 //#define HW_HEADER "hw_uavc_basic.h"
+
+#define HW_SOURCE "hw_HSWR3.c"
+#define HW_HEADER "hw_HSWR3.h"
 #endif
 
 #ifndef HW_SOURCE
