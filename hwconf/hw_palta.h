@@ -23,11 +23,17 @@
 #define HW_NAME					"PALTA"
 
 #define PALTA_USE_DAC
+//#define PALTA_USE_MOTOR_TEMP
+#define HW_PALTA_USE_LINE_TO_LINE
+#define	HW_PALTA_FORCE_HIGH_CURRENT_MEASUREMENTS
 #define HW_VERSION_PALTA
+
+//#define HW_PALTA_REV_B
 
 // HW properties
 #define HW_HAS_3_SHUNTS
 #define HW_HAS_PHASE_SHUNTS
+#define HW_HAS_SIN_COS_ENCODER
 
 // Macros
 #define ENABLE_GATE()			palSetPad(GPIOC, 14)
@@ -38,8 +44,14 @@
 
 #define LED_GREEN_ON()			palSetPad(GPIOB, 2)
 #define LED_GREEN_OFF()			palClearPad(GPIOB, 2)
+
+#ifdef HW_PALTA_REV_B
+#define LED_RED_ON()			palSetPad(GPIOB, 1)
+#define LED_RED_OFF()			palClearPad(GPIOB, 1)
+#else
 #define LED_RED_ON()			palSetPad(GPIOB, 11)
 #define LED_RED_OFF()			palClearPad(GPIOB, 11)
+#endif
 
 /*
  * ADC Vector
@@ -87,17 +99,26 @@
 #define V_REG					3.3
 #endif
 #ifndef VIN_R1
+#ifdef HW_PALTA_REV_B
+#define VIN_R1					112.15    //TF since RevC = 113.15V/V
+#else
 #define VIN_R1					184.0    //TF since RevC = 185V/V
+#endif
 #endif
 #ifndef VIN_R2
 #define VIN_R2					1.0
 #endif
 #ifndef CURRENT_AMP_GAIN
 #define CURRENT_AMP_GAIN		0.003761	//Transfer Function [V/A] for ISB-425-A
+//#define CURRENT_AMP_GAIN		0.001249	//Transfer Function [V/A] for HTFS 800-P
 #endif
 #ifndef CURRENT_SHUNT_RES
 #define CURRENT_SHUNT_RES		1.000 // Unity gain so we use a single transfer function defined as CURRENT_AMP_GAIN
 #endif
+
+#define HW_MAX_CURRENT_OFFSET					620		// More than this offset (0.5 Vdc) trips the offset fault (likely a sensor disconnected)
+#define MCCONF_MAX_CURRENT_UNBALANCE			130.0	// [Amp] More than this unbalance trips the fault (likely a sensor disconnected)
+#define MCCONF_MAX_CURRENT_UNBALANCE_RATE		0.3		// Fault if more than 30% of the time the motor is unbalanced
 
 // Input voltage
 #define GET_INPUT_VOLTAGE()		((V_REG / 4095.0) * (float)ADC_Value[ADC_IND_VIN_SENS] * ((VIN_R1 + VIN_R2) / VIN_R2))
@@ -106,14 +127,30 @@
 #define NTC_RES(adc_val)		((4095.0 * 10000.0) / adc_val - 10000.0)
 #define NTC_TEMP(adc_ind)		(1.0 / ((logf(NTC_RES(ADC_Value[adc_ind]) / 10000.0) / 3434.0) + (1.0 / 298.15)) - 273.15)
 
-#define NTC_RES_MOTOR(adc_val)	(10000.0 / ((4095.0 / (float)adc_val) - 1.0)) // Motor temp sensor on low side
-#define NTC_TEMP_MOTOR(beta)	(1.0 / ((logf(NTC_RES_MOTOR(ADC_Value[ADC_IND_TEMP_MOTOR]) / 10000.0) / beta) + (1.0 / 298.15)) - 273.15)
+#define NTC_RES_MOTOR(adc_val)	((4095.0 * 10000.0) / adc_val - 10000.0)
 
+#ifdef PALTA_USE_MOTOR_TEMP
+#define NTC_TEMP_MOTOR(beta)	(1.0 / ((logf(NTC_RES_MOTOR(ADC_Value[ADC_IND_TEMP_MOTOR]) / 10000.0) / beta) + (1.0 / 298.15)) - 273.15)
+#else
+#define NTC_TEMP_MOTOR(beta)	25.0
+#endif
 // Voltage on ADC channel
 #define ADC_VOLTS(ch)			((float)ADC_Value[ch] / 4096.0 * V_REG)
 
+// Sin/Cos Encoder signals
+#define ENCODER_SIN_VOLTS			ADC_VOLTS(ADC_IND_EXT)
+#define ENCODER_COS_VOLTS			ADC_VOLTS(ADC_IND_EXT2)
+
+#ifdef HW_PALTA_REV_B
+#define GET_GATE_DRIVER_SUPPLY_VOLTAGE()	15.0
+#else
 // Gate driver power supply output voltage
 #define GET_GATE_DRIVER_SUPPLY_VOLTAGE()	((float)ADC_VOLTS(ADC_IND_VOUT_GATE_DRV) * 11.0)
+#endif
+
+#define ANGLE_TO_DAC_VALUE(angle)	( angle * 512.0 + 0x800 )//angle between -pi to pi
+#define CURRENT_TO_DAC_VALUE(current)	( current * 70.0  + 0x800 )//current
+#define VOLTAGE_TO_DAC_VALUE(voltage)	( voltage * 40.0 + 0x800 )//angle between -pi to pi
 
 // Double samples in beginning and end for positive current measurement.
 // Useful when the shunt sense traces have noise that causes offset.
@@ -126,9 +163,6 @@
 #ifndef CURR3_DOUBLE_SAMPLE
 #define CURR3_DOUBLE_SAMPLE		0
 #endif
-
-// Number of servo outputs
-#define HW_SERVO_NUM			2
 
 // UART Peripheral
 #define HW_UART_DEV				SD3
@@ -234,7 +268,7 @@
 #define HW_LIM_CURRENT				-200.0, 200.0
 #define HW_LIM_CURRENT_IN			-100.0, 100.0
 #define HW_LIM_CURRENT_ABS			0.0, 230.0
-#define HW_LIM_VIN					6.0, 85.0
+#define HW_LIM_VIN					6.0, 400.0
 #define HW_LIM_ERPM					-100e3, 100e3
 #define HW_LIM_DUTY_MIN				0.0, 0.1
 #define HW_LIM_DUTY_MAX				0.0, 1.0
