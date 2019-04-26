@@ -14,7 +14,7 @@
 
 struct Digital_IO_t digital_IO;
 
-void SCEN2_dio_init(void)
+void SCEN2_DIO_init(void)
 {
 	CHG_ENABLE();
 	CAN_CP_ON();
@@ -30,7 +30,7 @@ void SCEN2_dio_init(void)
 	digital_IO.trigger.T2B = false;
 }
 
-void SCEN2_dio_handler(void)
+void SCEN2_DIO_handler(void)
 {
 	if ((!digital_IO.buttons.silver) && (BUTTON_SILVER()))
 	{
@@ -57,7 +57,7 @@ void SCEN2_dio_handler(void)
 	}
 }
 
-void SCEN_button_handler(void)
+void SCEN2_button_handler(void)
 {
 	if (digital_IO.buttons.silver)
 	{

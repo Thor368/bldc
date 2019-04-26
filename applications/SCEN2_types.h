@@ -19,7 +19,7 @@ struct Analog_IO_t
 	float temp_motor;  // C
 	float U_in;  // V
 	float U_charge;  // V
-	float I_charge;  // A
+	float I_charge_raw;  // A
 	float pressure;  // bar
 	float water_ingress;  // V
 	float depth;  // m
@@ -60,5 +60,17 @@ struct Errors_t
 	bool water_ingress_error;
 };
 extern struct Errors_t errors;
+
+struct Battery_t
+{
+	uint32_t CAN_offset;
+
+	bool OK_to_charge;
+	bool OK_to_discharge;
+
+	float U;
+	float SOC;
+};
+extern struct Battery_t batteries[2];
 
 #endif /* APPLICATIONS_SCEN2_TYPES_H_ */

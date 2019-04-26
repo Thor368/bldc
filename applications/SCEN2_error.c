@@ -11,7 +11,7 @@
 
 struct Errors_t errors;
 
-void SCEN2_error_handler(void)
+void SCEN2_Error_handler(void)
 {
 
 }

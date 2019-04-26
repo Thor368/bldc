@@ -35,7 +35,7 @@ uint32_t CAN_base = 0;
 void tx_ChargeCurrent(void)
 {
 	float data[1];
-	data[0] = analog_IO.I_charge;
+	data[0] = analog_IO.I_charge_raw;
 	comm_can_transmit_eid(MCL_ChargeCurrent + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
@@ -58,9 +58,9 @@ void tx_MC_PID(void)
 {
 	uint16_t data[3];
 	const volatile mc_configuration *conf = mc_interface_get_configuration();
-	data[0] = (uint16_t) lround(conf->p_pid_kp);
-	data[1] = (uint16_t) lround(conf->p_pid_ki);
-	data[2] = (uint16_t) lround(conf->p_pid_kd);
+	data[0] = (uint16_t) lround(conf->p_pid_kp)*10000;
+	data[1] = (uint16_t) lround(conf->p_pid_ki)*10000;
+	data[2] = (uint16_t) lround(conf->p_pid_kd)*10000;
 	comm_can_transmit_eid(MCL_MC_PID_rd + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
@@ -369,10 +369,9 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 		case MCL_MC_PID_wr:
 			conf = *mc_interface_get_configuration();
 
-//			ToDo:
-//			data[0] = (uint16_t) lround(conf->p_pid_kp);
-//			data[1] = (uint16_t) lround(conf->p_pid_ki);
-//			data[2] = (uint16_t) lround(conf->p_pid_kd);
+			conf.p_pid_kp = (*(uint16_t *) &data[0])/10000;
+			conf.p_pid_ki = (*(uint16_t *) &data[2])/10000;
+			conf.p_pid_kd = (*(uint16_t *) &data[4])/10000;
 
 			conf_general_store_mc_configuration(&conf);
 			mc_interface_set_configuration(&conf);

@@ -2,8 +2,10 @@
 
 #include "SCEN2_settings.h"
 #include "SCEN2_ADC.h"
+#include "SCEN2_digital_IO.h"
 #include "SCEN2_error.h"
 #include "SCEN2_CAN.h"
+#include "SCEN2_charge.h"
 
 #include "ch.h"
 #include "hal.h"
@@ -44,6 +46,8 @@ static THD_FUNCTION(custom_thread, arg) {
 	is_running = true;
 
 	SCEN2_CAN_init();
+	SCEN2_DIO_init();
+	SCEN2_Charge_init();
 
 	for(;;)
 	{
@@ -54,8 +58,11 @@ static THD_FUNCTION(custom_thread, arg) {
 		}
 
 		SCEN2_ADC_handler();
-		SCEN2_error_handler();
+		SCEN2_Error_handler();
 		SCEN2_CAN_handler();
+		SCEN2_DIO_handler();
+		SCEN2_Charge_init();
+
 
 		chThdSleep(1);
 	}

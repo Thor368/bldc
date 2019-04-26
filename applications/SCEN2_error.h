@@ -8,6 +8,6 @@
 #ifndef APPLICATIONS_SCEN2_ERROR_H_
 #define APPLICATIONS_SCEN2_ERROR_H_
 
-void SCEN2_error_handler(void);
+void SCEN2_Error_handler(void);
 
 #endif /* APPLICATIONS_SCEN2_ERROR_H_ */
