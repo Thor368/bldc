@@ -79,10 +79,13 @@
 #define VIN_R2					12000.0
 #endif
 #ifndef CURRENT_AMP_GAIN
-#define CURRENT_AMP_GAIN		-20.0
+#define CURRENT_AMP_GAIN		20.0
 #endif
 #ifndef CURRENT_SHUNT_RES
 #define CURRENT_SHUNT_RES		0.0005
+#endif
+#ifndef INVERTED_SHUNT_POLARITY
+#define INVERTED_SHUNT_POLARITY
 #endif
 
 // Input voltage
