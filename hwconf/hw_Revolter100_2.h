@@ -15,17 +15,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     */
 
-#ifndef HW_REVOLTER100_1_H_
-#define HW_REVOLTER100_1_H_
+#ifndef HW_R100_2_H_
+#define HW_R100_2_H_
 
-#define HW_NAME					"Revolter100 V1"
+#define HW_NAME					"Revolter100 V2"
 
 // Macros
-#define ENABLE_GATE()			palSetPad(GPIOC, 10)
-#define DISABLE_GATE()			palClearPad(GPIOC, 10)
-#define DCCAL_ON()				palSetPad(GPIOB, 12)
-#define DCCAL_OFF()				palClearPad(GPIOB, 12)
-#define IS_DRV_FAULT()			(!palReadPad(GPIOC, 12))
+#define ENABLE_GATE()			palClearPad(GPIOC, 10)
+#define DISABLE_GATE()			palSetPad(GPIOC, 10)
 
 #define LED_GREEN_ON()			palSetPad(GPIOC, 4)
 #define LED_GREEN_OFF()			palClearPad(GPIOC, 4)
@@ -73,10 +70,10 @@
 #define V_REG					3.3
 #endif
 #ifndef VIN_R1
-#define VIN_R1					220000.0
+#define VIN_R1					100000.0
 #endif
 #ifndef VIN_R2
-#define VIN_R2					12000.0
+#define VIN_R2					3300.0
 #endif
 #ifndef CURRENT_AMP_GAIN
 #define CURRENT_AMP_GAIN		20.0
@@ -109,9 +106,6 @@
 #ifndef CURR2_DOUBLE_SAMPLE
 #define CURR2_DOUBLE_SAMPLE		0
 #endif
-
-// Number of servo outputs
-#define HW_SERVO_NUM			2
 
 // UART Peripheral
 #define HW_UART_DEV				SD6
@@ -179,14 +173,19 @@
 #define READ_HALL2()			palReadPad(HW_HALL_ENC_GPIO2, HW_HALL_ENC_PIN2)
 #define READ_HALL3()			palReadPad(HW_HALL_ENC_GPIO3, HW_HALL_ENC_PIN3)
 
+// Default setting overrides
+#ifndef MCCONF_DEFAULT_MOTOR_TYPE
+#define MCCONF_DEFAULT_MOTOR_TYPE		MOTOR_TYPE_FOC
+#endif
+
 // Setting limits
-#define HW_LIM_CURRENT			-100.0, 100.0
-#define HW_LIM_CURRENT_IN		-100.0, 100.0
-#define HW_LIM_CURRENT_ABS		0.0, 150.0
-#define HW_LIM_VIN				6.0, 57.0
+#define HW_LIM_CURRENT			-200.0, 200.0
+#define HW_LIM_CURRENT_IN		-200.0, 200.0
+#define HW_LIM_CURRENT_ABS		0.0, 230.0
+#define HW_LIM_VIN				6.0, 100.0
 #define HW_LIM_ERPM				-200e3, 200e3
 #define HW_LIM_DUTY_MIN			0.0, 0.1
 #define HW_LIM_DUTY_MAX			0.0, 0.95
 #define HW_LIM_TEMP_FET			-40.0, 110.0
 
-#endif /* HW_410_H_ */
+#endif /* HW_R100_2_H_ */

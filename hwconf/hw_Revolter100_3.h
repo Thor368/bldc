@@ -26,12 +26,6 @@
 #define HW_HAS_3_SHUNTS
 
 // Macros
-#define ENABLE_GATE()
-#define DISABLE_GATE()
-#define DCCAL_ON()
-#define DCCAL_OFF()
-#define IS_DRV_FAULT()			0
-
 #define LED_GREEN_ON()			palSetPad(GPIOB, 0)
 #define LED_GREEN_OFF()			palClearPad(GPIOB, 0)
 #define LED_RED_ON()			palSetPad(GPIOB, 1)
