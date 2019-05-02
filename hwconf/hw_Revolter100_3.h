@@ -31,8 +31,15 @@
 #define LED_RED_ON()			palSetPad(GPIOB, 1)
 #define LED_RED_OFF()			palClearPad(GPIOB, 1)
 
-#define CURRENT_FILTER_ON()
-#define CURRENT_FILTER_OFF()
+// Switch on current filter if a permanent
+// NRF24 cannot be found, as the later
+// HW60 has changed one of the permanent NRF
+// pins to the current filter activation pin.
+#define HW_PERMANENT_NRF_FAILED_HOOK() \
+			palSetPadMode(GPIOD, 2, \
+			PAL_MODE_OUTPUT_PUSHPULL | \
+			PAL_STM32_OSPEED_HIGHEST); \
+			CURRENT_FILTER_ON()
 
 /*
  * ADC Vector
@@ -93,7 +100,6 @@
 #ifndef INVERTED_SHUNT_POLARITY
 #define INVERTED_SHUNT_POLARITY
 #endif
-
 // Input voltage
 #define GET_INPUT_VOLTAGE()		((V_REG / 4095.0) * (float)ADC_Value[ADC_IND_VIN_SENS] * ((VIN_R1 + VIN_R2) / VIN_R2))
 
@@ -118,9 +124,6 @@
 #ifndef CURR3_DOUBLE_SAMPLE
 #define CURR3_DOUBLE_SAMPLE		0
 #endif
-
-// Number of servo outputs
-#define HW_SERVO_NUM			1
 
 // UART Peripheral
 #define HW_UART_DEV				SD3
@@ -204,10 +207,10 @@
 #define HW_LIM_CURRENT			-120.0, 120.0
 #define HW_LIM_CURRENT_IN		-120.0, 120.0
 #define HW_LIM_CURRENT_ABS		0.0, 160.0
-#define HW_LIM_VIN				6.0, 57.0
+#define HW_LIM_VIN				6.0, 100.0
 #define HW_LIM_ERPM				-200e3, 200e3
 #define HW_LIM_DUTY_MIN			0.0, 0.1
 #define HW_LIM_DUTY_MAX			0.0, 0.99
 #define HW_LIM_TEMP_FET			-40.0, 110.0
 
-#endif /* HW_60_H_ */
+#endif /* HW_REVOLTER100_3_H_ */

@@ -15,8 +15,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     */
 
-#ifndef HW_R100_2_H_
-#define HW_R100_2_H_
+#ifndef HW_REVOLTER100_2_H_
+#define HW_REVOLTER100_2_H_
 
 #define HW_NAME					"Revolter100 V2"
 
@@ -179,13 +179,13 @@
 #endif
 
 // Setting limits
-#define HW_LIM_CURRENT			-200.0, 200.0
-#define HW_LIM_CURRENT_IN		-200.0, 200.0
-#define HW_LIM_CURRENT_ABS		0.0, 230.0
+#define HW_LIM_CURRENT			-120.0, 120.0
+#define HW_LIM_CURRENT_IN		-120.0, 120.0
+#define HW_LIM_CURRENT_ABS		0.0, 160.0
 #define HW_LIM_VIN				6.0, 100.0
 #define HW_LIM_ERPM				-200e3, 200e3
 #define HW_LIM_DUTY_MIN			0.0, 0.1
 #define HW_LIM_DUTY_MAX			0.0, 0.95
 #define HW_LIM_TEMP_FET			-40.0, 110.0
 
-#endif /* HW_R100_2_H_ */
+#endif /* HW_REVOLTER100_2_H_ */
