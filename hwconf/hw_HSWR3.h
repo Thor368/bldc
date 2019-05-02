@@ -17,8 +17,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     */
 
-#ifndef HW_60_H_
-#define HW_60_H_
+#ifndef HW_HSWR3_H_
+#define HW_HSWR3_H_
 
 #define HW_NAME					"HSWR3"
 
@@ -26,10 +26,6 @@
 #define HW_HAS_3_SHUNTS
 
 // Macros
-#define DCCAL_ON()
-#define DCCAL_OFF()
-#define IS_DRV_FAULT()			0
-
 #define LED_GREEN_ON()			palSetPad(GPIOC, 10)
 #define LED_GREEN_OFF()			palClearPad(GPIOC, 10)
 #define LED_RED_ON()			palSetPad(GPIOC, 11)
@@ -95,7 +91,6 @@
 #define INVERTED_SHUNT_POLARITY
 #endif
 
-
 // Input voltage
 #define GET_INPUT_VOLTAGE()		((V_REG / 4095.0) * (float)ADC_Value[ADC_IND_VIN_SENS] * ((VIN_R1 + VIN_R2) / VIN_R2))
 
@@ -120,9 +115,6 @@
 #ifndef CURR3_DOUBLE_SAMPLE
 #define CURR3_DOUBLE_SAMPLE		0
 #endif
-
-// Number of servo outputs
-#define HW_SERVO_NUM			2
 
 // UART Peripheral
 #define HW_UART_DEV				SD3
@@ -206,10 +198,10 @@
 #define HW_LIM_CURRENT			-120.0, 120.0
 #define HW_LIM_CURRENT_IN		-120.0, 120.0
 #define HW_LIM_CURRENT_ABS		0.0, 160.0
-#define HW_LIM_VIN				6.0, 57.0
+#define HW_LIM_VIN				6.0, 200.0
 #define HW_LIM_ERPM				-200e3, 200e3
 #define HW_LIM_DUTY_MIN			0.0, 0.1
 #define HW_LIM_DUTY_MAX			0.0, 0.99
 #define HW_LIM_TEMP_FET			-40.0, 110.0
 
-#endif /* HW_60_H_ */
+#endif /* HW_HSWR3_H_ */

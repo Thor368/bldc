@@ -27,12 +27,23 @@
 							<option id="fr.ac6.managedbuild.option.gnu.cross.instructionSet.1481384050" name="Instruction Set" superClass="fr.ac6.managedbuild.option.gnu.cross.instructionSet"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="fr.ac6.managedbuild.targetPlatform.gnu.cross.1060604979" isAbstract="false" osList="all" superClass="fr.ac6.managedbuild.targetPlatform.gnu.cross"/>
 							<builder id="fr.ac6.managedbuild.builder.gnu.cross.1252802963" managedBuildOn="false" name="Gnu Make Builder.Default" superClass="fr.ac6.managedbuild.builder.gnu.cross"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.88133635" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler"/>
+							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.88133635" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler">
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.99142925" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c"/>
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s.1769014797" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s"/>
+							</tool>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.cpp.compiler.160813131" name="MCU G++ Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.cpp.compiler"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.883049375" name="MCU GCC Linker" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker"/>
+							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.883049375" name="MCU GCC Linker" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker">
+								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.395636263" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.cpp.linker.594647934" name="MCU G++ Linker" superClass="fr.ac6.managedbuild.tool.gnu.cross.cpp.linker"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.archiver.419521163" name="MCU GCC Archiver" superClass="fr.ac6.managedbuild.tool.gnu.archiver"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.assembler.302801571" name="MCU GCC Assembler" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler"/>
+							<tool id="fr.ac6.managedbuild.tool.gnu.cross.assembler.302801571" name="MCU GCC Assembler" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1619851444" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.assembler.input.245344411" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.input"/>
+							</tool>
 						</toolChain>
 					</folderInfo>
 				</configuration>
@@ -41,10 +52,11 @@
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="bldc.null.822092723" name="bldc"/>
+		<project id="bldc.null.1833334070" name="bldc"/>
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>

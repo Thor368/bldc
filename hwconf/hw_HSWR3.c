@@ -21,7 +21,6 @@
 #include "hal.h"
 #include "stm32f4xx_conf.h"
 #include "utils.h"
-#include "drv8301.h"
 
 // Variables
 static volatile bool i2c_running = false;
