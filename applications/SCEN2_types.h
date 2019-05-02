@@ -11,8 +11,9 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "hal.h"
 
-struct Analog_IO_t
+typedef struct
 {
 	float temp_water;  // C
 	float temp_MOS;  // C
@@ -20,13 +21,14 @@ struct Analog_IO_t
 	float U_in;  // V
 	float U_charge;  // V
 	float I_charge_raw;  // A
+	float I_charge_offset;  // A
 	float pressure;  // bar
 	float water_ingress;  // V
 	float depth;  // m
-};
-extern struct Analog_IO_t analog_IO;
+} Analog_IO_t;
+extern Analog_IO_t analog_IO;
 
-struct Digital_IO_t
+typedef struct
 {
 	union
 	{
@@ -51,26 +53,78 @@ struct Digital_IO_t
 		};
 		uint32_t all;
 	} trigger;
-};
-extern struct Digital_IO_t digital_IO, can_IO;
+} Digital_IO_t;
+extern Digital_IO_t digital_IO, can_IO;
 
-struct Errors_t
+typedef union
 {
-	bool water_pressure_error;
-	bool water_ingress_error;
-};
-extern struct Errors_t errors;
+	struct
+	{
+		bool water_pressure_error;
+		bool water_ingress_error;
+		bool battery_single_channel;
+		bool trigger_error;
+		bool charger_error;
+	};
 
-struct Battery_t
+	uint8_t all;
+} Errors_t;
+extern Errors_t errors;
+
+typedef struct
 {
-	uint32_t CAN_offset;
+	uint32_t offset;
+	systime_t time_last_seen;
+	bool active;
 
 	bool OK_to_charge;
 	bool OK_to_discharge;
 
-	float U;
 	float SOC;
-};
-extern struct Battery_t batteries[2];
+	float total_U;
+
+	union
+	{
+		struct
+		{
+			unsigned LTC_config_failed: 1;
+			unsigned Cell_temp_discharge_low: 1;
+			unsigned Cell_temp_discharge_high: 1;
+			unsigned Cell_temp_charge_low: 1;
+			unsigned Cell_temp_charge_high: 1;
+			unsigned Cell_U_discharge_low: 1;
+			unsigned Fuse_fault: 1;
+			unsigned reserved: 1;
+		};
+
+		uint8_t all;
+	} error_flags;
+
+	union
+	{
+		struct
+		{
+			unsigned Battery_full: 1;
+			unsigned Cell_U_high_warn1: 1;
+			unsigned Cell_U_high_warn2: 1;
+			unsigned Cell_dU_high: 1;
+			unsigned Discharge_I_high: 1;
+			unsigned Cell_U_below_flight: 1;
+			unsigned Cell_U_over_flight: 1;
+			unsigned LTC_ref_U_fault: 1;
+		};
+
+		uint8_t all;
+	} warning_flags;
+} Battery_t;
+extern Battery_t batteries[2];
+
+typedef enum
+{
+	no_charger,
+	charger_detected_no_ACK,
+	charger_detected_with_ACK
+} Charge_mode_t;
+extern Charge_mode_t charge_mode;
 
 #endif /* APPLICATIONS_SCEN2_TYPES_H_ */

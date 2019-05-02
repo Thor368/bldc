@@ -11,6 +11,7 @@
 
 #include "hal.h"
 #include "mc_interface.h"
+#include "SCEN2_charge.h"
 
 
 enum
@@ -18,27 +19,32 @@ enum
 	init,
 	callibrating,
 	wait_for_charger,
+	wait_for_HMI_acknowledgement,
 	charging,
-	stop_charging,
-	emergency_stop,
-	wait_for_disconnect
+	wait_for_reset
 } charge_state;
 
-float chg_offset = 0;
-
+Charge_mode_t charge_mode;
 
 void SCEN2_Charge_init(void)
 {
 	SCEN2_Battery_init();
 
 	charge_state = init;
+	charge_mode = no_charger;
 }
 
-void SCEN2_Carge_handler(void)
+uint8_t SCEN2_charge_state(void)
 {
-	static systime_t chg_timer;
-	static uint32_t chg_cc;
-	float Charge_I = analog_IO.I_charge_raw - chg_offset;
+	return charge_state;
+}
+
+
+void SCEN2_Charge_handler(void)
+{
+	static systime_t timer;
+	static uint32_t cc;
+	float Charge_I = analog_IO.I_charge_raw - analog_IO.I_charge_offset;
 
 	SCEN2_Battery_handler();
 
@@ -46,121 +52,107 @@ void SCEN2_Carge_handler(void)
 	{
 	case init:
 		CHG_DISABLE();
-		chg_timer = chVTGetSystemTime();
-		chg_offset = 0;
-		chg_cc = 0;
+		timer = chVTGetSystemTime();
+		analog_IO.I_charge_offset = 0;
+		cc = 0;
 
 		charge_state = callibrating;
 	break;
 
 	case callibrating:
-		chg_offset += analog_IO.I_charge_raw;
-		chg_cc++;
+		analog_IO.I_charge_offset += analog_IO.I_charge_raw;
+		cc++;
 
-		if (chVTTimeElapsedSinceX(chg_timer) > MS2ST(500))
+		if (chVTTimeElapsedSinceX(timer) > MS2ST(500))
 		{
-			chg_offset /= chg_cc;
-			chg_cc = 0;
+			analog_IO.I_charge_offset /= cc;
+			cc = 0;
 
-			chg_timer = chVTGetSystemTime();
+			timer = chVTGetSystemTime();
 			charge_state = wait_for_charger;
 		}
 	break;
 
 	case wait_for_charger:
-		if (chVTTimeElapsedSinceX(chg_timer) > MS2ST(1))
+		if (chVTTimeElapsedSinceX(timer) > MS2ST(1))
 		{
-			chg_timer = chVTGetSystemTime();
+			timer = chVTGetSystemTime();
 
-			if (((analog_IO.U_charge > batteries[0].U) ||
-				 (analog_IO.U_charge > batteries[1].U)) &&
-				(analog_IO.U_charge < CHARGE_U_MAX))
-				chg_cc++;
+			if (analog_IO.U_charge >= CHARGE_U_DETECT)
+				cc++;
 			else
-				chg_cc = 0;
+				cc = 0;
 
-			if ((chg_cc >= 500) &&
-				(batteries[0].SOC <= CHARGE_SOC_START) &&
-				(batteries[1].SOC <= CHARGE_SOC_START))
+			if (cc >= 500)
 			{
-				// ToDo: switch batteries into sleep mode
+				charge_mode = charger_detected_no_ACK;
+				timer = chVTGetSystemTime();
+				cc = 0;
 
-				CHG_ENABLE();
-
-				charge_state = charging;
+				charge_state = wait_for_HMI_acknowledgement;
 			}
 		}
 	break;
 
+	case wait_for_HMI_acknowledgement:
+		if (chVTTimeElapsedSinceX(timer) > MS2ST(1))
+		{
+			timer = chVTGetSystemTime();
+
+			if (analog_IO.U_charge < CHARGE_U_DETECT)
+				cc++;
+			else
+				cc = 0;
+
+			if (cc >= 500)
+				charge_mode = no_charger;
+		}
+
+		if (charge_mode == charger_detected_with_ACK)
+		{
+			CHG_ENABLE();
+			charge_state = charging;
+		}
+		else if (charge_mode == no_charger)
+		{
+			cc = 0;
+			timer = chVTGetSystemTime();
+
+			charge_state = wait_for_charger;
+		}
+	break;
+
 	case charging:
-		if ((batteries[0].OK_to_charge) &&
-			((batteries[1].U - batteries[0].U) >= CHARGE_U_DELTA))
-		{
-			// ToDo: switch bat 0 into charge mode
-		}
-		else
-		{
-			// ToDo: switch bat 0 into sleep mode
-		}
-
-		if ((batteries[1].OK_to_charge) &&
-			((batteries[0].U - batteries[1].U) >= CHARGE_U_DELTA))
-		{
-			// ToDo: switch bat 1 into charge mode
-		}
-		else
-		{
-			// ToDo: switch bat 1 into sleep mode
-		}
-
 		if ((analog_IO.U_charge > CHARGE_U_MAX) ||
-			(analog_IO.U_charge < CHARGE_U_MIN) ||
 			(Charge_I > CHARGE_I_MAX) ||
 			(Charge_I > CHARGE_I_MIN))
 		{
-			charge_state = emergency_stop;
+			CHG_DISABLE();
+			errors.charger_error = true;
+
+			charge_state = wait_for_reset;
 		}
 
-		if ((batteries[0].SOC >= 1) &&
-			(batteries[1].SOC >= 1) &&
-			(Charge_I <= CHARGE_I_TRICKLE))
+		if (charge_mode != charger_detected_with_ACK)
 		{
-			charge_state = stop_charging;
+			CHG_DISABLE();
+
+			cc = 0;
+			timer = chVTGetSystemTime();
+
+			charge_state = wait_for_charger;
 		}
-
 	break;
 
-	case stop_charging:
-		// ToDo: switch batteries into sleep mode
-
-		CHG_DISABLE();
-
-		charge_state = wait_for_charger;
-	break;
-
-	case emergency_stop:
-		CHG_DISABLE();
-
-		// ToDo: switch batteries into sleep mode
-
-		chg_timer = chVTGetSystemTime();
-		chg_cc = 0;
-
-		charge_state = wait_for_disconnect;
-	break;
-
-	case wait_for_disconnect:
-		if (chVTTimeElapsedSinceX(chg_timer) > MS2ST(1))
+	case wait_for_reset:
+		if (charge_mode == no_charger)
 		{
-			chg_timer = chVTGetSystemTime();
+			errors.charger_error = true;
 
-			if (analog_IO.U_charge < CHARGE_U_MIN)
-				chg_cc++;
-			else
-				chg_cc = 0;
+			cc = 0;
+			timer = chVTGetSystemTime();
 
-			if (chg_cc >= 5000)
-				charge_state = wait_for_charger;
+			charge_state = wait_for_charger;
 		}
 	break;
 	}

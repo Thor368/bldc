@@ -45,11 +45,11 @@
 #define TRIG_SPLY_OFF()			palClearPad(GPIOE, 3)
 #define TRIG_SPLY_TOG()			palTogglePad(GPIOE, 3)
 
-#define BAT_SB_SPLY_ON()		palSetPad(GPIOE, 4)
-#define BAT_SB_SPLY_OFF()		palClearPad(GPIOE, 4)
+#define BAT_RIGHT_SPLY_ON()		palSetPad(GPIOE, 4)
+#define BAT_RIGHT_SPLY_OFF()	palClearPad(GPIOE, 4)
 
-#define BAT_BB_SPLY_ON()		palSetPad(GPIOE, 5)
-#define BAT_BB_SPLY_OFF()		palClearPad(GPIOE, 5)
+#define BAT_LEFT_SPLY_ON()		palSetPad(GPIOE, 5)
+#define BAT_LEFT_SPLY_OFF()		palClearPad(GPIOE, 5)
 
 #define CAN_CP_ON()				palSetPad(GPIOB, 11)
 #define CAN_CP_OFF()			palClearPad(GPIOB, 11)

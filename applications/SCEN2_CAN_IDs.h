@@ -15,6 +15,8 @@
 #define MCL_Hash						0x31008
 #define MCL_Reset						0x3100A
 #define MCL_Jump_Bootloader				0x3100C
+#define MCL_Errors						0x3100E
+
 
 #define MCL_Buttons						0x31011
 #define MCL_Trigger1					0x31013
@@ -37,7 +39,7 @@
 #define MCL_MC_PID_wr					0x31034
 #define MCL_MC_PID_rd					0x31035
 #define MCL_ChargeMode_wr				0x31040
-#define MCL_ChargeMode					0x31041
+#define MCL_ChargeMode_rd				0x31041
 #define MCL_ChargeCurrent				0x31043
 
 #endif /* SCEN2_CAN_IDS_H_ */

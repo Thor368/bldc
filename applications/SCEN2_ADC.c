@@ -9,7 +9,7 @@
 #include "SCEN2_types.h"
 #include "SCEN2_settings.h"
 
-struct Analog_IO_t analog_IO;
+Analog_IO_t analog_IO;
 
 
 void SCEN2_ADC_handler(void)

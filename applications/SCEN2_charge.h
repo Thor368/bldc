@@ -10,6 +10,8 @@
 
 void SCEN2_Charge_init(void);
 
-void SCEN2_Carge_handler(void);
+uint8_t SCEN2_charge_state(void);
+
+void SCEN2_Charge_handler(void);
 
 #endif /* APPLICATIONS_SCEN2_CHARGE_H_ */

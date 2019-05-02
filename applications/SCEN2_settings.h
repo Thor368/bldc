@@ -14,8 +14,7 @@
 
 #define LEAKAGE_THRESHOLD	1000
 #define CHARGE_U_MAX		55				// 55V maximum allowed charger output voltage
-#define CHARGE_U_MIN		42				// 42V minimum allowed charger output voltage
-#define CHARGE_U_DELTA		2				// 2V maximum delta between AKKs
+#define CHARGE_U_DETECT		51				// 51V charger detect voltage
 #define CHARGE_I_MAX		25				// 25A maximum allowed charge current
 #define CHARGE_I_MIN		-0.5			// 0.5A discharge over CP trip level
 #define CHARGE_I_TRICKLE	1				// Trickle charge threshold
@@ -24,5 +23,7 @@
 #define POLE_PAIR_COUNT		5
 
 #define STM32_UID			((uint32_t *) 0x1FFF7A10)
+
+#define SCEN2_debugging_enable
 
 #endif /* APPLICATIONS_SCEN2_SETTINGS_H_ */

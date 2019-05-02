@@ -70,7 +70,7 @@ static void send_packet_wrapper(unsigned char *data, unsigned int len);
 static void set_timing(int brp, int ts1, int ts2);
 
 // Function pointers
-static void(*sid_callback)(uint32_t id, uint8_t *data, uint8_t len) = 0;
+static void(*sid_callback)(uint32_t id, uint8_t *data, uint8_t len, uint8_t RTR) = 0;
 
 void comm_can_init(void) {
 	for (int i = 0;i < CAN_STATUS_MSGS_TO_STORE;i++) {
@@ -158,13 +158,13 @@ static THD_FUNCTION(cancom_process_thread, arg) {
 			if (rxmsg.IDE == CAN_IDE_STD)
 			{
 				if (sid_callback) {
-					sid_callback(rxmsg.SID, rxmsg.data8, rxmsg.DLC);
+					sid_callback(rxmsg.SID, rxmsg.data8, rxmsg.DLC, rxmsg.RTR);
 				}
 			}
 			else if (rxmsg.IDE == CAN_IDE_EXT)
 			{
 				if (sid_callback) {
-					sid_callback(rxmsg.EID, rxmsg.data8, rxmsg.DLC);
+					sid_callback(rxmsg.EID, rxmsg.data8, rxmsg.DLC, rxmsg.RTR);
 				}
 			}
 
@@ -224,6 +224,25 @@ void comm_can_transmit_eid(uint32_t id, uint8_t *data, uint8_t len) {
 #endif
 }
 
+void comm_can_transmit_eid_RTR(uint32_t id) {
+#if CAN_ENABLE
+	CANTxFrame txmsg;
+	txmsg.IDE = CAN_IDE_EXT;
+	txmsg.EID = id;
+	txmsg.RTR = CAN_RTR_REMOTE;
+	txmsg.DLC = 0;
+
+	chMtxLock(&can_mtx);
+	canTransmit(&CANDx, CAN_ANY_MAILBOX, &txmsg, MS2ST(20));
+	chMtxUnlock(&can_mtx);
+
+#else
+	(void)id;
+	(void)data;
+	(void)len;
+#endif
+}
+
 msg_t comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
 	if (len > 8) {
 		len = 8;
@@ -258,7 +277,7 @@ msg_t comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
  * @param p_func
  * Pointer to the function.
  */
-void comm_can_set_sid_rx_callback(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len)) {
+void comm_can_set_sid_rx_callback(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)) {
 	sid_callback = p_func;
 }
 

@@ -8,6 +8,8 @@
 #include "SCEN2_types.h"
 #include "SCEN2_settings.h"
 #include "SCEN2_CAN_IDs.h"
+#include "SCEN2_battery.h"
+#include "SCEN2_charge.h"
 
 #include "ch.h"
 #include "comm_can.h"
@@ -25,7 +27,7 @@
 systime_t can_basic_update;
 systime_t start_up_timer;
 //mc_configuration *c_conf;
-struct Digital_IO_t can_IO;
+Digital_IO_t can_IO;
 
 bool starting_up = false;
 float speed_save = 0;
@@ -208,16 +210,37 @@ void tx_Buttons(void)
 	comm_can_transmit_eid(MCL_Buttons + CAN_base, (uint8_t *) &buttons, 6);
 }
 
-static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
+void tx_Errors(void)
+{
+	comm_can_transmit_eid(MCL_Errors + CAN_base, (uint8_t *) &errors.all, sizeof(errors.all));
+}
+
+void tx_charge_mode(void)
+{
+	comm_can_transmit_eid(MCL_ChargeMode_rd + CAN_base, &charge_mode, sizeof(charge_mode));
+}
+
+void tx_Debugging(void)
+{
+
+}
+
+static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 {
 	float speed, limit;
 	static mc_configuration conf;
 	(void) len;
 
-	if ((id >=  + CAN_base) && (id <  + (CAN_base + 0x1000)))
-		id -= CAN_base;
+	if ((id >=  + CAN_base) && (id <  + (CAN_base + 0x1000)))  // frame for us?
+		id -= CAN_base;  // subtract base id
 	else
 		return;
+
+	if ((id >= 0x100) && (id < 0x400))  // frame for BMS?
+	{
+		SCEN2_Battery_RX(id, data, len, rtr);
+		return;
+	}
 
 	switch (id)
 	{
@@ -236,7 +259,8 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 		case MCL_ThrowBattOff_wr:
 			if (*((uint16_t *) &data[0]) == 666)
 			{
-				// disable power to AKKs
+				BAT_RIGHT_SPLY_OFF();
+				BAT_LEFT_SPLY_OFF();
 			}
 		break;
 
@@ -262,6 +286,10 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 			{
 				// jump to bootloader
 			}
+		break;
+
+		case MCL_Errors:
+			tx_Errors();
 		break;
 
 		case MCL_Buttons:
@@ -383,11 +411,11 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 		break;
 
 		case MCL_ChargeMode_wr:
-// 			ToDo: Charge Statemachine
+			charge_mode = data[0];
 		break;
 
-		case MCL_ChargeMode:
-// 			ToDo: Charge Statemachine
+		case MCL_ChargeMode_rd:
+			tx_charge_mode();
 		break;
 
 		case MCL_ChargeCurrent:
@@ -401,11 +429,13 @@ void SCEN2_CAN_handler(void)
 	if (can_IO.buttons.all)
 		tx_Buttons();
 
+#ifdef SCEN2_debugging_enable
 	if (chVTTimeElapsedSinceX(can_basic_update) > MS2ST(CAN_DELAY_BASIC))
 	{
 		can_basic_update = chVTGetSystemTime();
-		tx_Voltages();
+		tx_Debugging();
 	}
+#endif
 
 	if ((starting_up) && (chVTTimeElapsedSinceX(start_up_timer) > MS2ST(START_UP_TIME)))
 	{

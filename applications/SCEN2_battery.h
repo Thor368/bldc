@@ -10,6 +10,8 @@
 
 void SCEN2_Battery_init(void);
 
+void SCEN2_Battery_RX(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr);
+
 void SCEN2_Battery_handler(void);
 
 #endif /* APPLICATIONS_SCEN2_BATTERY_H_ */

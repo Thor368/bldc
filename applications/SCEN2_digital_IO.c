@@ -12,7 +12,7 @@
 #include "hal.h"
 #include "mc_interface.h"
 
-struct Digital_IO_t digital_IO;
+Digital_IO_t digital_IO;
 
 void SCEN2_DIO_init(void)
 {
