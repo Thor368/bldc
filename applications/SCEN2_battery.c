@@ -98,17 +98,17 @@ void SCEN2_Battery_RX(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 	if ((id >= 0x100) && (id < 0x200))
 	{
 		bat = &battery_init;
-		id -= 100;
+		id -= 0x100;
 	}
 	else if ((id >= 0x200) && (id < 0x300))
 	{
 		bat = &battery_left;
-		id -= 200;
+		id -= 0x200;
 	}
-	else if ((id >= 0x100) && (id < 0x200))
+	else if ((id >= 0x300) && (id < 0x400))
 	{
 		bat = &battery_right;
-		id -= 300;
+		id -= 0x300;
 	}
 	else
 		return;
@@ -185,6 +185,7 @@ void SCEN2_Battery_handler(void)
 		else if (chVTTimeElapsedSinceX(timer) > MS2ST(100))
 		{
 			cc++;
+			timer = chVTGetSystemTime();
 			ping_all();
 		}
 	break;
@@ -221,6 +222,7 @@ void SCEN2_Battery_handler(void)
 		else if (chVTTimeElapsedSinceX(timer) > MS2ST(100))
 		{
 			ping_all();
+			timer = chVTGetSystemTime();
 			cc++;
 		}
 	break;
@@ -256,6 +258,7 @@ void SCEN2_Battery_handler(void)
 		else if (chVTTimeElapsedSinceX(timer) > MS2ST(100))
 		{
 			ping_all();
+			timer = chVTGetSystemTime();
 			cc++;
 		}
 	break;
@@ -266,8 +269,8 @@ void SCEN2_Battery_handler(void)
 		if (chVTTimeElapsedSinceX(battery_right.time_last_seen) > MS2ST(1000))
 			battery_right.active = false;
 
-		errors.battery_left_error &= battery_left.active;
-		errors.battery_right_error &= battery_right.active;
+//		errors.battery_left_error |= !battery_left.active;
+//		errors.battery_right_error |= !battery_right.active;
 	break;
 	}
 }

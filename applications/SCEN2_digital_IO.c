@@ -87,28 +87,28 @@ void SCEN2_DIO_handler(void)
 		can_IO.trigger.T1 = false;
 	}
 
-	if (TRIGGER_2A() && !TRIGGER_2B() && !T2)
-	{
-		T2 = true;
-
-		digital_IO.trigger.T2 = false;
-		can_IO.trigger.T2 = false;
-	}
-	else if (!TRIGGER_2A() && TRIGGER_2B() && T2)
-	{
-		T2 = false;
-
-		digital_IO.trigger.T2 = false;
-		can_IO.trigger.T2 = false;
-	}
-	else if ((TRIGGER_2A() && TRIGGER_2B()) ||
-			(!TRIGGER_2A() && !TRIGGER_2B()))
-	{
-		errors.trigger_error = true;
-		T2 = false;
-		digital_IO.trigger.T2 = false;
-		can_IO.trigger.T2 = false;
-	}
+//	if (TRIGGER_2A() && !TRIGGER_2B() && !T2)
+//	{
+//		T2 = true;
+//
+//		digital_IO.trigger.T2 = false;
+//		can_IO.trigger.T2 = false;
+//	}
+//	else if (!TRIGGER_2A() && TRIGGER_2B() && T2)
+//	{
+//		T2 = false;
+//
+//		digital_IO.trigger.T2 = false;
+//		can_IO.trigger.T2 = false;
+//	}
+//	else if ((TRIGGER_2A() && TRIGGER_2B()) ||
+//			(!TRIGGER_2A() && !TRIGGER_2B()))
+//	{
+//		errors.trigger_error = true;
+//		T2 = false;
+//		digital_IO.trigger.T2 = false;
+//		can_IO.trigger.T2 = false;
+//	}
 }
 
 void SCEN2_button_handler(void)

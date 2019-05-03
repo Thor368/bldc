@@ -137,24 +137,24 @@ void tx_DCPower(void)
 
 void tx_Trigger(void)
 {
-	float data[8];
+	float data[2];
 
 	if (errors.trigger_error)
 	{
-		*(float *) &data[0] = 0;
-		*(float *) &data[4] = 0;
+		data[0] = 0;
+		data[1] = 0;
 	}
 	else
 	{
 		if (can_IO.trigger.T1)
-			*(float *) &data[0] = 1;
+			data[0] = 1;
 		else
-			*(float *) &data[0] = 0;
+			data[0] = 0;
 
 		if (can_IO.trigger.T2)
-			*(float *) &data[4] = 1;
+			data[1] = 1;
 		else
-			*(float *) &data[4] = 0;
+			data[1] = 0;
 	}
 
 	comm_can_transmit_eid(MCL_Trigger + CAN_base, (uint8_t *) &data, sizeof(data));
@@ -187,7 +187,7 @@ void tx_UID(void)
 	comm_can_transmit_eid(MCL_UID + CAN_base, (uint8_t *) &UID, 6);
 }
 
-void tx_Buttons(void)
+void tx_Buttons(bool polled)
 {
 	uint8_t buttons[4];
 
@@ -201,6 +201,9 @@ void tx_Buttons(void)
 		can_IO.buttons.blue = 1;
 	if (can_IO.buttons.red)
 		can_IO.buttons.red = 1;
+
+	if (polled)
+		can_IO.buttons.all = 0;
 
 	comm_can_transmit_eid(MCL_Buttons + CAN_base, (uint8_t *) &buttons, sizeof(can_IO.buttons.all));
 }
@@ -253,7 +256,7 @@ void rx_rtr_handler(uint32_t id, uint8_t *data)
 		break;
 
 		case MCL_Buttons:
-			tx_Buttons();
+			tx_Buttons(true);
 		break;
 
 		case MCL_Trigger:
@@ -413,16 +416,16 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 {
 	(void) len;
 
+
 	if ((id >= (MCL_CAN_ID_base + CAN_base)) && (id < (MCL_CAN_ID_base + CAN_base + 0x1000)))  // frame for us?
 		id -= CAN_base;  // subtract base id
-	else
-		return;
-
-	if ((id >= 0x100) && (id < 0x400))  // frame for BMS?
+	else if ((id >= 0x100) && (id < 0x400))  // frame for BMS?
 	{
 		SCEN2_Battery_RX(id, data, len, rtr);
 		return;
 	}
+	else
+		return;
 
 	if (rtr)
 		rx_rtr_handler(id, data);
@@ -436,7 +439,7 @@ void SCEN2_CAN_handler(void)
 		(can_IO.buttons.green == 3) ||
 		(can_IO.buttons.blue == 3) ||
 		(can_IO.buttons.red == 3))
-		tx_Buttons();
+		tx_Buttons(false);
 
 #ifdef SCEN2_debugging_enable
 	if (chVTTimeElapsedSinceX(can_basic_update) > MS2ST(CAN_DELAY_BASIC))
