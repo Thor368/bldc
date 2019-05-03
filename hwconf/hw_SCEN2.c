@@ -82,6 +82,12 @@ void hw_init_gpio(void) {
 	palSetPadMode(GPIOA, 0, PAL_MODE_INPUT_PULLUP);  // blue
 	palSetPadMode(GPIOE, 15, PAL_MODE_INPUT_PULLUP);  // red
 
+	// Trigger inputs
+	palSetPadMode(GPIOC, 10, PAL_MODE_INPUT_PULLUP);  // T1A
+	palSetPadMode(GPIOC, 11, PAL_MODE_INPUT_PULLUP);  // T1B
+	palSetPadMode(GPIOC, 12, PAL_MODE_INPUT_PULLUP);  // T2A
+	palSetPadMode(GPIOD, 0, PAL_MODE_INPUT_PULLUP);  // T2B
+
 	// GPIOA Configuration: Channel 1 to 3 as alternate function push-pull
 	palSetPadMode(GPIOA, 8, PAL_MODE_ALTERNATE(GPIO_AF_TIM1) |
 			PAL_STM32_OSPEED_HIGHEST |

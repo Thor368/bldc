@@ -62,6 +62,11 @@
 #define BUTTON_BLUE()			palReadPad(GPIOA, 0)
 #define BUTTON_RED()			palReadPad(GPIOE, 15)
 
+#define TRIGGER_1A()			palReadPad(GPIOC, 10)
+#define TRIGGER_1B()			palReadPad(GPIOC, 11)
+#define TRIGGER_2A()			palReadPad(GPIOC, 12)
+#define TRIGGER_2B()			palReadPad(GPIOD, 0)
+
 // ADC
 #define HW_ADC_CHANNELS			15
 #define HW_ADC_INJ_CHANNELS		3
@@ -85,8 +90,8 @@
 #define ADC_IND_U_CHG			11
 
 #define ADC_IND_TEMP_MOTOR		12
-#define ADC_IND_ING				13
-#define ADC_IND_I_CHG			14
+#define ADC_IND_I_CHG			13
+#define ADC_IND_ING				14
 
 // ADC macros and settings
 

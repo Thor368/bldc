@@ -59,10 +59,11 @@ static THD_FUNCTION(custom_thread, arg) {
 			return;
 		}
 
+		SCEN2_CAN_handler();
 		SCEN2_ADC_handler();
 		SCEN2_Error_handler();
-		SCEN2_CAN_handler();
 		SCEN2_DIO_handler();
+		SCEN2_button_handler();
 		SCEN2_Charge_handler();
 		SCEN2_Battery_handler();
 

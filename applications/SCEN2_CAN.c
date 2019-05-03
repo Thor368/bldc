@@ -32,7 +32,7 @@ Digital_IO_t can_IO;
 bool starting_up = false;
 float speed_save = 0;
 
-uint32_t CAN_base = 0;
+uint32_t CAN_base;
 
 void tx_ChargeCurrent(void)
 {
@@ -135,38 +135,29 @@ void tx_DCPower(void)
 	comm_can_transmit_eid(MCL_DC_Power + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
-void tx_Trigger1(void)
+void tx_Trigger(void)
 {
 	float data[8];
 
-	if (can_IO.trigger.T1A)
-		*(float *) &data[0] = 1;
-	else
+	if (errors.trigger_error)
+	{
 		*(float *) &data[0] = 0;
-
-	if (can_IO.trigger.T1B)
-		*(float *) &data[4] = 1;
-	else
 		*(float *) &data[4] = 0;
-
-	comm_can_transmit_eid(MCL_Trigger1 + CAN_base, (uint8_t *) &data, sizeof(data));
-}
-
-void tx_Trigger2(void)
-{
-	float data[8];
-
-	if (can_IO.trigger.T2A)
-		*(float *) &data[0] = 1;
+	}
 	else
-		*(float *) &data[0] = 0;
+	{
+		if (can_IO.trigger.T1)
+			*(float *) &data[0] = 1;
+		else
+			*(float *) &data[0] = 0;
 
-	if (can_IO.trigger.T2B)
-		*(float *) &data[4] = 1;
-	else
-		*(float *) &data[4] = 0;
+		if (can_IO.trigger.T2)
+			*(float *) &data[4] = 1;
+		else
+			*(float *) &data[4] = 0;
+	}
 
-	comm_can_transmit_eid(MCL_Trigger2 + CAN_base, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_Trigger + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_Version(void)
@@ -200,14 +191,18 @@ void tx_Buttons(void)
 {
 	uint8_t buttons[4];
 
-	buttons[0] = can_IO.buttons.silver;
-	buttons[1] = can_IO.buttons.green;
-	buttons[2] = can_IO.buttons.blue;
-	buttons[3] = can_IO.buttons.red;
+	*((uint32_t *) &buttons[0]) = can_IO.buttons.all;
 
-	can_IO.buttons.all = 0;
+	if (can_IO.buttons.silver)
+		can_IO.buttons.silver = 1;
+	if (can_IO.buttons.green)
+		can_IO.buttons.green = 1;
+	if (can_IO.buttons.blue)
+		can_IO.buttons.blue = 1;
+	if (can_IO.buttons.red)
+		can_IO.buttons.red = 1;
 
-	comm_can_transmit_eid(MCL_Buttons + CAN_base, (uint8_t *) &buttons, 6);
+	comm_can_transmit_eid(MCL_Buttons + CAN_base, (uint8_t *) &buttons, sizeof(can_IO.buttons.all));
 }
 
 void tx_Errors(void)
@@ -225,45 +220,10 @@ void tx_Debugging(void)
 
 }
 
-static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
+void rx_rtr_handler(uint32_t id, uint8_t *data)
 {
-	float speed, limit;
-	static mc_configuration conf;
-	(void) len;
-
-	if ((id >=  + CAN_base) && (id <  + (CAN_base + 0x1000)))  // frame for us?
-		id -= CAN_base;  // subtract base id
-	else
-		return;
-
-	if ((id >= 0x100) && (id < 0x400))  // frame for BMS?
-	{
-		SCEN2_Battery_RX(id, data, len, rtr);
-		return;
-	}
-
 	switch (id)
 	{
-		case MCL_CAN_ID_base_wr:
-			if (data[0] == 15)
-			{
-				if (data[1] == 0)
-					CAN_base = 0;
-				else if (data[1] == 1)
-					CAN_base = 0x1000;
-				else if (data[1] == 2)
-					CAN_base = 0x2000;
-			}
-		break;
-
-		case MCL_ThrowBattOff_wr:
-			if (*((uint16_t *) &data[0]) == 666)
-			{
-				BAT_RIGHT_SPLY_OFF();
-				BAT_LEFT_SPLY_OFF();
-			}
-		break;
-
 		case MCL_UID:
 			tx_UID();
 		break;
@@ -296,12 +256,8 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 			tx_Buttons();
 		break;
 
-		case MCL_Trigger1:
-			tx_Trigger1();
-		break;
-
-		case MCL_Trigger2:
-			tx_Trigger2();
+		case MCL_Trigger:
+			tx_Trigger();
 		break;
 
 		case MCL_Voltages:
@@ -310,6 +266,83 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 
 		case MCL_Temperatures:
 			tx_Temperatures();
+		break;
+
+		case MCL_Temperature_Limits_rd:
+			tx_Temperature_Limits();
+		break;
+
+		case MCL_MotorTemp:
+			tx_MotorTemp();
+		break;
+
+		case MCL_MotorTemp_Limit_rd:
+			tx_MotorTemp_Limit();
+		break;
+
+		case MCL_Pressure:
+			tx_Preassure();
+		break;
+
+		case MCL_LeakageSensor:
+			tx_LeakageSensor();
+		break;
+
+		case MCL_LeakageSensorThreshold_rd:
+			tx_LeakageSensorThreshold();
+		break;
+
+		case MCL_DC_Power:
+			tx_DCPower();
+		break;
+
+		case MCL_MotorSpeed_rd:
+			tx_MotorSpeed();
+		break;
+
+		case MCL_MotorCurrents:
+			tx_MotorCurrents();
+		break;
+
+		case MCL_MC_PID_rd:
+			tx_MC_PID();
+		break;
+
+		case MCL_ChargeMode_rd:
+			tx_charge_mode();
+		break;
+
+		case MCL_ChargeCurrent:
+			tx_ChargeCurrent();
+		break;
+	}
+}
+
+void rx_wr_handler(uint32_t id, uint8_t *data)
+{
+	float speed, limit;
+	static mc_configuration conf;
+
+	switch (id)
+	{
+		case MCL_CAN_ID_base_wr:
+			if (data[0] == 15)
+			{
+				if (data[1] == 0)
+					CAN_base = 0;
+				else if (data[1] == 1)
+					CAN_base = 0x1000;
+				else if (data[1] == 2)
+					CAN_base = 0x2000;
+			}
+		break;
+
+		case MCL_ThrowBattOff_wr:
+			if (*((uint16_t *) &data[0]) == 666)
+			{
+				BAT_RIGHT_SPLY_OFF();
+				BAT_LEFT_SPLY_OFF();
+			}
 		break;
 
 		case MCL_Temperature_Limits_wr:
@@ -325,14 +358,6 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 			chThdSleepMilliseconds(200);
 		break;
 
-		case MCL_Temperature_Limits_rd:
-			tx_Temperature_Limits();
-		break;
-
-		case MCL_MotorTemp:
-			tx_MotorTemp();
-		break;
-
 		case MCL_MotorTemp_Limit_wr:
 			conf = *mc_interface_get_configuration();
 
@@ -343,28 +368,8 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 			chThdSleepMilliseconds(200);
 		break;
 
-		case MCL_MotorTemp_Limit_rd:
-			tx_MotorTemp_Limit();
-		break;
-
-		case MCL_Pressure:
-			tx_Preassure();
-		break;
-
-		case MCL_LeakageSensor:
-			tx_LeakageSensor();
-		break;
-
 		case MCL_LeakageSensorThreshold_wr:
 			// ToDo: NV memory
-		break;
-
-		case MCL_LeakageSensorThreshold_rd:
-			tx_LeakageSensorThreshold();
-		break;
-
-		case MCL_DC_Power:
-			tx_DCPower();
 		break;
 
 		case MCL_MotorSpeed_wr:
@@ -386,14 +391,6 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 			timeout_reset();
 		break;
 
-		case MCL_MotorSpeed_rd:
-			tx_MotorSpeed();
-		break;
-
-		case MCL_MotorCurrents:
-			tx_MotorCurrents();
-		break;
-
 		case MCL_MC_PID_wr:
 			conf = *mc_interface_get_configuration();
 
@@ -406,27 +403,39 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 			chThdSleepMilliseconds(200);
 		break;
 
-		case MCL_MC_PID_rd:
-			tx_MC_PID();
-		break;
-
 		case MCL_ChargeMode_wr:
 			charge_mode = data[0];
-		break;
-
-		case MCL_ChargeMode_rd:
-			tx_charge_mode();
-		break;
-
-		case MCL_ChargeCurrent:
-			tx_ChargeCurrent();
 		break;
 	}
 }
 
+static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
+{
+	(void) len;
+
+	if ((id >= (MCL_CAN_ID_base + CAN_base)) && (id < (MCL_CAN_ID_base + CAN_base + 0x1000)))  // frame for us?
+		id -= CAN_base;  // subtract base id
+	else
+		return;
+
+	if ((id >= 0x100) && (id < 0x400))  // frame for BMS?
+	{
+		SCEN2_Battery_RX(id, data, len, rtr);
+		return;
+	}
+
+	if (rtr)
+		rx_rtr_handler(id, data);
+	else
+		rx_wr_handler(id, data);
+}
+
 void SCEN2_CAN_handler(void)
 {
-	if (can_IO.buttons.all)
+	if ((can_IO.buttons.silver == 3) ||
+		(can_IO.buttons.green == 3) ||
+		(can_IO.buttons.blue == 3) ||
+		(can_IO.buttons.red == 3))
 		tx_Buttons();
 
 #ifdef SCEN2_debugging_enable
@@ -449,6 +458,10 @@ void SCEN2_CAN_handler(void)
 
 void SCEN2_CAN_init(void)
 {
+	CAN_base = 0;
+	can_IO.buttons.all = 0;
+	can_IO.trigger.all = 0;
+
 	can_basic_update = chVTGetSystemTime();
 	start_up_timer = chVTGetSystemTime();
 

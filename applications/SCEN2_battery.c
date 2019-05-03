@@ -76,7 +76,8 @@ void batteries_reset(void)
 
 void SCEN2_Battery_init(void)
 {
-	errors.battery_single_channel = false;
+	errors.battery_left_error = false;
+	errors.battery_right_error = false;
 	batteries_reset();
 }
 
@@ -173,6 +174,7 @@ void SCEN2_Battery_handler(void)
 		if (battery_init.active || (cc >= 5))
 		{
 			BAT_RIGHT_SPLY_OFF();
+
 			cc = 0;
 			timer = chVTGetSystemTime();
 
@@ -203,16 +205,18 @@ void SCEN2_Battery_handler(void)
 	case configure_left:
 		if (battery_init.active)
 			battery_set_offset(&battery_left, offset_init);
-		else if (battery_left.active)
+		else if (battery_left.active || (cc >= 5))
 		{
 			BAT_RIGHT_SPLY_ON();
 			BAT_LEFT_SPLY_OFF();
+			if (cc >= 5)
+				errors.battery_left_error = true;
 
 			timer = chVTGetSystemTime();
 
 			batteries_state = switch_to_right;
 		}
-		else if (battery_right.active || (cc >= 5))
+		else if (battery_right.active)
 			battery_set_offset(&battery_left, offset_right);
 		else if (chVTTimeElapsedSinceX(timer) > MS2ST(100))
 		{
@@ -242,6 +246,8 @@ void SCEN2_Battery_handler(void)
 		else if (battery_right.active || (cc >= 5))
 		{
 			BAT_LEFT_SPLY_ON();
+			if (cc >= 5)
+				errors.battery_right_error = true;
 
 			timer = chVTGetSystemTime();
 
@@ -260,8 +266,8 @@ void SCEN2_Battery_handler(void)
 		if (chVTTimeElapsedSinceX(battery_right.time_last_seen) > MS2ST(1000))
 			battery_right.active = false;
 
-		if (!battery_left.active || !battery_right.active)
-			errors.battery_single_channel = true;
+		errors.battery_left_error &= battery_left.active;
+		errors.battery_right_error &= battery_right.active;
 	break;
 	}
 }

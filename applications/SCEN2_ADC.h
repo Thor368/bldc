@@ -10,5 +10,4 @@
 
 void SCEN2_ADC_handler(void);
 
-
 #endif /* APPLICATIONS_SCEN2_ADC_H_ */

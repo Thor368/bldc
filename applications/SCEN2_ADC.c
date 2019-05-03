@@ -5,6 +5,7 @@
  *      Author: alexander.schroeder
  */
 
+
 #include "mc_interface.h"
 #include "SCEN2_types.h"
 #include "SCEN2_settings.h"
@@ -36,7 +37,7 @@ void SCEN2_ADC_handler(void)
 	analog_IO.U_in = GET_INPUT_VOLTAGE();
 
 	// charge port voltage and current measurement
-	analog_IO.U_charge = ADC_VOLTS(ADC_IND_U_CHG)*0.0434142752;
+	analog_IO.U_charge = ADC_VOLTS(ADC_IND_U_CHG)*18.727272727272727272727272727272;
 	analog_IO.I_charge_raw = ADC_VOLTS(ADC_IND_I_CHG)*50;
 
 	analog_IO.water_ingress = ADC_VOLTS(ADC_IND_ING);

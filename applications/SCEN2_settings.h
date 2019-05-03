@@ -12,7 +12,7 @@
 #define minor_release		1
 #define branch				2				// alpha dev branch
 
-#define LEAKAGE_THRESHOLD	1000
+#define LEAKAGE_THRESHOLD	1.0				// 1.0V water ingress threshold
 #define CHARGE_U_MAX		55				// 55V maximum allowed charger output voltage
 #define CHARGE_U_DETECT		51				// 51V charger detect voltage
 #define CHARGE_I_MAX		25				// 25A maximum allowed charge current

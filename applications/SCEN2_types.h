@@ -46,12 +46,10 @@ typedef struct
 	{
 		struct
 		{
-			bool T1A;
-			bool T1B;
-			bool T2A;
-			bool T2B;
+			bool T1;
+			bool T2;
 		};
-		uint32_t all;
+		uint16_t all;
 	} trigger;
 } Digital_IO_t;
 extern Digital_IO_t digital_IO, can_IO;
@@ -60,11 +58,12 @@ typedef union
 {
 	struct
 	{
-		bool water_pressure_error;
-		bool water_ingress_error;
-		bool battery_single_channel;
-		bool trigger_error;
-		bool charger_error;
+		unsigned water_pressure_error: 1;
+		unsigned water_ingress_error: 1;
+		unsigned battery_left_error: 1;
+		unsigned battery_right_error: 1;
+		unsigned trigger_error: 1;
+		unsigned charger_error: 1;
 	};
 
 	uint8_t all;
