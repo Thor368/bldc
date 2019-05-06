@@ -111,6 +111,9 @@ void SCEN2_Charge_handler(void)
 		if (charge_mode == charger_detected_with_ACK)
 		{
 			CHG_ENABLE();
+
+			timer = chVTGetSystemTime();
+
 			charge_state = charging;
 		}
 		else if (charge_mode == no_charger)
@@ -123,9 +126,10 @@ void SCEN2_Charge_handler(void)
 	break;
 
 	case charging:
-		if ((analog_IO.U_charge > CHARGE_U_MAX) ||
-			(Charge_I > CHARGE_I_MAX) ||
-			(Charge_I > CHARGE_I_MIN))
+		if ((chVTTimeElapsedSinceX(timer) > MS2ST(100)) &&
+			((analog_IO.U_charge > CHARGE_U_MAX) ||
+			 (Charge_I > CHARGE_I_MAX) ||
+			 (Charge_I < CHARGE_I_MIN)))
 		{
 			CHG_DISABLE();
 			errors.charger_error = true;

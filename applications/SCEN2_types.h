@@ -24,7 +24,6 @@ typedef struct
 	float I_charge_offset;  // A
 	float pressure;  // bar
 	float water_ingress;  // V
-	float depth;  // m
 } Analog_IO_t;
 extern Analog_IO_t analog_IO;
 

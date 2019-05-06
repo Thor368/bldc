@@ -9,10 +9,10 @@
 #define APPLICATIONS_SCEN2_SETTINGS_H_
 
 #define major_release		0
-#define minor_release		1
+#define minor_release		2
 #define branch				2				// alpha dev branch
 
-#define LEAKAGE_THRESHOLD	1.0				// 1.0V water ingress threshold
+#define LEAKAGE_THRESHOLD	0.7				// 1.0V water ingress threshold
 #define CHARGE_U_MAX		55				// 55V maximum allowed charger output voltage
 #define CHARGE_U_DETECT		51				// 51V charger detect voltage
 #define CHARGE_I_MAX		25				// 25A maximum allowed charge current
@@ -24,6 +24,6 @@
 
 #define STM32_UID			((uint32_t *) 0x1FFF7A10)
 
-#define SCEN2_debugging_enable
+//#define SCEN2_debugging_enable
 
 #endif /* APPLICATIONS_SCEN2_SETTINGS_H_ */

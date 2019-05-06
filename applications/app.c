@@ -50,7 +50,6 @@ void app_set_configuration(app_configuration *conf) {
 	switch (appconf.app_to_use) {
 	case APP_CUSTOM:
 #ifdef APP_CUSTOM_TO_USE
-		hw_stop_i2c();
 		app_custom_start();
 #endif
 		break;

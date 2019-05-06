@@ -25,7 +25,6 @@ void SCEN2_ADC_handler(void)
 	else
 		errors.water_pressure_error = false;
 	analog_IO.pressure = tmp_L*0.00313313802083 - 1.25;
-	analog_IO.depth = analog_IO.pressure*9.807;
 
 	// power stage temperature measurement
 	analog_IO.temp_MOS = mc_interface_temp_fet_filtered();

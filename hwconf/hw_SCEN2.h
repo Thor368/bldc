@@ -81,17 +81,17 @@
 #define ADC_IND_CURR2			4
 #define ADC_IND_CURR3			5
 
-#define ADC_IND_TEMP_MOS		6
-#define ADC_IND_				7
-#define ADC_IND_TEMP_W			8
+#define ADC_IND_TEMP_W			6
+#define ADC_IND_U_CHG			7
+#define ADC_IND_TEMP_MOS		8
 
 #define ADC_IND_PRESSURE		9
 #define ADC_IND_VIN_SENS		10
-#define ADC_IND_U_CHG			11
+#define ADC_IND_I_CHG			11
 
 #define ADC_IND_TEMP_MOTOR		12
-#define ADC_IND_I_CHG			13
-#define ADC_IND_ING				14
+#define ADC_IND_ING				13
+#define ADC_IND_U_SENSE2		14
 
 // ADC macros and settings
 
@@ -138,14 +138,6 @@
 #ifndef CURR3_DOUBLE_SAMPLE
 #define CURR3_DOUBLE_SAMPLE		0
 #endif
-
-// I2C Peripheral
-#define HW_I2C_DEV				I2CD2
-#define HW_I2C_GPIO_AF			GPIO_AF_I2C2
-#define HW_I2C_SCL_PORT			GPIOB
-#define HW_I2C_SCL_PIN			10
-#define HW_I2C_SDA_PORT			GPIOB
-#define HW_I2C_SDA_PIN			11
 
 // Hall/encoder pins
 #define HW_ENC_TIM				TIM3

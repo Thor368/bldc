@@ -220,7 +220,31 @@ void tx_charge_mode(void)
 
 void tx_Debugging(void)
 {
+	uint16_t data[4];
 
+	data[0] = ADC_Value[0];
+	data[1] = ADC_Value[1];
+	data[2] = ADC_Value[2];
+	data[3] = ADC_Value[3];
+	comm_can_transmit_eid(0, (uint8_t *) &data, sizeof(data));
+
+	data[0] = ADC_Value[4];
+	data[1] = ADC_Value[5];
+	data[2] = ADC_Value[6];
+	data[3] = ADC_Value[7];
+	comm_can_transmit_eid(1, (uint8_t *) &data, sizeof(data));
+
+	data[0] = ADC_Value[8];
+	data[1] = ADC_Value[9];
+	data[2] = ADC_Value[10];
+	data[3] = ADC_Value[11];
+	comm_can_transmit_eid(2, (uint8_t *) &data, sizeof(data));
+
+	data[0] = ADC_Value[12];
+	data[1] = ADC_Value[13];
+	data[2] = ADC_Value[14];
+	data[3] = ADC_Value[15];
+	comm_can_transmit_eid(3, (uint8_t *) &data, sizeof(data));
 }
 
 void rx_rtr_handler(uint32_t id, uint8_t *data)
