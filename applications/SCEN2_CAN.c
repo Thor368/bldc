@@ -26,8 +26,6 @@
 
 systime_t can_basic_update;
 systime_t start_up_timer;
-//mc_configuration *c_conf;
-Digital_IO_t can_IO;
 
 bool starting_up = false;
 float speed_save = 0;
@@ -37,7 +35,7 @@ uint32_t CAN_base;
 void tx_ChargeCurrent(void)
 {
 	float data[1];
-	data[0] = analog_IO.I_charge_raw;
+	data[0] = analog_IO.I_charge_raw - analog_IO.I_charge_offset;
 	comm_can_transmit_eid(MCL_ChargeCurrent + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
@@ -121,7 +119,7 @@ void tx_MotorSpeed(void)
 	comm_can_transmit_eid(MCL_MotorSpeed_rd + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
-void tx_Preassure(void)
+void tx_Pressure(void)
 {
 	float data[1];
 	data[0] = analog_IO.pressure;
@@ -146,12 +144,12 @@ void tx_Trigger(void)
 	}
 	else
 	{
-		if (can_IO.trigger.T1)
+		if (digital_IO.trigger.T1)
 			data[0] = 1;
 		else
 			data[0] = 0;
 
-		if (can_IO.trigger.T2)
+		if (digital_IO.trigger.T2)
 			data[1] = 1;
 		else
 			data[1] = 0;
@@ -187,25 +185,9 @@ void tx_UID(void)
 	comm_can_transmit_eid(MCL_UID + CAN_base, (uint8_t *) &UID, 6);
 }
 
-void tx_Buttons(bool polled)
+void tx_Buttons(void)
 {
-	uint8_t buttons[4];
-
-	*((uint32_t *) &buttons[0]) = can_IO.buttons.all;
-
-	if (can_IO.buttons.silver)
-		can_IO.buttons.silver = 1;
-	if (can_IO.buttons.green)
-		can_IO.buttons.green = 1;
-	if (can_IO.buttons.blue)
-		can_IO.buttons.blue = 1;
-	if (can_IO.buttons.red)
-		can_IO.buttons.red = 1;
-
-	if (polled)
-		can_IO.buttons.all = 0;
-
-	comm_can_transmit_eid(MCL_Buttons + CAN_base, (uint8_t *) &buttons, sizeof(can_IO.buttons.all));
+	comm_can_transmit_eid(MCL_Buttons + CAN_base, (uint8_t *) &digital_IO.buttons.all, sizeof(digital_IO.buttons.all));
 }
 
 void tx_Errors(void)
@@ -280,7 +262,7 @@ void rx_rtr_handler(uint32_t id, uint8_t *data)
 		break;
 
 		case MCL_Buttons:
-			tx_Buttons(true);
+			tx_Buttons();
 		break;
 
 		case MCL_Trigger:
@@ -308,7 +290,7 @@ void rx_rtr_handler(uint32_t id, uint8_t *data)
 		break;
 
 		case MCL_Pressure:
-			tx_Preassure();
+			tx_Pressure();
 		break;
 
 		case MCL_LeakageSensor:
@@ -459,11 +441,12 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 
 void SCEN2_CAN_handler(void)
 {
-	if ((can_IO.buttons.silver == 3) ||
-		(can_IO.buttons.green == 3) ||
-		(can_IO.buttons.blue == 3) ||
-		(can_IO.buttons.red == 3))
-		tx_Buttons(false);
+	static uint32_t buttons = 0;
+	if ((buttons != digital_IO.buttons.all))
+	{
+		buttons = digital_IO.buttons.all;
+		tx_Buttons();
+	}
 
 #ifdef SCEN2_debugging_enable
 	if (chVTTimeElapsedSinceX(can_basic_update) > MS2ST(CAN_DELAY_BASIC))
@@ -486,8 +469,6 @@ void SCEN2_CAN_handler(void)
 void SCEN2_CAN_init(void)
 {
 	CAN_base = 0;
-	can_IO.buttons.all = 0;
-	can_IO.trigger.all = 0;
 
 	can_basic_update = chVTGetSystemTime();
 	start_up_timer = chVTGetSystemTime();

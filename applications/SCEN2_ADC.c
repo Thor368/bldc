@@ -9,6 +9,7 @@
 #include "mc_interface.h"
 #include "SCEN2_types.h"
 #include "SCEN2_settings.h"
+#include <math.h>
 
 Analog_IO_t analog_IO;
 
@@ -16,7 +17,7 @@ Analog_IO_t analog_IO;
 void SCEN2_ADC_handler(void)
 {
 	// Water temperature measurement -> Sensor unknown
-	analog_IO.temp_water = ADC_Value[ADC_IND_TEMP_W];
+	analog_IO.temp_water = ADC_VOLTS(ADC_IND_TEMP_W);
 
 	// Water pressure and diving depth measurement
 	uint32_t tmp_L = ADC_Value[ADC_IND_PRESSURE];
@@ -24,7 +25,7 @@ void SCEN2_ADC_handler(void)
 		errors.water_pressure_error = true;
 	else
 		errors.water_pressure_error = false;
-	analog_IO.pressure = tmp_L*0.00313313802083 - 1.25;
+	analog_IO.pressure = ADC_VOLTS(ADC_IND_PRESSURE);
 
 	// power stage temperature measurement
 	analog_IO.temp_MOS = mc_interface_temp_fet_filtered();

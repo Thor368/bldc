@@ -51,7 +51,7 @@ typedef struct
 		uint16_t all;
 	} trigger;
 } Digital_IO_t;
-extern Digital_IO_t digital_IO, can_IO;
+extern Digital_IO_t digital_IO;
 
 typedef union
 {

@@ -26,118 +26,32 @@ void SCEN2_DIO_init(void)
 
 void SCEN2_DIO_handler(void)
 {
-	static bool s = false, g = false, b = false, r = false, T1 = false, T2 = false;
+	digital_IO.buttons.silver = !BUTTON_SILVER();
+	digital_IO.buttons.green = !BUTTON_GREEN();
+	digital_IO.buttons.blue = !BUTTON_BLUE();
+	digital_IO.buttons.red = !BUTTON_RED();
 
-	if (!s && BUTTON_SILVER())
+	static uint32_t T1_fault = 0;
+	if (TRIGGER_1A() && !TRIGGER_1B())
 	{
-		s = true;
-		digital_IO.buttons.silver = 1;
-		can_IO.buttons.silver = 3;
-	}
-	else if (s && !BUTTON_SILVER())
-		s = false;
-
-	if (!g && BUTTON_GREEN())
-	{
-		g = true;
-		digital_IO.buttons.green = 1;
-		can_IO.buttons.green = 3;
-	}
-	else if (s && !BUTTON_GREEN())
-		g = false;
-
-	if (!b && BUTTON_BLUE())
-	{
-		b = true;
-		digital_IO.buttons.blue = 1;
-		can_IO.buttons.blue = 3;
-	}
-	else if (s && !BUTTON_BLUE())
-		b = false;
-
-	if (!r && BUTTON_RED())
-	{
-		r = true;
-		digital_IO.buttons.red = 1;
-		can_IO.buttons.red = 3;
-	}
-	else if (s && !BUTTON_RED())
-		r = false;
-
-	if (TRIGGER_1A() && !TRIGGER_1B() && !T1)
-	{
-		T1 = true;
+		T1_fault = 0;
 
 		digital_IO.trigger.T1 = false;
-		can_IO.trigger.T1 = false;
 	}
-	else if (!TRIGGER_1A() && TRIGGER_1B() && T1)
+	else if (!TRIGGER_1A() && TRIGGER_1B())
 	{
-		T1 = false;
+		T1_fault = 0;
 
-		digital_IO.trigger.T1 = false;
-		can_IO.trigger.T1 = false;
+		digital_IO.trigger.T1 = true;
 	}
-	else if ((TRIGGER_1A() && TRIGGER_1B()) ||
-			(!TRIGGER_1A() && !TRIGGER_1B()))
+	else if (T1_fault >= 1000)
 	{
 		errors.trigger_error = true;
-		T1 = false;
 		digital_IO.trigger.T1 = false;
-		can_IO.trigger.T1 = false;
 	}
+	else if ((TRIGGER_1A() && TRIGGER_1B()) ||
+			 (!TRIGGER_1A() && !TRIGGER_1B()))
+		T1_fault++;
 
-//	if (TRIGGER_2A() && !TRIGGER_2B() && !T2)
-//	{
-//		T2 = true;
-//
-//		digital_IO.trigger.T2 = false;
-//		can_IO.trigger.T2 = false;
-//	}
-//	else if (!TRIGGER_2A() && TRIGGER_2B() && T2)
-//	{
-//		T2 = false;
-//
-//		digital_IO.trigger.T2 = false;
-//		can_IO.trigger.T2 = false;
-//	}
-//	else if ((TRIGGER_2A() && TRIGGER_2B()) ||
-//			(!TRIGGER_2A() && !TRIGGER_2B()))
-//	{
-//		errors.trigger_error = true;
-//		T2 = false;
-//		digital_IO.trigger.T2 = false;
-//		can_IO.trigger.T2 = false;
-//	}
-}
-
-void SCEN2_button_handler(void)
-{
-	if (digital_IO.buttons.silver)
-	{
-		digital_IO.buttons.silver = 0;
-
-		// do something
-	}
-
-	if (digital_IO.buttons.green)
-	{
-		digital_IO.buttons.green= 0;
-
-		// do something
-	}
-
-	if (digital_IO.buttons.blue)
-	{
-		digital_IO.buttons.blue= 0;
-
-		// do something
-	}
-
-	if (digital_IO.buttons.red)
-	{
-		digital_IO.buttons.red = 0;
-
-		// do something
-	}
+	// T2 disabled
 }
