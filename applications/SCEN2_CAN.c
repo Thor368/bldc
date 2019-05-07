@@ -35,7 +35,10 @@ uint32_t CAN_base;
 void tx_ChargeCurrent(void)
 {
 	float data[1];
-	data[0] = analog_IO.I_charge_raw - analog_IO.I_charge_offset;
+	data[0] = analog_IO.I_charge;
+//	float data[2];
+//	data[0] = analog_IO.I_charge_raw;
+//	data[1] = analog_IO.I_charge_offset;
 	comm_can_transmit_eid(MCL_ChargeCurrent + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 

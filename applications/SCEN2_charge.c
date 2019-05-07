@@ -17,7 +17,6 @@
 enum
 {
 	init,
-	callibrating,
 	wait_for_charger,
 	wait_for_HMI_acknowledgement,
 	charging,
@@ -44,33 +43,25 @@ void SCEN2_Charge_handler(void)
 {
 	static systime_t timer;
 	static uint32_t cc;
-	float Charge_I = analog_IO.I_charge_raw - analog_IO.I_charge_offset;
+	static float offset_filter = 0;
 
 	SCEN2_Battery_handler();
+
+	if (charge_mode != charger_detected_with_ACK)
+	{
+		offset_filter += analog_IO.I_charge_raw;
+		offset_filter -= offset_filter/10;
+		analog_IO.I_charge_offset = offset_filter/9;
+	}
 
 	switch (charge_state)
 	{
 	case init:
 		CHG_DISABLE();
 		timer = chVTGetSystemTime();
-		analog_IO.I_charge_offset = 0;
 		cc = 0;
 
-		charge_state = callibrating;
-	break;
-
-	case callibrating:
-		analog_IO.I_charge_offset += analog_IO.I_charge_raw;
-		cc++;
-
-		if (chVTTimeElapsedSinceX(timer) > MS2ST(500))
-		{
-			analog_IO.I_charge_offset /= cc;
-			cc = 0;
-
-			timer = chVTGetSystemTime();
-			charge_state = wait_for_charger;
-		}
+		charge_state = wait_for_charger;
 	break;
 
 	case wait_for_charger:
@@ -126,16 +117,16 @@ void SCEN2_Charge_handler(void)
 	break;
 
 	case charging:
-		if ((chVTTimeElapsedSinceX(timer) > MS2ST(100)) &&
-			((analog_IO.U_charge > CHARGE_U_MAX) ||
-			 (Charge_I > CHARGE_I_MAX) ||
-			 (Charge_I < CHARGE_I_MIN)))
-		{
-			CHG_DISABLE();
-			errors.charger_error = true;
-
-			charge_state = wait_for_reset;
-		}
+//		if ((chVTTimeElapsedSinceX(timer) > MS2ST(100)) &&
+//			((analog_IO.U_charge > CHARGE_U_MAX) ||
+//			 (Charge_I > CHARGE_I_MAX) ||
+//			 (Charge_I < CHARGE_I_MIN)))
+//		{
+//			CHG_DISABLE();
+//			errors.charger_error = true;
+//
+//			charge_state = wait_for_reset;
+//		}
 
 		if (charge_mode != charger_detected_with_ACK)
 		{
@@ -151,7 +142,7 @@ void SCEN2_Charge_handler(void)
 	case wait_for_reset:
 		if (charge_mode == no_charger)
 		{
-			errors.charger_error = true;
+			errors.charger_error = false;
 
 			cc = 0;
 			timer = chVTGetSystemTime();

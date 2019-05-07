@@ -20,6 +20,7 @@ typedef struct
 	float temp_motor;  // C
 	float U_in;  // V
 	float U_charge;  // V
+	float I_charge;  // A
 	float I_charge_raw;  // A
 	float I_charge_offset;  // A
 	float pressure;  // bar
@@ -119,9 +120,9 @@ extern Battery_t batteries[2];
 
 typedef enum
 {
-	no_charger,
-	charger_detected_no_ACK,
-	charger_detected_with_ACK
+	no_charger = 0,
+	charger_detected_no_ACK = 1,
+	charger_detected_with_ACK = 2
 } Charge_mode_t;
 extern Charge_mode_t charge_mode;
 

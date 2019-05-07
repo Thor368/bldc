@@ -38,36 +38,44 @@ void hw_init_gpio(void) {
 	palSetPadMode(GPIOE, 0,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+	CAN_STB_LO();
 
 	// CAN_CP_ON
 	palSetPadMode(GPIOB, 11,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+	CAN_CP_OFF();
 
 	// LED
 	palSetPadMode(GPIOE, 2,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+	LED_GREEN_OFF();
+	LED_RED_OFF();
 
 	// Trigger power
 	palSetPadMode(GPIOE, 3,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+	TRIG_SPLY_OFF();
 
-	// Battery starbord power
+	// Battery right power
 	palSetPadMode(GPIOE, 4,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+	BAT_RIGHT_SPLY_OFF();
 
-	// Battery portside power
+	// Battery left power
 	palSetPadMode(GPIOE, 5,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+	BAT_LEFT_SPLY_OFF();
 
 	// Charge Enable/Disable
 	palSetPadMode(GPIOB, 10,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+	CHG_DISABLE();
 
 	// Button inputs
 	palSetPadMode(GPIOD, 3, PAL_MODE_INPUT_PULLUP);  // silver
