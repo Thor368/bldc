@@ -23,6 +23,7 @@
 typedef enum
 {
 	init,
+	wait_for_governor,
 	check_batteries,
 	switch_to_left,
 	configure_left,
@@ -161,13 +162,23 @@ void SCEN2_Battery_handler(void)
 	case init:
 		SCEN2_Battery_init();
 
-		BAT_LEFT_SPLY_ON();
-		BAT_RIGHT_SPLY_ON();
+		BAT_LEFT_SPLY_OFF();
+		BAT_RIGHT_SPLY_OFF();
 
-		cc = 0;
-		timer = chVTGetSystemTime();
+		batteries_state = wait_for_governor;
+	break;
 
-		batteries_state = check_batteries;
+	case wait_for_governor:
+		if (governor_state == gv_init_BMS)
+		{
+			BAT_LEFT_SPLY_ON();
+			BAT_RIGHT_SPLY_ON();
+
+			cc = 0;
+			timer = chVTGetSystemTime();
+
+			batteries_state = check_batteries;
+		}
 	break;
 
 	case check_batteries:
@@ -253,6 +264,7 @@ void SCEN2_Battery_handler(void)
 
 			timer = chVTGetSystemTime();
 
+			governor_state = gv_run;
 			batteries_state = run;
 		}
 		else if (chVTTimeElapsedSinceX(timer) > MS2ST(100))

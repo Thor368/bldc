@@ -13,6 +13,7 @@
 #include "stm32f4xx_conf.h"
 #include "mc_interface.h"
 #include "timeout.h"
+#include "SCEN2_types.h"
 
 // Threads
 static THD_FUNCTION(custom_thread, arg);
@@ -22,6 +23,8 @@ static THD_WORKING_AREA(custom_thread_wa, 1024);
 static volatile app_configuration config;
 static volatile bool stop_now = true;
 static volatile bool is_running = false;
+
+Governor_state_t governor_state = gv_init;
 
 void app_custom_configure(app_configuration *conf) {
 	config = *conf;
@@ -66,6 +69,8 @@ static THD_FUNCTION(custom_thread, arg) {
 		SCEN2_Charge_handler();
 		SCEN2_Battery_handler();
 
+		if (governor_state == gv_run)
+			DISP_SPLY_ON();
 
 		chThdSleep(1);
 	}

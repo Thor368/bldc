@@ -35,47 +35,56 @@ void hw_init_gpio(void) {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
 
 	// CAN_STB
+	CAN_STB_LO();
 	palSetPadMode(GPIOE, 0,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
-	CAN_STB_LO();
 
 	// CAN_CP_ON
+	CAN_CP_OFF();
 	palSetPadMode(GPIOB, 11,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
-	CAN_CP_OFF();
 
-	// LED
+	// LEDs
+	LED_GREEN_OFF();
+	LED_RED_OFF();
 	palSetPadMode(GPIOE, 2,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
-	LED_GREEN_OFF();
-	LED_RED_OFF();
+	palSetPadMode(GPIOE, 1,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
 
 	// Trigger power
+	TRIG_SPLY_OFF();
 	palSetPadMode(GPIOE, 3,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
-	TRIG_SPLY_OFF();
 
 	// Battery right power
+	BAT_RIGHT_SPLY_OFF();
 	palSetPadMode(GPIOE, 4,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
-	BAT_RIGHT_SPLY_OFF();
 
 	// Battery left power
+	BAT_LEFT_SPLY_OFF();
 	palSetPadMode(GPIOE, 5,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
-	BAT_LEFT_SPLY_OFF();
+
+	// Display power
+	DISP_SPLY_OFF();
+	palSetPadMode(GPIOD, 11,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
 
 	// Charge Enable/Disable
+	CHG_DISABLE();
 	palSetPadMode(GPIOB, 10,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
-	CHG_DISABLE();
 
 	// Button inputs
 	palSetPadMode(GPIOD, 3, PAL_MODE_INPUT_PULLUP);  // silver

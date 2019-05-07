@@ -14,16 +14,17 @@
 #define filter_constant				500
 
 Analog_IO_t analog_IO, filter_analog_IO;
+float leakage_threashold = LEAKAGE_THRESHOLD;
 
 
 void SCEN2_ADC_handler(void)
 {
-	// Water temperature measurement -> Sensor unknown
+	// Water temperature measurement
 	filter_analog_IO.temp_water += ADC_Value[ADC_IND_TEMP_W]*-0.057035696 + 197.7983105;
 	filter_analog_IO.temp_water -= filter_analog_IO.temp_water/filter_constant;
 	analog_IO.temp_water = filter_analog_IO.temp_water/(filter_constant - 1);
 
-	// Water pressure and diving depth measurement
+	// Water pressure measurement
 	uint32_t tmp_L = ADC_Value[ADC_IND_PRESSURE];
 	if ((tmp_L < 399) || (tmp_L > 3591))
 		errors.water_pressure_error = true;
@@ -57,9 +58,10 @@ void SCEN2_ADC_handler(void)
 	filter_analog_IO.I_charge -= filter_analog_IO.I_charge/filter_constant;
 	analog_IO.I_charge = filter_analog_IO.I_charge/(filter_constant - 1);
 
+	// water ingress sensor
 	analog_IO.water_ingress = ADC_VOLTS(ADC_IND_ING);
 	// check if water ingress is tripped
-	if (analog_IO.water_ingress < LEAKAGE_THRESHOLD)
+	if (analog_IO.water_ingress < leakage_threashold)
 		errors.water_ingress_error = true;
 	else
 		errors.water_ingress_error = false;

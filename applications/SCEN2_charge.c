@@ -17,6 +17,8 @@
 enum
 {
 	init,
+	wait_for_governor,
+	calibrate,
 	wait_for_charger,
 	wait_for_HMI_acknowledgement,
 	charging,
@@ -47,21 +49,42 @@ void SCEN2_Charge_handler(void)
 
 	SCEN2_Battery_handler();
 
-	if (charge_mode != charger_detected_with_ACK)
-	{
-		offset_filter += analog_IO.I_charge_raw;
-		offset_filter -= offset_filter/10;
-		analog_IO.I_charge_offset = offset_filter/9;
-	}
-
 	switch (charge_state)
 	{
 	case init:
 		CHG_DISABLE();
-		timer = chVTGetSystemTime();
-		cc = 0;
 
-		charge_state = wait_for_charger;
+		charge_state = wait_for_governor;
+	break;
+
+	case wait_for_governor:
+		if (governor_state == gv_calibrate_chg)
+		{
+			offset_filter = 0;
+			CHG_ENABLE();
+
+			timer = chVTGetSystemTime();
+
+			charge_state = wait_for_charger;
+		}
+	break;
+
+	case calibrate:
+		if (chVTTimeElapsedSinceX(timer) > MS2ST(200))
+		{
+			analog_IO.I_charge_offset = offset_filter/99;
+
+			timer = chVTGetSystemTime();
+			cc = 0;
+
+			charge_state = wait_for_charger;
+			governor_state = gv_init_BMS;
+		}
+		else if (chVTTimeElapsedSinceX(timer) > MS2ST(100))
+		{
+			offset_filter += analog_IO.I_charge_raw;
+			offset_filter -= offset_filter/100;
+		}
 	break;
 
 	case wait_for_charger:

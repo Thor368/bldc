@@ -382,6 +382,7 @@ void rx_wr_handler(uint32_t id, uint8_t *data)
 
 		case MCL_LeakageSensorThreshold_wr:
 			// ToDo: NV memory
+			leakage_threashold = *((float *) &data[0]);
 		break;
 
 		case MCL_MotorSpeed_wr:

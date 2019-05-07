@@ -35,21 +35,23 @@
 
 #define LED_GREEN_ON()			palSetPad(GPIOE, 2)
 #define LED_GREEN_OFF()			palClearPad(GPIOE, 2)
-#define LED_RED_ON()
-#define LED_RED_OFF()
+#define LED_RED_ON()			palSetPad(GPIOE, 1)
+#define LED_RED_OFF()			palClearPad(GPIOE, 1)
 
 #define CAN_STB_HI()			palSetPad(GPIOE, 0)
 #define CAN_STB_LO()			palClearPad(GPIOE, 0)
 
 #define TRIG_SPLY_ON()			palSetPad(GPIOE, 3)
 #define TRIG_SPLY_OFF()			palClearPad(GPIOE, 3)
-#define TRIG_SPLY_TOG()			palTogglePad(GPIOE, 3)
 
 #define BAT_RIGHT_SPLY_ON()		palSetPad(GPIOE, 4)
 #define BAT_RIGHT_SPLY_OFF()	palClearPad(GPIOE, 4)
 
 #define BAT_LEFT_SPLY_ON()		palSetPad(GPIOE, 5)
 #define BAT_LEFT_SPLY_OFF()		palClearPad(GPIOE, 5)
+
+#define DISP_SPLY_ON()			palSetPad(GPIOD, 11)
+#define DISP_SPLY_OFF()			palClearPad(GPIOD, 11)
 
 #define CAN_CP_ON()				palSetPad(GPIOB, 11)
 #define CAN_CP_OFF()			palClearPad(GPIOB, 11)

@@ -126,4 +126,15 @@ typedef enum
 } Charge_mode_t;
 extern Charge_mode_t charge_mode;
 
+typedef enum
+{
+	gv_init,
+	gv_calibrate_chg,
+	gv_init_BMS,
+	gv_run
+} Governor_state_t;
+extern Governor_state_t governor_state;
+
+extern float leakage_threashold;
+
 #endif /* APPLICATIONS_SCEN2_TYPES_H_ */
