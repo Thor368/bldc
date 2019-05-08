@@ -71,6 +71,8 @@ static THD_FUNCTION(custom_thread, arg) {
 
 		if (governor_state == gv_run)
 			DISP_SPLY_ON();
+		else if (governor_state == gv_init)
+			governor_state = gv_calibrate_chg;
 
 		chThdSleep(1);
 	}

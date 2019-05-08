@@ -65,12 +65,12 @@ void SCEN2_Charge_handler(void)
 
 			timer = chVTGetSystemTime();
 
-			charge_state = wait_for_charger;
+			charge_state = calibrate;
 		}
 	break;
 
 	case calibrate:
-		if (chVTTimeElapsedSinceX(timer) > MS2ST(200))
+		if (chVTTimeElapsedSinceX(timer) > MS2ST(500))
 		{
 			analog_IO.I_charge_offset = offset_filter/99;
 
