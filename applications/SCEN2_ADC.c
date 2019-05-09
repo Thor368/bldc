@@ -37,7 +37,7 @@ void SCEN2_ADC_handler(void)
 	// power stage temperature measurement
 	filter_analog_IO.temp_MOS += mc_interface_temp_fet_filtered();
 	filter_analog_IO.temp_MOS -= filter_analog_IO.temp_MOS/filter_constant;
-	analog_IO.temp_MOS += filter_analog_IO.temp_MOS/(filter_constant - 1);
+	analog_IO.temp_MOS = filter_analog_IO.temp_MOS/(filter_constant - 1);
 
 	// motor temperature measurement
 	filter_analog_IO.temp_motor += mc_interface_temp_motor_filtered();
