@@ -386,7 +386,7 @@ void rx_wr_handler(uint32_t id, uint8_t *data)
 		break;
 
 		case MCL_MotorSpeed_wr:
-			speed = *((int16_t *) data)*POLE_PAIR_COUNT;
+			speed = *((float *) data)*POLE_PAIR_COUNT;
 
 			if (abs(speed - speed_save) > 1)  // floats...
 			{
