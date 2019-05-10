@@ -1041,7 +1041,7 @@ float mcpwm_foc_get_vq(void) {
  * this is used by the virtual motor to save the current offsets,
  * when it is connected
  */
-void mcpwm_foc_get_current_offsets(volatile int *curr0_offset, volatile int *curr1_offset, volatile int *curr2_offset){
+void mcpwm_foc_get_current_offsets(volatile int *curr0_offset, volatile int *curr1_offset, volatile int *curr2_offset) {
 	*curr0_offset = m_curr0_offset;
 	*curr1_offset = m_curr1_offset;
 #ifdef HW_HAS_3_SHUNTS
@@ -1509,7 +1509,7 @@ bool mcpwm_foc_measure_res_ind(float *res, float *ind) {
 		i_last = (m_conf->l_current_max / 2.0);
 	}
 
-#ifdef HW_PALTA_FORCE_HIGH_CURRENT_MEASUREMENTS
+#ifdef HW_AXIOM_FORCE_HIGH_CURRENT_MEASUREMENTS
 	i_last = (m_conf->l_current_max / 2.0);
 #endif
 
@@ -2064,7 +2064,7 @@ void mcpwm_foc_adc_int_handler(void *p, uint32_t flags) {
 		float c, s;
 		utils_fast_sincos_better(m_motor_state.phase, &s, &c);
 
-#ifdef HW_PALTA_USE_LINE_TO_LINE
+#ifdef HW_USE_LINE_TO_LINE
 		// rotate alpha-beta 30 degrees to compensate for line-to-line phase voltage sensing
 		float x_tmp = m_motor_state.v_alpha;
 		float y_tmp = m_motor_state.v_beta;

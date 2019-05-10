@@ -122,7 +122,7 @@ void terminal_process_string(char *str) {
 				commands_printf("Current          : %.1f", (double)fault_vec[i].current);
 				commands_printf("Current filtered : %.1f", (double)fault_vec[i].current_filtered);
 				commands_printf("Voltage          : %.2f", (double)fault_vec[i].voltage);
-#ifdef HW_VERSION_PALTA
+#ifdef HW_VERSION_AXIOM
 				commands_printf("Gate drv voltage : %.2f", (double)fault_vec[i].gate_driver_voltage);
 #endif
 				commands_printf("Duty             : %.3f", (double)fault_vec[i].duty);
@@ -182,7 +182,7 @@ void terminal_process_string(char *str) {
 		commands_printf("Current 2 sample: %u\n", current2_samp);
 	} else if (strcmp(argv[0], "volt") == 0) {
 		commands_printf("Input voltage: %.2f\n", (double)GET_INPUT_VOLTAGE());
-#ifdef HW_VERSION_PALTA
+#ifdef HW_VERSION_AXIOM
 		commands_printf("Gate driver power supply output voltage: %.2f\n", (double)GET_GATE_DRIVER_SUPPLY_VOLTAGE());
 #endif
 	} else if (strcmp(argv[0], "param_detect") == 0) {
@@ -438,6 +438,16 @@ void terminal_process_string(char *str) {
 				STM32_UUID_8[4], STM32_UUID_8[5], STM32_UUID_8[6], STM32_UUID_8[7],
 				STM32_UUID_8[8], STM32_UUID_8[9], STM32_UUID_8[10], STM32_UUID_8[11]);
 		commands_printf("Permanent NRF found: %s", conf_general_permanent_nrf_found ? "Yes" : "No");
+
+		int curr0_offset;
+		int curr1_offset;
+		int curr2_offset;
+
+		mcpwm_foc_get_current_offsets(&curr0_offset, &curr1_offset, &curr2_offset);
+
+		commands_printf("FOC Current Offsets: %d %d %d",
+				curr0_offset, curr1_offset, curr2_offset);
+
 		commands_printf(" ");
 	} else if (strcmp(argv[0], "foc_openloop") == 0) {
 		if (argc == 3) {
