@@ -1371,7 +1371,7 @@ void mc_interface_mc_timer_isr(void) {
 		mc_interface_fault_stop(FAULT_CODE_DRV);
 	}
 
-#ifdef HW_VERSION_PALTA
+#ifdef HW_VERSION_AXIOM
 	if( m_gate_driver_voltage > HW_GATE_DRIVER_SUPPLY_MAX_VOLTAGE) {
 		mc_interface_fault_stop(FAULT_CODE_GATE_DRIVER_OVER_VOLTAGE);
 	}
@@ -1576,7 +1576,7 @@ static void update_override_limits(volatile mc_configuration *conf) {
 
 	UTILS_LP_FAST(m_temp_fet, NTC_TEMP(ADC_IND_TEMP_MOS), 0.1);
 	UTILS_LP_FAST(m_temp_motor, NTC_TEMP_MOTOR(conf->m_ntc_motor_beta), 0.1);
-#ifdef HW_VERSION_PALTA
+#ifdef HW_VERSION_AXIOM
 	UTILS_LP_FAST(m_gate_driver_voltage, GET_GATE_DRIVER_SUPPLY_VOLTAGE(), 0.01);
 #endif
 
@@ -1812,23 +1812,26 @@ static THD_FUNCTION(timer_thread, arg) {
 				mc_interface_fault_stop(FAULT_CODE_ENCODER_SINCOS_ABOVE_MAX_AMPLITUDE);
 		}
 
-		int m_curr0_offset;
-		int m_curr1_offset;
-		int m_curr2_offset;
+		// TODO: Implement for BLDC and GPDRIVE
+		if(m_conf.motor_type == MOTOR_TYPE_FOC) {
+			int curr0_offset;
+			int curr1_offset;
+			int curr2_offset;
 
-		mcpwm_foc_get_current_offsets(&m_curr0_offset, &m_curr1_offset, &m_curr2_offset);
+			mcpwm_foc_get_current_offsets(&curr0_offset, &curr1_offset, &curr2_offset);
 
-		if (abs(m_curr0_offset - 2048) > HW_MAX_CURRENT_OFFSET) {
-			mc_interface_fault_stop(FAULT_CODE_HIGH_OFFSET_CURRENT_SENSOR_1);
-		}
-		if (abs(m_curr1_offset - 2048) > HW_MAX_CURRENT_OFFSET) {
-			mc_interface_fault_stop(FAULT_CODE_HIGH_OFFSET_CURRENT_SENSOR_2);
-		}
+			if (abs(curr0_offset - 2048) > HW_MAX_CURRENT_OFFSET) {
+				mc_interface_fault_stop(FAULT_CODE_HIGH_OFFSET_CURRENT_SENSOR_1);
+			}
+			if (abs(curr1_offset - 2048) > HW_MAX_CURRENT_OFFSET) {
+				mc_interface_fault_stop(FAULT_CODE_HIGH_OFFSET_CURRENT_SENSOR_2);
+			}
 #ifdef HW_HAS_3_SHUNTS
-		if (abs(m_curr2_offset - 2048) > HW_MAX_CURRENT_OFFSET) {
-			mc_interface_fault_stop(FAULT_CODE_HIGH_OFFSET_CURRENT_SENSOR_3);
-		}
+			if (abs(curr2_offset - 2048) > HW_MAX_CURRENT_OFFSET) {
+				mc_interface_fault_stop(FAULT_CODE_HIGH_OFFSET_CURRENT_SENSOR_3);
+			}
 #endif
+		}
 
 		chThdSleepMilliseconds(1);
 	}

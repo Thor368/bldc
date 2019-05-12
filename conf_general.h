@@ -22,7 +22,7 @@
 
 // Firmware version
 #define FW_VERSION_MAJOR		3
-#define FW_VERSION_MINOR		55
+#define FW_VERSION_MINOR		56
 
 #include "datatypes.h"
 
@@ -79,8 +79,8 @@
 //#define HW_SOURCE "hw_das_rs.c"
 //#define HW_HEADER "hw_das_rs.h"
 
-//#define HW_SOURCE "hw_palta.c"
-//#define HW_HEADER "hw_palta.h"
+//#define HW_SOURCE "hw_axiom.c"
+//#define HW_HEADER "hw_axiom.h"
 
 //#define HW_SOURCE "hw_rh.c"
 //#define HW_HEADER "hw_rh.h"
