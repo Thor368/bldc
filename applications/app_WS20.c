@@ -76,7 +76,15 @@ static THD_FUNCTION(WS20_thread, arg) {
 		}
 
 		static systime_t wait_1s = 0;
-//		if ()
+		if (chVTTimeElapsedSinceX(wait_1s) > MS2ST(1000))
+		{
+			wait_1s = chVTGetSystemTime();
+
+			uint32_t data[2];
+			data[0] = "TRIa";
+			data[1] = 0;
+			comm_can_transmit_sid(CAN_ID_INFO, (uint8_t *) data, sizeof(data));
+		}
 
 //		comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len);
 
