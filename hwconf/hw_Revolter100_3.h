@@ -100,6 +100,7 @@
 #ifndef INVERTED_SHUNT_POLARITY
 #define INVERTED_SHUNT_POLARITY
 #endif
+
 // Input voltage
 #define GET_INPUT_VOLTAGE()		((V_REG / 4095.0) * (float)ADC_Value[ADC_IND_VIN_SENS] * ((VIN_R1 + VIN_R2) / VIN_R2))
 
