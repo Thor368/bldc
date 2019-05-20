@@ -33,14 +33,42 @@ uint32_t CAN_base_adr;
 #define BASE_OFFSET					0x100
 #define CAN_DRIVE_CONTROLS_BASE		(CAN_base_adr + BASE_OFFSET)
 
+#define PACKET_HANDLER				1
+
+static SerialConfig uart_cfg = {
+		500000,
+		0,
+		0,
+		0
+};
+
+static uint8_t if_buffer[16], if_ptr;
+static uint16_t pos1, pos2;
+static uint8_t temp1, temp2;
+
 void app_custom_start(void)
 {
 	stop_now = false;
+
+	if_ptr = 0;
+
+	sdStart(&HW_UART_DEV, &uart_cfg);
+	palSetPadMode(HW_UART_TX_PORT, HW_UART_TX_PIN, PAL_MODE_ALTERNATE(HW_UART_GPIO_AF) |
+			PAL_STM32_OSPEED_HIGHEST |
+			PAL_STM32_PUDR_PULLUP);
+	palSetPadMode(HW_UART_RX_PORT, HW_UART_RX_PIN, PAL_MODE_ALTERNATE(HW_UART_GPIO_AF) |
+			PAL_STM32_OSPEED_HIGHEST |
+			PAL_STM32_PUDR_PULLUP);
+
 	chThdCreateStatic(WS20_thread_wa, sizeof(WS20_thread_wa), NORMALPRIO, WS20_thread, NULL);
 }
 
 void app_custom_stop(void)
 {
+	sdStop(&HW_UART_DEV);
+	palSetPadMode(HW_UART_TX_PORT, HW_UART_TX_PIN, PAL_MODE_INPUT_PULLUP);
+	palSetPadMode(HW_UART_RX_PORT, HW_UART_RX_PIN, PAL_MODE_INPUT_PULLUP);
+
 	stop_now = true;
 	while (is_running)
 		chThdSleepMilliseconds(1);
@@ -77,6 +105,22 @@ void app_custom_configure(app_configuration *conf)
 
 	CAN_base_adr = app_conf.controller_id*0x20;
 	comm_can_set_sid_rx_callback(&rx_callback);
+}
+
+void UART_handler(void)
+{
+	msg_t res = sdGetTimeout(&HW_UART_DEV, TIME_IMMEDIATE);
+	if (res != MSG_TIMEOUT)
+	{
+		if_buffer[if_ptr++] = res;
+		if (if_ptr >= 16)
+			if_ptr -= 16;
+
+		pos1 = *((uint16_t *) &if_buffer[8]);
+		temp1 = if_buffer[10];
+		temp2 = if_buffer[11];
+		pos2 = *((uint16_t *) &if_buffer[12]);
+	}
 }
 
 static THD_FUNCTION(WS20_thread, arg)
@@ -152,6 +196,8 @@ static THD_FUNCTION(WS20_thread, arg)
 			data_F[1] = mc_interface_get_speed();
 			comm_can_transmit_sid(ID_VELOCITY + CAN_BASE, (uint8_t *) data_F, sizeof(data_F));
 		}
+
+//		UART_handler();
 
 		chThdSleep(1);
 	}
