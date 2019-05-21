@@ -460,10 +460,17 @@ void SCEN2_CAN_handler(void)
 	}
 #endif
 
-	if ((starting_up) && (chVTTimeElapsedSinceX(start_up_timer) > MS2ST(START_UP_TIME)))
+	if (starting_up)
 	{
-		starting_up = false;
-		mc_interface_set_pid_speed(speed_save);
+		if (chVTTimeElapsedSinceX(start_up_timer) > MS2ST(START_UP_TIME))
+		{
+			mc_interface_release_motor();
+		}
+		else if (abs(mc_interface_get_rpm()) >= 1000)
+		{
+			starting_up = false;
+			mc_interface_set_pid_speed(speed_save);
+		}
 	}
 
 	if (timeout_has_timeout())
