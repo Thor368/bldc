@@ -43,13 +43,19 @@ enum Battery_index_t
 
 Battery_t battery_left, battery_right, battery_init;
 
+void send_state(void)
+{
+	uint8_t data[1];
+	data[0] = batteries_state;
+	comm_can_transmit_eid(5, (uint8_t *) &data, sizeof(data));
+}
 
 void battery_set_offset(Battery_t *bat, uint32_t old_offset)
 {
 	uint8_t data[2];
 	data[0] = 0x22;
 	data[1] = bat->offset >> 8;
-	comm_can_transmit_eid(old_offset, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(old_offset + 0x0A, (uint8_t *) &data, sizeof(data));
 }
 
 void battery_reset(Battery_t *bat, uint32_t offset)
@@ -92,6 +98,9 @@ void SCEN2_Battery_RX(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 	(void) len;
 
 	Battery_t *bat;
+
+	if ((id == 0x5) && rtr)
+		send_state();
 
 	if (rtr)
 		return;
@@ -166,6 +175,7 @@ void SCEN2_Battery_handler(void)
 		BAT_RIGHT_SPLY_OFF();
 
 		batteries_state = wait_for_governor;
+		send_state();
 	break;
 
 	case wait_for_governor:
@@ -178,11 +188,12 @@ void SCEN2_Battery_handler(void)
 			timer = chVTGetSystemTime();
 
 			batteries_state = check_batteries;
+			send_state();
 		}
 	break;
 
 	case check_batteries:
-		if (battery_init.active || (cc >= 5))
+		if (battery_init.active || (cc >= 10))
 		{
 			BAT_RIGHT_SPLY_OFF();
 
@@ -190,9 +201,13 @@ void SCEN2_Battery_handler(void)
 			timer = chVTGetSystemTime();
 
 			batteries_state = switch_to_left;
+			send_state();
 		}
 		else if (battery_left.active && battery_right.active)
+		{
 			batteries_state = run;
+			send_state();
+		}
 		else if (chVTTimeElapsedSinceX(timer) > MS2ST(100))
 		{
 			cc++;
@@ -202,7 +217,7 @@ void SCEN2_Battery_handler(void)
 	break;
 
 	case switch_to_left:
-		if (chVTTimeElapsedSinceX(timer) > MS2ST(1000))
+		if (chVTTimeElapsedSinceX(timer) > MS2ST(10000))
 		{
 			batteries_reset();
 			ping_all();
@@ -211,22 +226,24 @@ void SCEN2_Battery_handler(void)
 			timer = chVTGetSystemTime();
 
 			batteries_state = configure_left;
+			send_state();
 		}
 	break;
 
 	case configure_left:
 		if (battery_init.active)
 			battery_set_offset(&battery_left, offset_init);
-		else if (battery_left.active || (cc >= 5))
+		else if (battery_left.active || (cc >= 10))
 		{
 			BAT_RIGHT_SPLY_ON();
 			BAT_LEFT_SPLY_OFF();
-			if (cc >= 5)
+			if (cc >= 10)
 				errors.battery_left_error = true;
 
 			timer = chVTGetSystemTime();
 
 			batteries_state = switch_to_right;
+			send_state();
 		}
 		else if (battery_right.active)
 			battery_set_offset(&battery_left, offset_right);
@@ -239,7 +256,7 @@ void SCEN2_Battery_handler(void)
 	break;
 
 	case switch_to_right:
-		if (chVTTimeElapsedSinceX(timer) > MS2ST(1000))
+		if (chVTTimeElapsedSinceX(timer) > MS2ST(10000))
 		{
 			batteries_reset();
 			ping_all();
@@ -248,6 +265,7 @@ void SCEN2_Battery_handler(void)
 			timer = chVTGetSystemTime();
 
 			batteries_state = configure_right;
+			send_state();
 		}
 	break;
 
@@ -256,16 +274,17 @@ void SCEN2_Battery_handler(void)
 			battery_set_offset(&battery_right, offset_init);
 		else if (battery_left.active)
 			battery_set_offset(&battery_right, offset_left);
-		else if (battery_right.active || (cc >= 5))
+		else if (battery_right.active || (cc >= 10))
 		{
 			BAT_LEFT_SPLY_ON();
-			if (cc >= 5)
+			if (cc >= 10)
 				errors.battery_right_error = true;
 
 			timer = chVTGetSystemTime();
 
 			governor_state = gv_run;
 			batteries_state = run;
+			send_state();
 		}
 		else if (chVTTimeElapsedSinceX(timer) > MS2ST(100))
 		{

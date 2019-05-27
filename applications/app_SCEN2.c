@@ -69,9 +69,7 @@ static THD_FUNCTION(custom_thread, arg) {
 		SCEN2_Charge_handler();
 		SCEN2_Battery_handler();
 
-		if (governor_state == gv_run)
-			DISP_SPLY_ON();
-		else if (governor_state == gv_init)
+		if (governor_state == gv_init)
 			governor_state = gv_calibrate_chg;
 
 		chThdSleep(1);

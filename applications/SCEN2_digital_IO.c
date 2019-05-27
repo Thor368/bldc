@@ -18,6 +18,8 @@ void SCEN2_DIO_init(void)
 {
 	CAN_STB_LO();
 	CAN_CP_ON();
+	TRIG_SPLY_ON();
+	DISP_SPLY_ON();
 
 	digital_IO.buttons.all = 0;
 	digital_IO.trigger.all = 0;

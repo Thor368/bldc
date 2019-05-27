@@ -232,7 +232,7 @@ void tx_Debugging(void)
 	comm_can_transmit_eid(3, (uint8_t *) &data, sizeof(data));
 }
 
-void rx_rtr_handler(uint32_t id, uint8_t *data)
+void rx_rtr_handler(uint32_t id)
 {
 	switch (id)
 	{
@@ -246,18 +246,6 @@ void rx_rtr_handler(uint32_t id, uint8_t *data)
 
 		case MCL_Hash:
 			tx_HASH();
-		break;
-
-		case MCL_Reset:
-			__disable_irq();  // watchdog will reset system
-			while(1);
-		break;
-
-		case MCL_Jump_Bootloader:
-			if (*((uint16_t *) &data[0]) == 666)
-			{
-				// jump to bootloader
-			}
 		break;
 
 		case MCL_Errors:
@@ -386,6 +374,9 @@ void rx_wr_handler(uint32_t id, uint8_t *data)
 		break;
 
 		case MCL_MotorSpeed_wr:
+			if (charge_mode == charger_detected_with_ACK)
+				return;
+
 			speed = *((float *) data)*POLE_PAIR_COUNT;
 
 			if (abs(speed - speed_save) > 1)  // floats...
@@ -419,6 +410,21 @@ void rx_wr_handler(uint32_t id, uint8_t *data)
 		case MCL_ChargeMode_wr:
 			charge_mode = data[0];
 		break;
+
+		case MCL_Reset:
+			if (*((uint16_t *) &data[0]) == 666)
+			{
+				__disable_irq();  // watchdog will reset system
+				while(1);
+			}
+		break;
+
+		case MCL_Jump_Bootloader:
+			if (*((uint16_t *) &data[0]) == 666)
+			{
+				// jump to bootloader
+			}
+		break;
 	}
 }
 
@@ -429,16 +435,16 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 
 	if ((id >= (MCL_CAN_ID_base + CAN_base)) && (id < (MCL_CAN_ID_base + CAN_base + 0x1000)))  // frame for us?
 		id -= CAN_base;  // subtract base id
-	else if ((id >= 0x100) && (id < 0x400))  // frame for BMS?
-	{
+//	else if ((id >= 0x100) && (id < 0x400))  // frame for BMS?
+//	{
 		SCEN2_Battery_RX(id, data, len, rtr);
-		return;
-	}
-	else
-		return;
+//		return;
+//	}
+//	else
+//		return;
 
 	if (rtr)
-		rx_rtr_handler(id, data);
+		rx_rtr_handler(id);
 	else
 		rx_wr_handler(id, data);
 }
@@ -471,6 +477,11 @@ void SCEN2_CAN_handler(void)
 			starting_up = false;
 			mc_interface_set_pid_speed(speed_save);
 		}
+	}
+	if (charge_mode == charger_detected_with_ACK)
+	{
+		mc_interface_release_motor();
+		speed_save = 0;
 	}
 
 	if (timeout_has_timeout())
