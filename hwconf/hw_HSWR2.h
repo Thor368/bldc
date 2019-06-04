@@ -70,10 +70,10 @@
 #define V_REG					3.3
 #endif
 #ifndef VIN_R1
-#define VIN_R1					220000
+#define VIN_R1					220000.0
 #endif
 #ifndef VIN_R2
-#define VIN_R2					3300
+#define VIN_R2					3300.0
 #endif
 #ifndef CURRENT_AMP_GAIN
 #define CURRENT_AMP_GAIN		20.0
@@ -149,16 +149,6 @@
 #define HW_ENC_EXTI_ISR_VEC		EXTI15_10_IRQHandler
 #define HW_ENC_TIM_ISR_CH		TIM4_IRQn
 #define HW_ENC_TIM_ISR_VEC		TIM4_IRQHandler
-
-// NRF pins
-#define NRF_PORT_CSN			GPIOA
-#define NRF_PIN_CSN				4
-#define NRF_PORT_SCK			GPIOA
-#define NRF_PIN_SCK				5
-#define NRF_PORT_MOSI			GPIOA
-#define NRF_PIN_MOSI			7
-#define NRF_PORT_MISO			GPIOA
-#define NRF_PIN_MISO			6
 
 // SPI pins
 #define HW_SPI_DEV				SPID1
