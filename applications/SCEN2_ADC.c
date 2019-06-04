@@ -13,6 +13,7 @@
 
 #define filter_constant				500
 
+
 Analog_IO_t analog_IO, filter_analog_IO;
 float leakage_threashold = LEAKAGE_THRESHOLD;
 
@@ -20,7 +21,11 @@ float leakage_threashold = LEAKAGE_THRESHOLD;
 void SCEN2_ADC_handler(void)
 {
 	// Water temperature measurement
-	filter_analog_IO.temp_water += ADC_Value[ADC_IND_TEMP_W]*-0.057035696 + 197.7983105;
+	float x = ADC_Value[ADC_IND_TEMP_W];
+	filter_analog_IO.temp_water -= 119.5217814001;
+	filter_analog_IO.temp_water += x*0.1571592547;
+	x *= x;
+	filter_analog_IO.temp_water -= x*0.0000345818;
 	filter_analog_IO.temp_water -= filter_analog_IO.temp_water/filter_constant;
 	analog_IO.temp_water = filter_analog_IO.temp_water/(filter_constant - 1);
 
@@ -55,8 +60,8 @@ void SCEN2_ADC_handler(void)
 	analog_IO.U_charge = filter_analog_IO.U_charge/(filter_constant - 1);
 	analog_IO.I_charge_raw = ADC_Value[ADC_IND_I_CHG]*0.040283203125;
 	filter_analog_IO.I_charge += analog_IO.I_charge_raw - analog_IO.I_charge_offset;
-	filter_analog_IO.I_charge -= filter_analog_IO.I_charge/filter_constant;
-	analog_IO.I_charge = filter_analog_IO.I_charge/(filter_constant - 1);
+	filter_analog_IO.I_charge -= filter_analog_IO.I_charge/10000;
+	analog_IO.I_charge = filter_analog_IO.I_charge/9999;
 
 	// water ingress sensor
 	analog_IO.water_ingress = ADC_VOLTS(ADC_IND_ING);

@@ -9,7 +9,7 @@
 #define APPLICATIONS_SCEN2_SETTINGS_H_
 
 #define major_release		0
-#define minor_release		6
+#define minor_release		7
 #define branch				2				// alpha dev branch
 
 #define LEAKAGE_THRESHOLD	0.7				// 1.0V water ingress threshold
@@ -25,5 +25,6 @@
 #define STM32_UID			((uint32_t *) 0x1FFF7A10)
 
 //#define SCEN2_debugging_enable
+#define SCEN2_emulate_CHG
 
 #endif /* APPLICATIONS_SCEN2_SETTINGS_H_ */

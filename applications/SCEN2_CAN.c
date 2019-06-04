@@ -34,11 +34,21 @@ uint32_t CAN_base;
 
 void tx_ChargeCurrent(void)
 {
-	float data[1];
-	data[0] = analog_IO.I_charge;
-//	float data[2];
-//	data[0] = analog_IO.I_charge_raw;
-//	data[1] = analog_IO.I_charge_offset;
+#ifdef SCEN2_debugging_enable
+	uint32_t data[2];
+	data[0] = analog_IO.I_charge_raw*1000;
+	data[1] = analog_IO.I_charge_offset*1000;
+#else
+	float data;
+	if (charge_mode  == charger_detected_with_ACK)
+#ifdef SCEN2_emulate_CHG
+		data = 6.5;
+#else
+		data = analog_IO.I_charge;
+#endif
+	else
+		data = 0;
+#endif
 	comm_can_transmit_eid(MCL_ChargeCurrent + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
@@ -119,6 +129,8 @@ void tx_MotorSpeed(void)
 {
 	float data[1];
 	data[0] = mc_interface_get_rpm()/POLE_PAIR_COUNT;
+	if (data[0] < 100)
+		data[0] = 0;
 	comm_can_transmit_eid(MCL_MotorSpeed_rd + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
@@ -433,16 +445,27 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 	(void) len;
 
 
-	if ((id >= (MCL_CAN_ID_base + CAN_base)) && (id < (MCL_CAN_ID_base + CAN_base + 0x1000)))  // frame for us?
-		id -= CAN_base;  // subtract base id
-//	else if ((id >= 0x100) && (id < 0x400))  // frame for BMS?
-//	{
-		SCEN2_Battery_RX(id, data, len, rtr);
-//		return;
-//	}
-//	else
-//		return;
+#ifdef SCEN2_debugging_enable
+	SCEN2_Battery_RX(id, data, len, rtr);
+#endif
 
+	if ((id >= (MCL_CAN_ID_base + CAN_base)) && (id < (MCL_CAN_ID_base + CAN_base + 0x1000)))  // frame for us?
+	{
+		id -= CAN_base;  // subtract base id
+	}
+#ifndef SCEN2_debugging_enable
+	else if ((id >= 0x100) && (id < 0x400))  // frame for BMS?
+	{
+		SCEN2_Battery_RX(id, data, len, rtr);
+		return;
+	}
+#endif
+	else
+	{
+		return;
+	}
+
+		SCEN2_Battery_RX(id, data, len, rtr);
 	if (rtr)
 		rx_rtr_handler(id);
 	else

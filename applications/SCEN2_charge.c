@@ -73,6 +73,7 @@ void SCEN2_Charge_handler(void)
 		if (chVTTimeElapsedSinceX(timer) > MS2ST(500))
 		{
 			analog_IO.I_charge_offset = offset_filter/99;
+			CHG_DISABLE();
 
 			timer = chVTGetSystemTime();
 			cc = 0;
