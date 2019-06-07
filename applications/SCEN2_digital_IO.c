@@ -46,14 +46,34 @@ void SCEN2_DIO_handler(void)
 
 		digital_IO.trigger.T1 = true;
 	}
-	else if (T1_fault >= 1000)
-	{
-		errors.trigger_error = true;
-		digital_IO.trigger.T1 = false;
-	}
-	else if ((TRIGGER_1A() && TRIGGER_1B()) ||
-			 (!TRIGGER_1A() && !TRIGGER_1B()))
-		T1_fault++;
+//	else if (T1_fault >= 1000)
+//	{
+//		errors.trigger_error = true;
+//		digital_IO.trigger.T1 = false;
+//	}
+//	else if ((TRIGGER_1A() && TRIGGER_1B()) ||
+//			 (!TRIGGER_1A() && !TRIGGER_1B()))
+//		T1_fault++;
 
-	// T2 disabled
+	static uint32_t T2_fault = 0;
+	if (TRIGGER_2A() && !TRIGGER_2B())
+	{
+		T2_fault = 0;
+
+		digital_IO.trigger.T2 = false;
+	}
+	else if (!TRIGGER_2A() && TRIGGER_2B())
+	{
+		T2_fault = 0;
+
+		digital_IO.trigger.T2 = true;
+	}
+//	else if (T2_fault >= 1000)
+//	{
+//		errors.trigger_error = true;
+//		digital_IO.trigger.T2 = false;
+//	}
+//	else if ((TRIGGER_2A() && TRIGGER_2B()) ||
+//			 (!TRIGGER_2A() && !TRIGGER_2B()))
+//		T2_fault++;
 }

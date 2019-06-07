@@ -152,12 +152,12 @@ void tx_Trigger(void)
 {
 	float data[2];
 
-	if (errors.trigger_error)
-	{
-		data[0] = 0;
-		data[1] = 0;
-	}
-	else
+//	if (errors.trigger_error)
+//	{
+//		data[0] = 0;
+//		data[1] = 0;
+//	}
+//	else
 	{
 		if (digital_IO.trigger.T1)
 			data[0] = 1;
@@ -465,7 +465,7 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 		return;
 	}
 
-		SCEN2_Battery_RX(id, data, len, rtr);
+	SCEN2_Battery_RX(id, data, len, rtr);
 	if (rtr)
 		rx_rtr_handler(id);
 	else
@@ -479,6 +479,13 @@ void SCEN2_CAN_handler(void)
 	{
 		buttons = digital_IO.buttons.all;
 		tx_Buttons();
+	}
+
+	static uint16_t trigger = 0;
+	if (trigger != digital_IO.trigger.all)
+	{
+		trigger = digital_IO.trigger.all;
+		tx_Trigger();
 	}
 
 #ifdef SCEN2_debugging_enable
