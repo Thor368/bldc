@@ -14,7 +14,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration buildProperties="" description="" id="fr.ac6.managedbuild.toolchain.gnu.cross.base.910727552" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
+				<configuration artifactName="${ProjName}" buildProperties="" description="" id="fr.ac6.managedbuild.toolchain.gnu.cross.base.910727552" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
 					<folderInfo id="fr.ac6.managedbuild.toolchain.gnu.cross.base.910727552.1777079950" name="/" resourcePath="">
 						<toolChain id="fr.ac6.managedbuild.toolchain.gnu.cross.base.2001773614" name="Ac6 STM32 MCU GCC" superClass="fr.ac6.managedbuild.toolchain.gnu.cross.base">
 							<option id="fr.ac6.managedbuild.option.gnu.cross.prefix.782155239" name="Prefix" superClass="fr.ac6.managedbuild.option.gnu.cross.prefix"/>
@@ -26,7 +26,7 @@
 							<option id="fr.ac6.managedbuild.option.gnu.cross.floatabi.1805891550" name="Floating-point ABI" superClass="fr.ac6.managedbuild.option.gnu.cross.floatabi"/>
 							<option id="fr.ac6.managedbuild.option.gnu.cross.instructionSet.881281095" name="Instruction Set" superClass="fr.ac6.managedbuild.option.gnu.cross.instructionSet"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="fr.ac6.managedbuild.targetPlatform.gnu.cross.2009640034" isAbstract="false" osList="all" superClass="fr.ac6.managedbuild.targetPlatform.gnu.cross"/>
-							<builder id="fr.ac6.managedbuild.builder.gnu.cross.877465054" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="fr.ac6.managedbuild.builder.gnu.cross"/>
+							<builder id="fr.ac6.managedbuild.builder.gnu.cross.877465054" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="8" superClass="fr.ac6.managedbuild.builder.gnu.cross"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.911755471" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler">
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.33010851" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c"/>
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s.539948980" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s"/>

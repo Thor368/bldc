@@ -86,6 +86,9 @@ void hw_init_gpio(void) {
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
 
+	// FAULT pin
+	palSetPadMode(GPIOB, 2, PAL_MODE_INPUT_PULLUP);
+
 	// Button inputs
 	palSetPadMode(GPIOD, 3, PAL_MODE_INPUT_PULLUP);  // silver
 	palSetPadMode(GPIOD, 2, PAL_MODE_INPUT_PULLUP);  // green

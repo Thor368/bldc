@@ -152,12 +152,12 @@ void tx_Trigger(void)
 {
 	float data[2];
 
-//	if (errors.trigger_error)
-//	{
-//		data[0] = 0;
-//		data[1] = 0;
-//	}
-//	else
+	if (errors.trigger_error)
+	{
+		data[0] = NAN;
+		data[1] = NAN;
+	}
+	else
 	{
 		if (digital_IO.trigger.T1)
 			data[0] = 1;

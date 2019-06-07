@@ -69,6 +69,8 @@
 #define TRIGGER_2A()			palReadPad(GPIOC, 12)
 #define TRIGGER_2B()			palReadPad(GPIOD, 0)
 
+#define CHG_FAULT()				palReadPad(GPIOB, 2)
+
 // ADC
 #define HW_ADC_CHANNELS			15
 #define HW_ADC_INJ_CHANNELS		3
