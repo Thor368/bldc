@@ -16,7 +16,6 @@
     */
 
 #include "hw.h"
-#ifdef HW_VERSION_SCEN2
 
 #include "ch.h"
 #include "hal.h"
@@ -175,5 +174,3 @@ void hw_setup_adc_channels(void) {
 	ADC_InjectedChannelConfig(ADC2, ADC_Channel_11, 3, ADC_SampleTime_15Cycles);		// I_V
 	ADC_InjectedChannelConfig(ADC3, ADC_Channel_12, 3, ADC_SampleTime_15Cycles); 		// I_U
 }
-
-#endif

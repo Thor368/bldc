@@ -109,6 +109,9 @@ include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 # Other files
 include hwconf/hwconf.mk
 include applications/applications.mk
+include libcanard/canard.mk
+include imu/imu.mk
+include blackmagic/blackmagic.mk
 
 # Define linker script file here
 LDSCRIPT= ld_eeprom_emu.ld
@@ -148,8 +151,17 @@ CSRC = $(STARTUPSRC) \
        flash_helper.c \
        mc_interface.c \
        mcpwm_foc.c \
+       gpdrive.c \
+       confgenerator.c \
+       timer.c \
+       i2c_bb.c \
+       virtual_motor.c \
        $(HWSRC) \
-       $(APPSRC)
+       $(APPSRC) \
+       $(NRFSRC) \
+       $(CANARDSRC) \
+       $(IMUSRC) \
+       $(BLACKMAGICSRC)
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
@@ -186,7 +198,10 @@ INCDIR = $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC) \
          appconf \
          $(HWINC) \
          $(APPINC) \
-         $(NRFINC)
+         $(NRFINC) \
+         $(CANARDINC) \
+         $(IMUINC) \
+         $(BLACKMAGICINC)
 
 #
 # Project, sources and paths
@@ -222,7 +237,7 @@ AOPT =
 TOPT = -mthumb -DTHUMB
 
 # Define C warning options here
-CWARN = -Wall -Wextra -Wundef -Wstrict-prototypes
+CWARN = -Wall -Wextra -Wundef -Wstrict-prototypes -Wshadow
 
 # Define C++ warning options here
 CPPWARN = -Wall -Wextra -Wundef
@@ -262,7 +277,7 @@ ifeq ($(USE_FWLIB),yes)
 endif
 
 build/$(PROJECT).bin: build/$(PROJECT).elf 
-	$(BIN) build/$(PROJECT).elf build/$(PROJECT).bin
+	$(BIN) build/$(PROJECT).elf build/$(PROJECT).bin --gap-fill 0xFF
 
 getver:
 	@echo GIT_COMMIT=$(githash)
@@ -272,6 +287,9 @@ upload: build/$(PROJECT).bin
 #	qstlink2 --cli --erase --write build/$(PROJECT).bin
 #	openocd -f interface/stlink-v2.cfg -c "set WORKAREASIZE 0x2000" -f target/stm32f4x_stlink.cfg -c "program build/$(PROJECT).elf verify reset" # Older openocd
 	openocd -f board/stm32f4discovery.cfg -c "reset_config trst_only combined" -c "program build/$(PROJECT).elf verify reset exit" # For openocd 0.9
+
+clear_option_bytes:
+	openocd -f board/stm32f4discovery.cfg -c "init" -c "stm32f2x unlock 0" -c "mww 0x40023C08 0x08192A3B; mww 0x40023C08 0x4C5D6E7F; mww 0x40023C14 0x0fffaaed" -c "exit"
 
 #program with olimex arm-usb-tiny-h and jtag-swd adapter board. needs openocd>=0.9
 upload-olimex: build/$(PROJECT).bin

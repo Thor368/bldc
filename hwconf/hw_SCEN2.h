@@ -24,7 +24,6 @@
 
 // HW properties
 #define HW_HAS_3_SHUNTS
-#define APP_CUSTOM_TO_USE		"app_SCEN2.c"
 
 // Macros
 #define ENABLE_GATE()
@@ -144,9 +143,20 @@
 #endif
 
 // Hall/encoder pins
+#define HW_HALL_ENC_GPIO1		GPIOC
+#define HW_HALL_ENC_PIN1		6
+#define HW_HALL_ENC_GPIO2		GPIOC
+#define HW_HALL_ENC_PIN2		7
+#define HW_HALL_ENC_GPIO3		GPIOC
+#define HW_HALL_ENC_PIN3		8
 #define HW_ENC_TIM				TIM3
 #define HW_ENC_TIM_AF			GPIO_AF_TIM3
 #define HW_ENC_TIM_CLK_EN()		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE)
+#define HW_ENC_EXTI_PORTSRC		EXTI_PortSourceGPIOC
+#define HW_ENC_EXTI_PINSRC		EXTI_PinSource8
+#define HW_ENC_EXTI_CH			EXTI9_5_IRQn
+#define HW_ENC_EXTI_LINE		EXTI_Line8
+#define HW_ENC_EXTI_ISR_VEC		EXTI9_5_IRQHandler
 #define HW_ENC_TIM_ISR_CH		TIM3_IRQn
 #define HW_ENC_TIM_ISR_VEC		TIM3_IRQHandler
 
@@ -160,6 +170,14 @@
 #define READ_HALL1()			0
 #define READ_HALL2()			0
 #define READ_HALL3()			0
+
+// CAN device and port
+#define HW_CANH_PORT			GPIOB
+#define HW_CANH_PIN				5
+#define HW_CANL_PORT			GPIOB
+#define HW_CANL_PIN				6
+#define HW_CAN_GPIO_AF			GPIO_AF_CAN2
+#define HW_CAN_DEV				CAND2
 
 // Default setting overrides
 #ifndef MCCONF_DEFAULT_MOTOR_TYPE
