@@ -26,12 +26,6 @@
 #define HW_HAS_3_SHUNTS
 
 // Macros
-#define ENABLE_GATE()
-#define DISABLE_GATE()
-#define DCCAL_ON()
-#define DCCAL_OFF()
-#define IS_DRV_FAULT()			0
-
 #define LED_GREEN_ON()			palSetPad(GPIOE, 2)
 #define LED_GREEN_OFF()			palClearPad(GPIOE, 2)
 #define LED_RED_ON()			palSetPad(GPIOE, 1)
@@ -70,15 +64,35 @@
 
 #define CHG_FAULT()				palReadPad(GPIOB, 2)
 
-// ADC
+
+/*
+ * ADC Vector
+ *
+ * 0:	IN0		SENS1
+ * 1:	IN1		SENS2
+ * 2:	IN2		SENS3
+ * 3:	IN10	CURR1
+ * 4:	IN11	CURR2
+ * 5:	IN12	CURR3
+ * 6:	IN5		ADC_EXT1
+ * 7:	IN6		ADC_EXT2
+ * 8:	IN3		TEMP_PCB
+ * 9:	IN14	TEMP_MOTOR
+ * 10:	IN15	ADC_EXT3
+ * 11:	IN13	AN_IN
+ * 12:	Vrefint
+ * 13:	IN0		SENS1
+ * 14:	IN1		SENS2
+ */
+
 #define HW_ADC_CHANNELS			15
 #define HW_ADC_INJ_CHANNELS		3
 #define HW_ADC_NBR_CONV			5
 
 // ADC Indexes
-#define ADC_IND_SENS3			0
+#define ADC_IND_SENS1			0
 #define ADC_IND_SENS2			1
-#define ADC_IND_SENS1			2
+#define ADC_IND_SENS3			2
 
 #define ADC_IND_CURR1			3
 #define ADC_IND_CURR2			4
@@ -109,10 +123,13 @@
 #define VIN_R2					2200.0
 #endif
 #ifndef CURRENT_AMP_GAIN
-#define CURRENT_AMP_GAIN		-20.0
+#define CURRENT_AMP_GAIN		20.0
 #endif
 #ifndef CURRENT_SHUNT_RES
 #define CURRENT_SHUNT_RES		0.000653
+#endif
+#ifndef INVERTED_SHUNT_POLARITY
+#define INVERTED_SHUNT_POLARITY
 #endif
 
 // Input voltage
@@ -125,7 +142,6 @@
 #define KTY84_TEMP(val)			(0.1824*val - 190.08)
 #define TEMP_MOTOR(adc_val)		KTY84_TEMP(adc_val)
 #define TEMP_WATER(adc_val)		KTY84_TEMP(adc_val)
-
 
 // Voltage on ADC channel
 #define ADC_VOLTS(ch)			((float)ADC_Value[ch] / 4096.0 * V_REG)
@@ -191,8 +207,8 @@
 #endif
 
 // Setting limits
-#define HW_LIM_CURRENT			-90.0, 90.0
-#define HW_LIM_CURRENT_IN		-90.0, 90.0
+#define HW_LIM_CURRENT			-120.0, 120.0
+#define HW_LIM_CURRENT_IN		-120.0, 120.0
 #define HW_LIM_CURRENT_ABS		0.0, 100.0
 #define HW_LIM_VIN				6.0, 75.0
 #define HW_LIM_ERPM				-200e3, 200e3
