@@ -29,9 +29,9 @@ static volatile bool is_running = false;
 
 
 uint32_t CAN_base_adr;
-#define CAN_BASE					CAN_base_adr
+#define CAN_DRIVE_CONTROLS_BASE		CAN_base_adr
 #define BASE_OFFSET					0x100
-#define CAN_DRIVE_CONTROLS_BASE		(CAN_base_adr + BASE_OFFSET)
+#define CAN_DATA_BASE				(CAN_base_adr + BASE_OFFSET)
 
 #define PACKET_HANDLER				1
 
@@ -150,12 +150,12 @@ static THD_FUNCTION(WS20_thread, arg)
 			data_B[2] = 'I';
 			data_B[3] = 'a';
 			*(uint32_t *) &data_B[4] = STM32_UUID[0] + STM32_UUID[1];
-			comm_can_transmit_sid(ID_INFO + CAN_BASE, (uint8_t *) data_B, sizeof(data_B));
+			comm_can_transmit_sid(ID_INFO + CAN_DATA_BASE, (uint8_t *) data_B, sizeof(data_B));
 
 			float data_f[2];
 			data_f[0] = mc_interface_temp_motor_filtered();
 			data_f[1] = mc_interface_temp_fet_filtered();
-			comm_can_transmit_sid(ID_TEMP + CAN_BASE, (uint8_t *) data_f, sizeof(data_f));
+			comm_can_transmit_sid(ID_TEMP + CAN_DATA_BASE, (uint8_t *) data_f, sizeof(data_f));
 		}
 
 		static systime_t wait_200ms = 0;
@@ -185,16 +185,16 @@ static THD_FUNCTION(WS20_thread, arg)
 			data_B[5] = 0;
 			data_B[6] = 0;
 			data_B[7] = 0;
-			comm_can_transmit_sid(ID_STATUS + CAN_BASE, (uint8_t *) data_B, sizeof(data_B));
+			comm_can_transmit_sid(ID_STATUS + CAN_DATA_BASE, (uint8_t *) data_B, sizeof(data_B));
 
 			float data_F[2];
 			data_F[0] = mc_interface_get_tot_current_in_filtered();
 			data_F[1] = GET_INPUT_VOLTAGE();
-			comm_can_transmit_sid(ID_BUS + CAN_BASE, (uint8_t *) data_F, sizeof(data_F));
+			comm_can_transmit_sid(ID_BUS + CAN_DATA_BASE, (uint8_t *) data_F, sizeof(data_F));
 
 			data_F[0] = mc_interface_get_rpm();
 			data_F[1] = mc_interface_get_speed();
-			comm_can_transmit_sid(ID_VELOCITY + CAN_BASE, (uint8_t *) data_F, sizeof(data_F));
+			comm_can_transmit_sid(ID_VELOCITY + CAN_DATA_BASE, (uint8_t *) data_F, sizeof(data_F));
 		}
 
 //		UART_handler();
