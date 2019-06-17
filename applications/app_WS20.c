@@ -42,7 +42,7 @@ static SerialConfig uart_cfg = {
 		0
 };
 
-static uint8_t if_buffer[16], if_ptr;
+static uint8_t if_buffer[2], if_buffer_state;
 static uint16_t pos1, pos2;
 static uint8_t temp1, temp2;
 
@@ -50,8 +50,7 @@ void app_custom_start(void)
 {
 	stop_now = false;
 
-	if_ptr = 0;
-
+	if_buffer_state = 0;
 	sdStart(&HW_UART_DEV, &uart_cfg);
 	palSetPadMode(HW_UART_TX_PORT, HW_UART_TX_PIN, PAL_MODE_ALTERNATE(HW_UART_GPIO_AF) |
 			PAL_STM32_OSPEED_HIGHEST |
@@ -110,16 +109,45 @@ void app_custom_configure(app_configuration *conf)
 void UART_handler(void)
 {
 	msg_t res = sdGetTimeout(&HW_UART_DEV, TIME_IMMEDIATE);
-	if (res != MSG_TIMEOUT)
+	while (res != MSG_TIMEOUT)
 	{
-		if_buffer[if_ptr++] = res;
-		if (if_ptr >= 16)
-			if_ptr -= 16;
+		if_buffer[0] = if_buffer[1];
+		if_buffer[1] = res;
+		if ((if_buffer[0] == 10) && (if_buffer[0] == 0))
+			if_buffer_state = 1;
+		else if (if_buffer_state > 0)
+		{
+			if_buffer_state++;
 
-		pos1 = *((uint16_t *) &if_buffer[8]);
-		temp1 = if_buffer[10];
-		temp2 = if_buffer[11];
-		pos2 = *((uint16_t *) &if_buffer[12]);
+			switch (if_buffer_state)
+			{
+			case 3:
+				pos1 = *((uint16_t *) if_buffer);
+			break;
+
+			case 4:
+				temp1 = if_buffer[1];
+			break;
+
+			case 5:
+				temp2 = if_buffer[1];
+			break;
+
+			case 7:
+				pos2 = *((uint16_t *) if_buffer);
+				if (pos1 != pos2)
+				{
+					pos1 = 0;
+					pos2 = 0;
+					mc_interface_release_motor();
+				}
+
+				if_buffer_state = 0;
+			break;
+			}
+		}
+
+		res = sdGetTimeout(&HW_UART_DEV, TIME_IMMEDIATE);
 	}
 }
 
@@ -197,7 +225,7 @@ static THD_FUNCTION(WS20_thread, arg)
 			comm_can_transmit_sid(ID_VELOCITY + CAN_DATA_BASE, (uint8_t *) data_F, sizeof(data_F));
 		}
 
-//		UART_handler();
+		UART_handler();
 
 		chThdSleep(1);
 	}
