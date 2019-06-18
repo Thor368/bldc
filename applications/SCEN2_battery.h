@@ -8,9 +8,11 @@
 #ifndef APPLICATIONS_SCEN2_BATTERY_H_
 #define APPLICATIONS_SCEN2_BATTERY_H_
 
+#include "hal.h"
+
 void SCEN2_Battery_init(void);
 
-void SCEN2_Battery_RX(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr);
+void SCEN2_Battery_RX(CANRxFrame *msg);
 
 void SCEN2_Battery_handler(void);
 

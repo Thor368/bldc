@@ -85,7 +85,8 @@ static void send_packet_wrapper(unsigned char *data, unsigned int len);
 static void set_timing(int brp, int ts1, int ts2);
 
 // Function pointers
-static void(*sid_callback)(uint32_t id, uint8_t *data, uint8_t len, uint8_t RTR) = 0;
+static void(*sid_callback)(uint32_t id, uint8_t *data, uint8_t len) = 0;
+static void(*app_callback)(CANRxFrame *msg) = 0;
 
 void comm_can_init(void) {
 	for (int i = 0;i < CAN_STATUS_MSGS_TO_STORE;i++) {
@@ -210,8 +211,18 @@ msg_t comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
  * @param p_func
  * Pointer to the function.
  */
-void comm_can_set_sid_rx_callback(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)) {
+void comm_can_set_sid_rx_callback(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len)) {
 	sid_callback = p_func;
+}
+
+/**
+ * Set function to be called when app wants CAN messages
+ *
+ * @param p_func
+ * Pointer to the function.
+ */
+void comm_can_set_app_rx_callback(void (*p_func)(CANRxFrame *msg)) {
+	app_callback = p_func;
 }
 
 /**
@@ -774,6 +785,7 @@ static THD_FUNCTION(cancom_read_thread, arg) {
 		while (result == MSG_OK) {
 
 			chMtxLock(&can_rx_mtx);
+			app_callback(&rxmsg);
 			rx_frames[rx_frame_write++] = rxmsg;
 			if (rx_frame_write == RX_FRAMES_SIZE) {
 				rx_frame_write = 0;
@@ -1120,7 +1132,7 @@ static THD_FUNCTION(cancom_process_thread, arg) {
 				}
 			} else {
 				if (sid_callback) {
-					sid_callback(rxmsg.SID, rxmsg.data8, rxmsg.DLC, rxmsg.RTR);
+					sid_callback(rxmsg.SID, rxmsg.data8, rxmsg.DLC);
 				}
 			}
 		}

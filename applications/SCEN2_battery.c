@@ -99,29 +99,27 @@ uint8_t SCEN2_battey_state(void)
 	return batteries_state;
 }
 
-void SCEN2_Battery_RX(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
+void SCEN2_Battery_RX(CANRxFrame *msg)
 {
-	(void) len;
-
 	Battery_t *bat;
 
 #ifdef SCEN2_debugging_enable
-	if ((id == 0x5) && rtr)
+	if ((msg->EID == 0x5) && msg->RTR)
 		send_state();
 #endif
 
-	if (rtr)
+	if (msg->RTR)
 		return;
 
 #ifdef SCEN2_debugging_enable
-	if (id == 0x06)
+	if (msg->EID == 0x06)
 	{
-		if (data[0] & 1)
+		if (msg->data8[0] & 1)
 			BAT_LEFT_SPLY_ON();
 		else
 			BAT_LEFT_SPLY_OFF();
 
-		if (data[0] & 2)
+		if (msg->data8[0] & 2)
 			BAT_RIGHT_SPLY_ON();
 		else
 			BAT_RIGHT_SPLY_OFF();
@@ -130,20 +128,20 @@ void SCEN2_Battery_RX(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 	}
 #endif
 
-	if ((id >= 0x100) && (id < 0x200))
+	if ((msg->EID >= 0x100) && (msg->EID < 0x200))
 	{
 		bat = &battery_init;
-		id -= 0x100;
+		msg->EID -= 0x100;
 	}
-	else if ((id >= 0x200) && (id < 0x300))
+	else if ((msg->EID >= 0x200) && (msg->EID < 0x300))
 	{
 		bat = &battery_left;
-		id -= 0x200;
+		msg->EID -= 0x200;
 	}
-	else if ((id >= 0x300) && (id < 0x400))
+	else if ((msg->EID >= 0x300) && (msg->EID < 0x400))
 	{
 		bat = &battery_right;
-		id -= 0x300;
+		msg->EID -= 0x300;
 	}
 	else
 		return;
@@ -151,19 +149,19 @@ void SCEN2_Battery_RX(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 	bat->time_last_seen = chVTGetSystemTime();
 	bat->active = true;
 
-	switch (id)
+	switch (msg->EID)
 	{
 	case 0x04:
-		bat->total_U = ((float) *(uint16_t *) &data[0])/1000;
+		bat->total_U = ((float) *(uint16_t *) &msg->data8[0])/1000;
 	break;
 
 	case 0x05:
-		bat->error_flags.all = data[0];
-		bat->warning_flags.all = data[1];
+		bat->error_flags.all = msg->data8[0];
+		bat->warning_flags.all = msg->data8[1];
 	break;
 
 	case 0x08:
-		switch (data[5])
+		switch (msg->data8[5])
 		{
 		case 0:
 			bat->OK_to_charge = true;
@@ -181,7 +179,7 @@ void SCEN2_Battery_RX(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 		break;
 		}
 
-		bat->SOC = ((float) *(uint16_t *) &data[6])/1000;
+		bat->SOC = ((float) *(uint16_t *) &msg->data8[6])/1000;
 	}
 }
 

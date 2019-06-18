@@ -440,23 +440,20 @@ void rx_wr_handler(uint32_t id, uint8_t *data)
 	}
 }
 
-static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
+static void rx_callback(CANRxFrame *msg)
 {
-	(void) len;
-
-
 #ifdef SCEN2_debugging_enable
-	SCEN2_Battery_RX(id, data, len, rtr);
+	SCEN2_Battery_RX(msg);
 #endif
 
-	if ((id >= (MCL_CAN_ID_base + CAN_base)) && (id < (MCL_CAN_ID_base + CAN_base + 0x1000)))  // frame for us?
+	if ((msg->EID >= (MCL_CAN_ID_base + CAN_base)) && (msg->EID < (MCL_CAN_ID_base + CAN_base + 0x1000)))  // frame for us?
 	{
-		id -= CAN_base;  // subtract base id
+		msg->EID -= CAN_base;  // subtract base id
 	}
 #ifndef SCEN2_debugging_enable
-	else if ((id >= 0x100) && (id < 0x400))  // frame for BMS?
+	else if ((msg->EID >= 0x100) && (msg->EID))  // frame for BMS?
 	{
-		SCEN2_Battery_RX(id, data, len, rtr);
+		SCEN2_Battery_RX(msg);
 		return;
 	}
 #endif
@@ -465,11 +462,11 @@ static void rx_callback(uint32_t id, uint8_t *data, uint8_t len, uint8_t rtr)
 		return;
 	}
 
-	SCEN2_Battery_RX(id, data, len, rtr);
-	if (rtr)
-		rx_rtr_handler(id);
+	SCEN2_Battery_RX(msg);
+	if (msg->RTR)
+		rx_rtr_handler(msg->EID);
 	else
-		rx_wr_handler(id, data);
+		rx_wr_handler(msg->EID, msg->data8);
 }
 
 void SCEN2_CAN_handler(void)
@@ -525,6 +522,6 @@ void SCEN2_CAN_init(void)
 	can_basic_update = chVTGetSystemTime();
 	start_up_timer = chVTGetSystemTime();
 
-	comm_can_set_sid_rx_callback(&rx_callback);
+	comm_can_set_app_rx_callback(&rx_callback);
 //	c_conf = mc_interface_get_configuration();
 }
