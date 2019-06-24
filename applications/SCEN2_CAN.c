@@ -512,7 +512,10 @@ void SCEN2_CAN_handler(void)
 	}
 
 	if (timeout_has_timeout())
+	{
+		starting_up = false;
 		speed_save = 0;
+	}
 }
 
 void SCEN2_CAN_init(void)
