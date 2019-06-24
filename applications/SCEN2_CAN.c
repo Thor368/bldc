@@ -88,7 +88,7 @@ void tx_Voltages(void)
 void tx_MotorCurrents(void)
 {
 	float data[2];
-	data[0] = mc_interface_get_tot_current_filtered();
+	data[0] = mc_interface_get_tot_current_filtered()/1.414;
 	data[1] = mc_interface_get_duty_cycle_now();
 	comm_can_transmit_eid(MCL_MotorCurrents + CAN_base, (uint8_t *) &data, sizeof(data));
 }
