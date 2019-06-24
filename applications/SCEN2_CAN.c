@@ -394,7 +394,7 @@ void rx_wr_handler(uint32_t id, uint8_t *data)
 			if (speed < 20)
 			{
 				mc_interface_release_motor();
-				starting_up = true;
+				starting_up = false;
 			}
 			else if (abs(speed - speed_save) > 1)  // floats...
 			{
