@@ -391,7 +391,12 @@ void rx_wr_handler(uint32_t id, uint8_t *data)
 
 			speed = *((float *) data)*POLE_PAIR_COUNT;
 
-			if (abs(speed - speed_save) > 1)  // floats...
+			if (speed < 20)
+			{
+				mc_interface_release_motor();
+				starting_up = true;
+			}
+			else if (abs(speed - speed_save) > 1)  // floats...
 			{
 				if (speed_save < 1)  // startup
 				{
