@@ -35,9 +35,10 @@ uint32_t CAN_base;
 void tx_ChargeCurrent(void)
 {
 #ifdef SCEN2_debugging_enable
-	uint32_t data[2];
+	int16_t data[3];
 	data[0] = analog_IO.I_charge_raw*1000;
 	data[1] = analog_IO.I_charge_offset*1000;
+	data[2] = analog_IO.I_charge*1000;
 #else
 	float data;
 	if (charge_mode  == charger_detected_with_ACK)

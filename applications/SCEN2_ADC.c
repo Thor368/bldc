@@ -58,10 +58,11 @@ void SCEN2_ADC_handler(void)
 	filter_analog_IO.U_charge += ADC_Value[ADC_IND_U_CHG]*0.01855758408368644067796610169492;
 	filter_analog_IO.U_charge -= filter_analog_IO.U_charge/filter_constant;
 	analog_IO.U_charge = filter_analog_IO.U_charge/(filter_constant - 1);
-	analog_IO.I_charge_raw = ADC_Value[ADC_IND_I_CHG]*0.040283203125;
+
+	analog_IO.I_charge_raw = ADC_Value[ADC_IND_I_CHG]*0.01535475628930817610062893081761;
 	filter_analog_IO.I_charge += analog_IO.I_charge_raw - analog_IO.I_charge_offset;
-	filter_analog_IO.I_charge -= filter_analog_IO.I_charge/10000;
-	analog_IO.I_charge = filter_analog_IO.I_charge/9999;
+	filter_analog_IO.I_charge -= filter_analog_IO.I_charge/1000;
+	analog_IO.I_charge = filter_analog_IO.I_charge/999;
 
 	// water ingress sensor
 	analog_IO.water_ingress = ADC_VOLTS(ADC_IND_ING);
