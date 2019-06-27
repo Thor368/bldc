@@ -60,6 +60,11 @@ void SCEN2_ADC_handler(void)
 	analog_IO.U_charge = filter_analog_IO.U_charge/(filter_constant - 1);
 
 	analog_IO.I_charge_raw = ADC_Value[ADC_IND_I_CHG]*0.01535475628930817610062893081761;
+#ifdef CHARGE_I_INVERTED
+	analog_IO.I_charge_raw = ADC_Value[ADC_IND_I_CHG]*-0.01535475628930817610062893081761;
+#else
+	analog_IO.I_charge_raw = ADC_Value[ADC_IND_I_CHG]*0.01535475628930817610062893081761;
+#endif
 	filter_analog_IO.I_charge += analog_IO.I_charge_raw - analog_IO.I_charge_offset;
 	filter_analog_IO.I_charge -= filter_analog_IO.I_charge/1000;
 	analog_IO.I_charge = filter_analog_IO.I_charge/999;

@@ -61,7 +61,6 @@ void SCEN2_Charge_handler(void)
 		if (governor_state == gv_calibrate_chg)
 		{
 			offset_filter = 0;
-			CHG_ENABLE();
 
 			timer = chVTGetSystemTime();
 
@@ -73,7 +72,6 @@ void SCEN2_Charge_handler(void)
 		if (chVTTimeElapsedSinceX(timer) > MS2ST(500))
 		{
 			analog_IO.I_charge_offset = offset_filter/99;
-			CHG_DISABLE();
 
 			timer = chVTGetSystemTime();
 			cc = 0;
@@ -106,6 +104,8 @@ void SCEN2_Charge_handler(void)
 
 				charge_state = wait_for_HMI_acknowledgement;
 			}
+			else
+				charge_mode = wait_for_charger;
 		}
 	break;
 
@@ -141,16 +141,16 @@ void SCEN2_Charge_handler(void)
 	break;
 
 	case charging:
-//		if ((chVTTimeElapsedSinceX(timer) > MS2ST(100)) &&
-//			((analog_IO.U_charge > CHARGE_U_MAX) ||
-//			 (Charge_I > CHARGE_I_MAX) ||
-//			 (Charge_I < CHARGE_I_MIN)))
-//		{
-//			CHG_DISABLE();
-//			errors.charger_error = true;
-//
-//			charge_state = wait_for_reset;
-//		}
+		if ((chVTTimeElapsedSinceX(timer) > MS2ST(100)) &&
+			((analog_IO.U_charge > CHARGE_U_MAX) ||
+			 (analog_IO.I_charge > CHARGE_I_MAX) ||
+			 (analog_IO.I_charge < CHARGE_I_MIN)))
+		{
+			CHG_DISABLE();
+			errors.charger_error = true;
+
+			charge_state = wait_for_reset;
+		}
 
 		if (charge_mode != charger_detected_with_ACK)
 		{
