@@ -105,7 +105,7 @@ void SCEN2_Charge_handler(void)
 				charge_state = wait_for_HMI_acknowledgement;
 			}
 			else
-				charge_mode = wait_for_charger;
+				charge_mode = no_charger;
 		}
 	break;
 
