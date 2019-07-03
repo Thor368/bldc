@@ -28,10 +28,51 @@ void SCEN2_DIO_init(void)
 
 void SCEN2_DIO_handler(void)
 {
-	digital_IO.buttons.silver = !BUTTON_SILVER();
-	digital_IO.buttons.green = !BUTTON_GREEN();
-	digital_IO.buttons.blue = !BUTTON_BLUE();
-	digital_IO.buttons.red = !BUTTON_RED();
+	static uint8_t silver_cc = 0;
+	static uint8_t green_cc = 0;
+	static uint8_t blue_cc = 0;
+	static uint8_t red_cc = 0;
+
+	if (digital_IO.buttons.silver == BUTTON_SILVER())
+		silver_cc++;
+	else
+		silver_cc = 0;
+	if (silver_cc >= BUTTON_DELAY)
+	{
+		digital_IO.buttons.silver = !BUTTON_SILVER();
+		silver_cc = 0;
+	}
+
+	if (digital_IO.buttons.green == BUTTON_GREEN())
+		green_cc++;
+	else
+		green_cc = 0;
+	if (green_cc >= BUTTON_DELAY)
+	{
+		digital_IO.buttons.green= !BUTTON_GREEN();
+		green_cc = 0;
+	}
+
+	if (digital_IO.buttons.blue == BUTTON_BLUE())
+		blue_cc++;
+	else
+		blue_cc = 0;
+	if (blue_cc >= BUTTON_DELAY)
+	{
+		digital_IO.buttons.blue= !BUTTON_BLUE();
+		blue_cc = 0;
+	}
+
+	if (digital_IO.buttons.red == BUTTON_RED())
+		red_cc++;
+	else
+		red_cc = 0;
+	if (red_cc >= BUTTON_DELAY)
+	{
+		digital_IO.buttons.red= !BUTTON_RED();
+		red_cc = 0;
+	}
+
 
 	static uint32_t T1_fault = 0;
 	if (TRIGGER_1A() && !TRIGGER_1B())

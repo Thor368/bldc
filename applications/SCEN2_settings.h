@@ -18,6 +18,8 @@
 #define CHARGE_I_MAX		25				// 25A maximum allowed charge current
 #define CHARGE_I_MIN		-0.5			// 0.5A discharge over CP trip level
 
+#define BUTTON_DELAY		1				// Button IO hysteresis
+
 #define CHARGE_I_INVERTED
 
 #define POLE_PAIR_COUNT		5
