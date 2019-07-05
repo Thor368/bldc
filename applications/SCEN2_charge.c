@@ -43,7 +43,7 @@ uint8_t SCEN2_charge_state(void)
 
 void SCEN2_Charge_handler(void)
 {
-	static systime_t timer;
+	static systime_t timer, timeout;
 	static uint32_t cc;
 	static float offset_filter = 0;
 
@@ -63,6 +63,7 @@ void SCEN2_Charge_handler(void)
 			offset_filter = 0;
 
 			timer = chVTGetSystemTime();
+			timeout = chVTGetSystemTime();
 
 			charge_state = calibrate;
 		}
@@ -123,7 +124,7 @@ void SCEN2_Charge_handler(void)
 				charge_mode = no_charger;
 		}
 
-		if (charge_mode == charger_detected_with_ACK)
+		if ((charge_mode == charger_detected_with_ACK) && (chVTTimeElapsedSinceX(timeout) > MS2ST(1000)))
 		{
 			CHG_ENABLE();
 
@@ -155,6 +156,7 @@ void SCEN2_Charge_handler(void)
 		if (charge_mode != charger_detected_with_ACK)
 		{
 			CHG_DISABLE();
+			timeout = chVTGetSystemTime();
 
 			cc = 0;
 			timer = chVTGetSystemTime();
