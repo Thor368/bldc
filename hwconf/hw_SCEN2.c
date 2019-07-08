@@ -63,7 +63,7 @@ void hw_init_gpio(void) {
 			PAL_STM32_OSPEED_HIGHEST);
 
 	// Trigger power
-	TRIG_SPLY_OFF();
+	POWER_OFF();
 	palSetPadMode(GPIOE, 3,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);

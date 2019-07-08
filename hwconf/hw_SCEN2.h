@@ -34,8 +34,8 @@
 #define CAN_STB_HI()			palSetPad(GPIOE, 0)
 #define CAN_STB_LO()			palClearPad(GPIOE, 0)
 
-#define TRIG_SPLY_ON()			palSetPad(GPIOE, 3)
-#define TRIG_SPLY_OFF()			palClearPad(GPIOE, 3)
+#define POWER_ON()				palSetPad(GPIOE, 3)
+#define POWER_OFF()				palClearPad(GPIOE, 3)
 
 #define BAT_RIGHT_SPLY_ON()		palSetPad(GPIOE, 4)
 #define BAT_RIGHT_SPLY_OFF()	palClearPad(GPIOE, 4)

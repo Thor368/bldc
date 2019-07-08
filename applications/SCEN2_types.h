@@ -51,6 +51,30 @@ typedef struct
 		};
 		uint16_t all;
 	} trigger;
+
+	union
+	{
+		struct
+		{
+			bool power_on;
+			bool HMI_supply;
+			bool AKK_left;
+			bool AKK_right;
+		};
+		uint8_t all;
+	} supply;
+
+	union
+	{
+		struct
+		{
+			uint8_t power_on;
+			uint8_t HMI_supply;
+			uint8_t AKK_left;
+			uint8_t AKK_right;
+		};
+		uint32_t all;
+	} supply_override;
 } Digital_IO_t;
 extern Digital_IO_t digital_IO;
 
@@ -62,7 +86,8 @@ typedef union
 		unsigned water_ingress_error: 1;
 		unsigned battery_left_error: 1;
 		unsigned battery_right_error: 1;
-		unsigned trigger_error: 1;
+		unsigned trigger_error_left: 1;
+		unsigned trigger_error_right: 1;
 		unsigned charger_error: 1;
 	};
 

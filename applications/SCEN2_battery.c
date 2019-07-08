@@ -111,23 +111,6 @@ void SCEN2_Battery_RX(CANRxFrame *msg)
 	if (msg->RTR)
 		return;
 
-#ifdef SCEN2_debugging_enable
-	if (msg->EID == 0x06)
-	{
-		if (msg->data8[0] & 1)
-			BAT_LEFT_SPLY_ON();
-		else
-			BAT_LEFT_SPLY_OFF();
-
-		if (msg->data8[0] & 2)
-			BAT_RIGHT_SPLY_ON();
-		else
-			BAT_RIGHT_SPLY_OFF();
-
-		send_state();
-	}
-#endif
-
 	if ((msg->EID >= 0x100) && (msg->EID < 0x200))
 	{
 		bat = &battery_init;
@@ -194,8 +177,8 @@ void SCEN2_Battery_handler(void)
 	case init:
 		SCEN2_Battery_init();
 
-		BAT_LEFT_SPLY_OFF();
-		BAT_RIGHT_SPLY_OFF();
+		digital_IO.supply.AKK_left = false;
+		digital_IO.supply.AKK_right = false;
 
 		batteries_state = wait_for_governor;
 #ifdef SCEN2_debugging_enable
@@ -206,7 +189,7 @@ void SCEN2_Battery_handler(void)
 	case wait_for_governor:
 		if (governor_state == gv_init_BMS)
 		{
-			BAT_LEFT_SPLY_ON();
+			digital_IO.supply.AKK_left = true;
 
 			cc = 0;
 			timer = chVTGetSystemTime();
@@ -280,8 +263,8 @@ void SCEN2_Battery_handler(void)
 	case wait_for_left:
 		if (chVTTimeElapsedSinceX(timer) > MS2ST(250))
 		{
-			BAT_LEFT_SPLY_OFF();
-			BAT_RIGHT_SPLY_ON();
+			digital_IO.supply.AKK_left = false;
+			digital_IO.supply.AKK_right = true;
 
 			cc = 0;
 			timer = chVTGetSystemTime();
@@ -315,7 +298,7 @@ void SCEN2_Battery_handler(void)
 			errors.battery_right_error = true;
 
 			batteries_state = run;
-			BAT_LEFT_SPLY_ON();
+			digital_IO.supply.AKK_left = true;
 #ifdef SCEN2_debugging_enable
 			send_state();
 #endif
@@ -326,7 +309,7 @@ void SCEN2_Battery_handler(void)
 			errors.battery_right_error = false;
 
 			batteries_state = run;
-			BAT_LEFT_SPLY_ON();
+			digital_IO.supply.AKK_left = true;
 #ifdef SCEN2_debugging_enable
 			send_state();
 #endif
@@ -337,7 +320,7 @@ void SCEN2_Battery_handler(void)
 			errors.battery_right_error = false;
 
 			batteries_state = run;
-			BAT_LEFT_SPLY_ON();
+			digital_IO.supply.AKK_left = true;
 #ifdef SCEN2_debugging_enable
 			send_state();
 #endif
@@ -350,7 +333,7 @@ void SCEN2_Battery_handler(void)
 			timer = chVTGetSystemTime();
 
 			batteries_state = run;
-			BAT_LEFT_SPLY_ON();
+			digital_IO.supply.AKK_left = true;
 #ifdef SCEN2_debugging_enable
 			send_state();
 #endif
