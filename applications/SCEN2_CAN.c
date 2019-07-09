@@ -114,13 +114,6 @@ void tx_Temperature_Limits(void)
 	comm_can_transmit_eid(MCL_Temperature_Limits + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
-void tx_MotorTemp(void)
-{
-	float data[1];
-	data[0] = analog_IO.temp_motor;
-	comm_can_transmit_eid(MCL_MotorTemp + CAN_base, (uint8_t *) &data, sizeof(data));
-}
-
 void tx_MotorTemp_Limit(void)
 {
 	float data[1];
@@ -136,20 +129,6 @@ void tx_MotorSpeed_actual(void)
 	if (data[0] < 100)
 		data[0] = 0;
 	comm_can_transmit_eid(MCL_MotorSpeed_actual + CAN_base, (uint8_t *) &data, sizeof(data));
-}
-
-void tx_MotorSpeed_set(void)
-{
-	float data[1];
-	data[0] = speed_save;
-	comm_can_transmit_eid(MCL_MotorSpeed_set + CAN_base, (uint8_t *) &data, sizeof(data));
-}
-
-void tx_Pressure(void)
-{
-	float data[1];
-	data[0] = analog_IO.pressure;
-	comm_can_transmit_eid(MCL_Pressure + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_DCPower(void)
@@ -230,16 +209,6 @@ void tx_UID(void)
 	comm_can_transmit_eid(MCL_UID + CAN_base, (uint8_t *) &UID, 6);
 }
 
-void tx_Errors(void)
-{
-	comm_can_transmit_eid(MCL_Errors + CAN_base, (uint8_t *) &errors.all, sizeof(errors.all));
-}
-
-void tx_charge_mode(void)
-{
-	comm_can_transmit_eid(MCL_ChargeMode + CAN_base, &charge_mode, sizeof(charge_mode));
-}
-
 void tx_Debugging(void)
 {
 	uint16_t data[4];
@@ -286,7 +255,7 @@ void rx_rtr_handler(uint32_t id)
 		break;
 
 		case MCL_Errors:
-			tx_Errors();
+			comm_can_transmit_eid(MCL_Errors + CAN_base, (uint8_t *) &errors.all, sizeof(errors.all));
 		break;
 
 		case MCL_Buttons_right:
@@ -318,7 +287,7 @@ void rx_rtr_handler(uint32_t id)
 		break;
 
 		case MCL_MotorTemp:
-			tx_MotorTemp();
+			comm_can_transmit_eid(MCL_MotorTemp + CAN_base, (uint8_t *) &analog_IO.temp_motor, sizeof(analog_IO.temp_motor));
 		break;
 
 		case MCL_MotorTemp_Limit:
@@ -326,7 +295,7 @@ void rx_rtr_handler(uint32_t id)
 		break;
 
 		case MCL_Pressure:
-			tx_Pressure();
+			comm_can_transmit_eid(MCL_Pressure + CAN_base, (uint8_t *) &analog_IO.pressure, sizeof(analog_IO.pressure));
 		break;
 
 		case MCL_LeakageSensor:
@@ -346,7 +315,7 @@ void rx_rtr_handler(uint32_t id)
 		break;
 
 		case MCL_MotorSpeed_set:
-			tx_MotorSpeed_set();
+			comm_can_transmit_eid(MCL_MotorSpeed_set + CAN_base, (uint8_t *) &speed_save, sizeof(speed_save));
 		break;
 
 
@@ -359,11 +328,15 @@ void rx_rtr_handler(uint32_t id)
 		break;
 
 		case MCL_ChargeMode:
-			tx_charge_mode();
+			comm_can_transmit_eid(MCL_ChargeMode + CAN_base, &charge_mode, sizeof(charge_mode));
 		break;
 
 		case MCL_ChargeCurrent:
 			tx_ChargeCurrent();
+		break;
+
+		case MCL_12V_control:
+			comm_can_transmit_eid(MCL_12V_control + CAN_base, (uint8_t *) &digital_IO.supply_override.all, sizeof(digital_IO.supply_override.all));
 		break;
 	}
 }
