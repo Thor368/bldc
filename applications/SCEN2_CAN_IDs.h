@@ -33,7 +33,8 @@
 #define MCL_LeakageSensor				0x31029
 #define MCL_LeakageSensorThreshold		0x3102A
 #define MCL_DC_Power					0x3102C
-#define MCL_MotorSpeed					0x31030
+#define MCL_MotorSpeed_set				0x31030
+#define MCL_MotorSpeed_actual			0x31031
 #define MCL_MotorCurrents				0x31033
 #define MCL_MC_PID						0x31034
 #define MCL_ChargeMode					0x31040

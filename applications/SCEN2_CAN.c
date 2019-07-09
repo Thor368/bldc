@@ -129,13 +129,20 @@ void tx_MotorTemp_Limit(void)
 	comm_can_transmit_eid(MCL_MotorTemp_Limit + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
-void tx_MotorSpeed(void)
+void tx_MotorSpeed_actual(void)
 {
 	float data[1];
 	data[0] = mc_interface_get_rpm()/POLE_PAIR_COUNT;
 	if (data[0] < 100)
 		data[0] = 0;
-	comm_can_transmit_eid(MCL_MotorSpeed + CAN_base, (uint8_t *) &data, sizeof(data));
+	comm_can_transmit_eid(MCL_MotorSpeed_actual + CAN_base, (uint8_t *) &data, sizeof(data));
+}
+
+void tx_MotorSpeed_set(void)
+{
+	float data[1];
+	data[0] = speed_save;
+	comm_can_transmit_eid(MCL_MotorSpeed_set + CAN_base, (uint8_t *) &data, sizeof(data));
 }
 
 void tx_Pressure(void)
@@ -334,9 +341,14 @@ void rx_rtr_handler(uint32_t id)
 			tx_DCPower();
 		break;
 
-		case MCL_MotorSpeed:
-			tx_MotorSpeed();
+		case MCL_MotorSpeed_actual:
+			tx_MotorSpeed_actual();
 		break;
+
+		case MCL_MotorSpeed_set:
+			tx_MotorSpeed_set();
+		break;
+
 
 		case MCL_MotorCurrents:
 			tx_MotorCurrents();
@@ -411,7 +423,7 @@ void rx_wr_handler(uint32_t id, uint8_t *data)
 			leakage_threashold = *((float *) &data[0]);
 		break;
 
-		case MCL_MotorSpeed:
+		case MCL_MotorSpeed_set:
 			if (charge_mode == charger_detected_with_ACK)
 				return;
 
