@@ -9,7 +9,7 @@
 #define APPLICATIONS_SCEN2_SETTINGS_H_
 
 #define major_release		0
-#define minor_release		11
+#define minor_release		12
 #define branch				2				// alpha dev branch
 
 #define LEAKAGE_THRESHOLD	0.7				// 0.7V water ingress threshold
