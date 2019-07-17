@@ -277,24 +277,24 @@
 #endif
 
 // CAN device and port (default CAN2)
-#ifndef HW_CANH_PORT
-#define HW_CANH_PORT			GPIOB
-#endif
-#ifndef HW_CANH_PIN
-#define HW_CANH_PIN				5
-#endif
-#ifndef HW_CANL_PORT
-#define HW_CANL_PORT			GPIOB
-#endif
-#ifndef HW_CANL_PIN
-#define HW_CANL_PIN				6
-#endif
-#ifndef HW_CAN_GPIO_AF
-#define HW_CAN_GPIO_AF			GPIO_AF_CAN2
-#endif
-#ifndef HW_CAN_DEV
-#define HW_CAN_DEV				CAND2
-#endif
+//#ifndef HW_CANH_PORT
+//#define HW_CANH_PORT			GPIOB
+//#endif
+//#ifndef HW_CANH_PIN
+//#define HW_CANH_PIN				5
+//#endif
+//#ifndef HW_CANL_PORT
+//#define HW_CANL_PORT			GPIOB
+//#endif
+//#ifndef HW_CANL_PIN
+//#define HW_CANL_PIN				6
+//#endif
+//#ifndef HW_CAN_GPIO_AF
+//#define HW_CAN_GPIO_AF			GPIO_AF_CAN2
+//#endif
+//#ifndef HW_CAN_DEV
+//#define HW_CAN_DEV				CAND2
+//#endif
 
 // Hook to call when trying to initialize the permanent NRF failed. Can be
 // used to e.g. reconfigure pins.

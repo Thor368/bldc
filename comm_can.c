@@ -103,17 +103,26 @@ void comm_can_init(void) {
 	chMtxObjectInit(&can_mtx);
 	chMtxObjectInit(&can_rx_mtx);
 
-	palSetPadMode(HW_CANH_PORT, HW_CANH_PIN,
-			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
+	palSetPadMode(HW_CANH_PORT, HW_CANH_PIN_INT,
+			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF_INT) |
 			PAL_STM32_OTYPE_PUSHPULL |
 			PAL_STM32_OSPEED_MID1);
-	palSetPadMode(HW_CANL_PORT, HW_CANL_PIN,
-			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
+	palSetPadMode(HW_CANL_PORT, HW_CANL_PIN_INT,
+			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF_INT) |
 			PAL_STM32_OTYPE_PUSHPULL |
 			PAL_STM32_OSPEED_MID1);
 
-	canStart(&CAND1, &cancfg);
-	canStart(&HW_CAN_DEV, &cancfg);
+	palSetPadMode(HW_CANH_PORT, HW_CANH_PIN_CP,
+			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF_CP) |
+			PAL_STM32_OTYPE_PUSHPULL |
+			PAL_STM32_OSPEED_MID1);
+	palSetPadMode(HW_CANL_PORT, HW_CANL_PIN_CP,
+			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF_CP) |
+			PAL_STM32_OTYPE_PUSHPULL |
+			PAL_STM32_OSPEED_MID1);
+
+	canStart(&HW_CAN_DEV_CP, &cancfg);
+	canStart(&HW_CAN_DEV_INT, &cancfg);
 
 	canard_driver_init();
 
@@ -150,7 +159,8 @@ void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len) {
 	memcpy(txmsg.data8, data, len);
 
 	chMtxLock(&can_mtx);
-	canTransmit(&HW_CAN_DEV, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+//	canTransmit(&HW_CAN_DEV_INT, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+	canTransmit(&HW_CAN_DEV_CP, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	chMtxUnlock(&can_mtx);
 #else
 	(void)id;
@@ -168,7 +178,8 @@ void comm_can_transmit_eid_RTR(uint32_t id) {
 	txmsg.DLC = 0;
 
 	chMtxLock(&can_mtx);
-	canTransmit(&HW_CAN_DEV, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+//	canTransmit(&HW_CAN_DEV_INT, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+	canTransmit(&HW_CAN_DEV_CP, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	chMtxUnlock(&can_mtx);
 
 #else
@@ -194,7 +205,8 @@ msg_t comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
 	memcpy(txmsg.data8, data, len);
 
 	chMtxLock(&can_mtx);
-	ret = canTransmit(&HW_CAN_DEV, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+//	ret = canTransmit(&HW_CAN_DEV_INT, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+	ret = canTransmit(&HW_CAN_DEV_CP, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	chMtxUnlock(&can_mtx);
 
 	return ret;
@@ -204,6 +216,7 @@ msg_t comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
 	(void)len;
 #endif
 }
+
 
 /**
  * Set function to be called when standard CAN frames are received.
@@ -767,10 +780,11 @@ static THD_FUNCTION(cancom_read_thread, arg) {
 	(void)arg;
 	chRegSetThreadName("CAN read");
 
-	event_listener_t el;
+	event_listener_t el_int, el_cp;
 	CANRxFrame rxmsg;
 
-	chEvtRegister(&HW_CAN_DEV.rxfull_event, &el, 0);
+	chEvtRegister(&HW_CAN_DEV_INT.rxfull_event, &el_int, 0);
+	chEvtRegister(&HW_CAN_DEV_CP.rxfull_event, &el_cp, 0);
 
 	while(!chThdShouldTerminateX()) {
 		// Feed watchdog
@@ -780,8 +794,7 @@ static THD_FUNCTION(cancom_read_thread, arg) {
 			continue;
 		}
 
-		msg_t result = canReceive(&HW_CAN_DEV, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
-
+		msg_t result = canReceive(&HW_CAN_DEV_CP, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
 		while (result == MSG_OK) {
 
 			chMtxLock(&can_rx_mtx);
@@ -794,11 +807,22 @@ static THD_FUNCTION(cancom_read_thread, arg) {
 
 			chEvtSignal(process_tp, (eventmask_t) 1);
 
-			result = canReceive(&HW_CAN_DEV, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
+			result = canReceive(&HW_CAN_DEV_CP, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
+		}
+
+		result = canReceive(&HW_CAN_DEV_INT, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
+		while (result == MSG_OK) {
+
+			chMtxLock(&can_rx_mtx);
+			app_callback(&rxmsg);
+			chMtxUnlock(&can_rx_mtx);
+
+			result = canReceive(&HW_CAN_DEV_INT, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
 		}
 	}
 
-	chEvtUnregister(&HW_CAN_DEV.rxfull_event, &el);
+	chEvtUnregister(&HW_CAN_DEV_INT.rxfull_event, &el_int);
+	chEvtUnregister(&HW_CAN_DEV_CP.rxfull_event, &el_cp);
 }
 
 static THD_FUNCTION(cancom_process_thread, arg) {
@@ -1229,6 +1253,6 @@ static void set_timing(int brp, int ts1, int ts2) {
 	cancfg.btr = CAN_BTR_SJW(3) | CAN_BTR_TS2(ts2) |
 		CAN_BTR_TS1(ts1) | CAN_BTR_BRP(brp);
 
-	canStop(&HW_CAN_DEV);
-	canStart(&HW_CAN_DEV, &cancfg);
+	canStop(&HW_CAN_DEV_CP);
+	canStart(&HW_CAN_DEV_CP, &cancfg);
 }

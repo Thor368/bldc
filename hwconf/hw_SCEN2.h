@@ -46,11 +46,8 @@
 #define DISP_SPLY_ON()			palSetPad(GPIOD, 11)
 #define DISP_SPLY_OFF()			palClearPad(GPIOD, 11)
 
-#define CAN_CP_ON()				palSetPad(GPIOB, 11)
-#define CAN_CP_OFF()			palClearPad(GPIOB, 11)
-
-#define CHG_ENABLE()			palSetPad(GPIOB, 10)
-#define CHG_DISABLE()			palClearPad(GPIOB, 10)
+#define CHG_ENABLE()			palSetPad(GPIOB, 12)
+#define CHG_DISABLE()			palClearPad(GPIOB, 12)
 
 #define BUTTON_SILVER()			palReadPad(GPIOD, 3)
 #define BUTTON_GREEN()			palReadPad(GPIOD, 2)
@@ -61,8 +58,6 @@
 #define TRIGGER_1B()			palReadPad(GPIOC, 11)
 #define TRIGGER_2A()			palReadPad(GPIOC, 12)
 #define TRIGGER_2B()			palReadPad(GPIOD, 0)
-
-#define CHG_FAULT()				palReadPad(GPIOB, 2)
 
 
 /*
@@ -189,11 +184,15 @@
 
 // CAN device and port
 #define HW_CANH_PORT			GPIOB
-#define HW_CANH_PIN				5
+#define HW_CANH_PIN_INT			5
+#define HW_CANH_PIN_CP			8
 #define HW_CANL_PORT			GPIOB
-#define HW_CANL_PIN				6
-#define HW_CAN_GPIO_AF			GPIO_AF_CAN2
-#define HW_CAN_DEV				CAND2
+#define HW_CANL_PIN_INT			6
+#define HW_CANL_PIN_CP			9
+#define HW_CAN_GPIO_AF_CP		GPIO_AF_CAN1
+#define HW_CAN_GPIO_AF_INT		GPIO_AF_CAN2
+#define HW_CAN_DEV_CP			CAND1
+#define HW_CAN_DEV_INT			CAND2
 
 // Default setting overrides
 #ifndef MCCONF_DEFAULT_MOTOR_TYPE

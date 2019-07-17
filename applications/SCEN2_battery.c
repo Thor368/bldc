@@ -48,9 +48,9 @@ void send_state(void)
 	uint8_t data[2];
 	data[0] = batteries_state;
 	data[1] = 0;
-	if (palReadPad(GPIOE, 5))
+	if (digital_IO.supply.AKK_left)
 		data[1] |= 1;
-	if (palReadPad(GPIOE, 4))
+	if (digital_IO.supply.AKK_right)
 		data[1] |= 2;
 	comm_can_transmit_eid(5, (uint8_t *) &data, sizeof(data));
 }

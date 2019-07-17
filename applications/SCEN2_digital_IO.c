@@ -17,7 +17,6 @@ Digital_IO_t digital_IO;
 void SCEN2_DIO_init(void)
 {
 	CAN_STB_LO();
-	CAN_CP_ON();
 	POWER_ON();
 	DISP_SPLY_ON();
 
@@ -123,23 +122,23 @@ void SCEN2_DIO_handler(void)
 	if (T2_fault == 0)
 		errors.trigger_error_right = false;
 
-	if (((digital_IO.supply_override.power_on == 0) && digital_IO.supply_override.power_on) || (digital_IO.supply_override.power_on == 1))
+	if (((digital_IO.supply_override.power_on == 0) && digital_IO.supply.power_on) || (digital_IO.supply_override.power_on == 1))
 		POWER_ON();
-	else if (((digital_IO.supply_override.power_on == 0) && !digital_IO.supply_override.power_on) || (digital_IO.supply_override.power_on == 2))
+	else if (((digital_IO.supply_override.power_on == 0) && !digital_IO.supply.power_on) || (digital_IO.supply_override.power_on == 2))
 		POWER_OFF();
 
-	if (((digital_IO.supply_override.HMI_supply == 0) && digital_IO.supply_override.HMI_supply) || (digital_IO.supply_override.HMI_supply == 1))
+	if (((digital_IO.supply_override.HMI_supply == 0) && digital_IO.supply.HMI_supply) || (digital_IO.supply_override.HMI_supply == 1))
 		DISP_SPLY_ON();
-	else if (((digital_IO.supply_override.HMI_supply == 0) && !digital_IO.supply_override.HMI_supply) || (digital_IO.supply_override.HMI_supply == 2))
+	else if (((digital_IO.supply_override.HMI_supply == 0) && !digital_IO.supply.HMI_supply) || (digital_IO.supply_override.HMI_supply == 2))
 		DISP_SPLY_OFF();
 
-	if (((digital_IO.supply_override.AKK_right == 0) && digital_IO.supply_override.AKK_right) || (digital_IO.supply_override.AKK_right == 1))
+	if (((digital_IO.supply_override.AKK_right == 0) && digital_IO.supply.AKK_right) || (digital_IO.supply_override.AKK_right == 1))
 		BAT_RIGHT_SPLY_ON();
-	else if (((digital_IO.supply_override.AKK_right == 0) && !digital_IO.supply_override.AKK_right) || (digital_IO.supply_override.AKK_right == 2))
+	else if (((digital_IO.supply_override.AKK_right == 0) && !digital_IO.supply.AKK_right) || (digital_IO.supply_override.AKK_right == 2))
 		BAT_RIGHT_SPLY_OFF();
 
-	if (((digital_IO.supply_override.AKK_left == 0) && digital_IO.supply_override.AKK_left) || (digital_IO.supply_override.AKK_left == 1))
+	if (((digital_IO.supply_override.AKK_left == 0) && digital_IO.supply.AKK_left) || (digital_IO.supply_override.AKK_left == 1))
 		BAT_LEFT_SPLY_ON();
-	else if (((digital_IO.supply_override.AKK_left == 0) && !digital_IO.supply_override.AKK_left) || (digital_IO.supply_override.AKK_left == 2))
+	else if (((digital_IO.supply_override.AKK_left == 0) && !digital_IO.supply.AKK_left) || (digital_IO.supply_override.AKK_left == 2))
 		BAT_LEFT_SPLY_OFF();
 }
