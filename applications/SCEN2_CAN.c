@@ -473,13 +473,13 @@ static void rx_callback(CANRxFrame *msg)
 	{
 		msg->EID -= CAN_base;  // subtract base id
 	}
-#ifndef SCEN2_debugging_enable
-	else if ((msg->EID >= 0x100) && (msg->EID))  // frame for BMS?
-	{
-		SCEN2_Battery_RX(msg);
-		return;
-	}
-#endif
+//#ifndef SCEN2_debugging_enable
+//	else if ((msg->EID >= 0x100) && (msg->EID))  // frame for BMS?
+//	{
+//		SCEN2_Battery_RX(msg);
+//		return;
+//	}
+//#endif
 	else
 	{
 		return;

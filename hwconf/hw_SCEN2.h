@@ -183,16 +183,9 @@
 #define READ_HALL3()			0
 
 // CAN device and port
-#define HW_CANH_PORT			GPIOB
-#define HW_CANH_PIN_INT			5
-#define HW_CANH_PIN_CP			8
-#define HW_CANL_PORT			GPIOB
-#define HW_CANL_PIN_INT			6
-#define HW_CANL_PIN_CP			9
-#define HW_CAN_GPIO_AF_CP		GPIO_AF_CAN1
-#define HW_CAN_GPIO_AF_INT		GPIO_AF_CAN2
-#define HW_CAN_DEV_CP			CAND1
-#define HW_CAN_DEV_INT			CAND2
+#define HW_CAN_PORT				GPIOB
+#define HW_CAN_GPIO_AF			GPIO_AF_CAN2
+#define HW_CAN_DEV				CAND2
 
 // Default setting overrides
 #ifndef MCCONF_DEFAULT_MOTOR_TYPE
