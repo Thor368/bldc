@@ -20,8 +20,6 @@
 
 #define BUTTON_DELAY		1				// Button IO hysteresis
 
-#define CHARGE_I_INVERTED
-
 #define POLE_PAIR_COUNT		5
 
 #define STM32_UID			((uint32_t *) 0x1FFF7A10)

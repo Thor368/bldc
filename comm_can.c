@@ -781,6 +781,7 @@ static THD_FUNCTION(cancom_read_thread, arg) {
 
 	event_listener_t el_1, el_2;
 	CANRxFrame rxmsg;
+	CANTxFrame txmsg;
 
 	chEvtRegister(&CAND1.rxfull_event, &el_1, 0);
 	chEvtRegister(&CAND2.rxfull_event, &el_2, 0);
@@ -797,6 +798,16 @@ static THD_FUNCTION(cancom_read_thread, arg) {
 
 		while (result == MSG_OK) {
 
+			txmsg.IDE = rxmsg.IDE;
+			txmsg.EID = rxmsg.EID;
+			txmsg.RTR = rxmsg.RTR;
+			txmsg.DLC = rxmsg.DLC;
+			memcpy(txmsg.data8, rxmsg.data8, rxmsg.DLC);
+
+			chMtxLock(&can_mtx);
+			canTransmit(&CAND1, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+			chMtxUnlock(&can_mtx);
+
 			chMtxLock(&can_rx_mtx);
 			rx_frames[rx_frame_write++] = rxmsg;
 			if (rx_frame_write == RX_FRAMES_SIZE) {
@@ -812,6 +823,16 @@ static THD_FUNCTION(cancom_read_thread, arg) {
 		result = canReceive(&CAND1, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
 
 		while (result == MSG_OK) {
+
+			txmsg.IDE = rxmsg.IDE;
+			txmsg.EID = rxmsg.EID;
+			txmsg.RTR = rxmsg.RTR;
+			txmsg.DLC = rxmsg.DLC;
+			memcpy(txmsg.data8, rxmsg.data8, rxmsg.DLC);
+
+			chMtxLock(&can_mtx);
+			canTransmit(&CAND2, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+			chMtxUnlock(&can_mtx);
 
 			chMtxLock(&can_rx_mtx);
 			rx_frames[rx_frame_write++] = rxmsg;

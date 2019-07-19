@@ -34,8 +34,8 @@ typedef struct
 	{
 		struct
 		{
-			uint8_t silver;
 			uint8_t green;
+			uint8_t silver;
 			uint8_t blue;
 			uint8_t red;
 		};

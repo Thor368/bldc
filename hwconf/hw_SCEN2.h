@@ -103,7 +103,6 @@
 
 #define ADC_IND_TEMP_MOTOR		12
 #define ADC_IND_ING				13
-#define ADC_IND_U_SENSE2		14
 
 // ADC macros and settings
 

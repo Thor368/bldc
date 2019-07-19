@@ -24,8 +24,8 @@
 #define CAN_DELAY_BASIC		100
 #define START_UP_TIME		1000
 
-#define RIGHT				0
-#define LEFT				1
+#define RIGHT				1
+#define LEFT				2
 
 systime_t can_basic_update;
 systime_t start_up_timer;
@@ -140,17 +140,17 @@ void tx_DCPower(void)
 
 void tx_Buttons(uint8_t RL)
 {
-	uint8_t data;
+	uint16_t data;
 
 	if (RL&RIGHT)
 	{
 		data = digital_IO.buttons.all & 0xFFFF;
-		comm_can_transmit_eid(MCL_Buttons_right + CAN_base, &data, 2);
+		comm_can_transmit_eid(MCL_Buttons_right + CAN_base, (uint8_t *) &data, 2);
 	}
 	if (RL&LEFT)
 	{
 		data = digital_IO.buttons.all >> 16;
-		comm_can_transmit_eid(MCL_Buttons_left + CAN_base, &data, 2);
+		comm_can_transmit_eid(MCL_Buttons_left + CAN_base, (uint8_t *) &data, 2);
 	}
 }
 
@@ -162,7 +162,7 @@ void tx_Trigger(uint8_t RL)
 	{
 		if (errors.trigger_error_right)
 			data = NAN;
-		else if (digital_IO.trigger.T1)
+		else if (digital_IO.trigger.T2)
 			data = 1;
 		else
 			data = 0;
@@ -173,7 +173,7 @@ void tx_Trigger(uint8_t RL)
 	{
 		if (errors.trigger_error_left)
 			data = NAN;
-		else if (digital_IO.trigger.T2)
+		else if (digital_IO.trigger.T1)
 			data = 1;
 		else
 			data = 0;
@@ -465,31 +465,21 @@ void rx_wr_handler(uint32_t id, uint8_t *data)
 
 static void rx_callback(CANRxFrame *msg)
 {
-#ifdef SCEN2_debugging_enable
-	SCEN2_Battery_RX(msg);
-#endif
-
 	if ((msg->EID >= (MCL_CAN_ID_base + CAN_base)) && (msg->EID < (MCL_CAN_ID_base + CAN_base + 0x1000)))  // frame for us?
 	{
 		msg->EID -= CAN_base;  // subtract base id
-	}
-//#ifndef SCEN2_debugging_enable
-//	else if ((msg->EID >= 0x100) && (msg->EID))  // frame for BMS?
-//	{
-//		SCEN2_Battery_RX(msg);
-//		return;
-//	}
-//#endif
-	else
-	{
-		return;
-	}
 
-	SCEN2_Battery_RX(msg);
-	if (msg->RTR)
-		rx_rtr_handler(msg->EID);
-	else
-		rx_wr_handler(msg->EID, msg->data8);
+		if (msg->RTR)
+			rx_rtr_handler(msg->EID);
+		else
+			rx_wr_handler(msg->EID, msg->data8);
+	}
+#ifndef SCEN2_debugging_enable
+	else if ((msg->EID >= 0x100) && (msg->EID <= 0x400))  // frame for BMS?
+#endif
+	{
+		SCEN2_Battery_RX(msg);
+	}
 }
 
 void SCEN2_CAN_handler(void)
