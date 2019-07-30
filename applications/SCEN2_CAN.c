@@ -209,6 +209,13 @@ void tx_UID(void)
 	comm_can_transmit_eid(MCL_UID + CAN_base, (uint8_t *) &UID, 6);
 }
 
+void tx_mode(void)
+{
+	uint8_t mode[3] = {0, 0, CAN_mode};
+
+	comm_can_transmit_eid(MCL_Mode_Switch + CAN_base, (uint8_t *) &mode, sizeof(mode));
+}
+
 void tx_Debugging(void)
 {
 	uint16_t data[4];
@@ -252,6 +259,10 @@ void rx_rtr_handler(uint32_t id)
 
 		case MCL_Hash:
 			tx_HASH();
+		break;
+
+		case MCL_Mode_Switch:
+			tx_mode();
 		break;
 
 		case MCL_Errors:
@@ -447,10 +458,11 @@ void rx_wr_handler(uint32_t id, uint8_t *data)
 			}
 		break;
 
-		case MCL_Jump_Bootloader:
+		case MCL_Mode_Switch:
 			if (*((uint16_t *) &data[0]) == 666)
 			{
-				// jump to bootloader
+				if (data[2] <= CAN_MODE_VESC)
+					CAN_mode = data[2];
 			}
 		break;
 

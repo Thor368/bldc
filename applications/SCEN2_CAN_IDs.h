@@ -16,7 +16,7 @@
 #define MCL_Version						0x31006
 #define MCL_Hash						0x31008
 #define MCL_Reset						0x3100A
-#define MCL_Jump_Bootloader				0x3100C
+#define MCL_Mode_Switch					0x3100C
 #define MCL_Errors						0x3100E
 
 

@@ -27,6 +27,10 @@
 #define CAN_STATUS_MSG_INT_MS		1
 #define CAN_STATUS_MSGS_TO_STORE	10
 
+#define CAN_MODE_PASSIVE	0
+#define CAN_MODE_SCEN2		1
+#define CAN_MODE_VESC		2
+
 // Functions
 void comm_can_init(void);
 void comm_can_set_baud(CAN_BAUD baud);
@@ -65,5 +69,8 @@ can_status_msg_4 *comm_can_get_status_msg_4_id(int id);
 can_status_msg_5 *comm_can_get_status_msg_5_index(int index);
 can_status_msg_5 *comm_can_get_status_msg_5_id(int id);
 CANRxFrame *comm_can_get_rx_frame(void);
+
+// CAN mode switch
+extern uint8_t CAN_mode;
 
 #endif /* COMM_CAN_H_ */

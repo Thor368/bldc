@@ -78,6 +78,9 @@ static CANConfig cancfg = {
 		CAN_BTR_TS1(9) | CAN_BTR_BRP(5)
 };
 
+// CAN mode switch
+uint8_t CAN_mode = CAN_MODE_PASSIVE;
+
 // Private functions
 #if CAN_ENABLE
 static void send_packet_wrapper(unsigned char *data, unsigned int len);
@@ -159,7 +162,8 @@ void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len) {
 	memcpy(txmsg.data8, data, len);
 
 	chMtxLock(&can_mtx);
-	canTransmit(&CAND1, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+	if (CAN_mode != CAN_MODE_PASSIVE)
+		canTransmit(&CAND1, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	canTransmit(&CAND2, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	chMtxUnlock(&can_mtx);
 #else
@@ -178,7 +182,8 @@ void comm_can_transmit_eid_RTR(uint32_t id) {
 	txmsg.DLC = 0;
 
 	chMtxLock(&can_mtx);
-	canTransmit(&CAND1, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+	if (CAN_mode != CAN_MODE_PASSIVE)
+		canTransmit(&CAND1, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	canTransmit(&CAND2, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	chMtxUnlock(&can_mtx);
 
@@ -205,7 +210,8 @@ msg_t comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
 	memcpy(txmsg.data8, data, len);
 
 	chMtxLock(&can_mtx);
-	ret = canTransmit(&CAND1, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+	if (CAN_mode != CAN_MODE_PASSIVE)
+		ret = canTransmit(&CAND1, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	ret = canTransmit(&CAND2, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	chMtxUnlock(&can_mtx);
 
@@ -875,9 +881,9 @@ static THD_FUNCTION(cancom_process_thread, arg) {
 		while ((rxmsg_tmp = comm_can_get_rx_frame()) != 0) {
 
 			CANRxFrame rxmsg = *rxmsg_tmp;
-			if (app_callback)
+			if (app_callback && !(CAN_mode == CAN_MODE_VESC))
 				app_callback(&rxmsg);
-			else
+			else if (CAN_mode == CAN_MODE_VESC)
 			{
 				if (rxmsg.IDE == CAN_IDE_EXT) {
 					uint8_t id = rxmsg.EID & 0xFF;
