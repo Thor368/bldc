@@ -46,8 +46,11 @@
 #define DISP_SPLY_ON()			palSetPad(GPIOD, 11)
 #define DISP_SPLY_OFF()			palClearPad(GPIOD, 11)
 
-#define CHG_ENABLE()			palSetPad(GPIOB, 12)
-#define CHG_DISABLE()			palClearPad(GPIOB, 12)
+#define CAN_CP_ON()				palSetPad(GPIOB, 11)
+#define CAN_CP_OFF()			palClearPad(GPIOB, 11)
+
+#define CHG_ENABLE()			palSetPad(GPIOB, 10)
+#define CHG_DISABLE()			palClearPad(GPIOB, 10)
 
 #define BUTTON_SILVER()			palReadPad(GPIOD, 3)
 #define BUTTON_GREEN()			palReadPad(GPIOD, 2)
@@ -58,6 +61,8 @@
 #define TRIGGER_1B()			palReadPad(GPIOC, 11)
 #define TRIGGER_2A()			palReadPad(GPIOC, 12)
 #define TRIGGER_2B()			palReadPad(GPIOD, 0)
+
+#define CHG_FAULT()				palReadPad(GPIOB, 2)
 
 
 /*
@@ -103,6 +108,7 @@
 
 #define ADC_IND_TEMP_MOTOR		12
 #define ADC_IND_ING				13
+#define ADC_IND_U_SENSE2		14
 
 // ADC macros and settings
 
@@ -180,11 +186,6 @@
 #define READ_HALL1()			0
 #define READ_HALL2()			0
 #define READ_HALL3()			0
-
-// CAN device and port
-#define HW_CAN_PORT				GPIOB
-#define HW_CAN_GPIO_AF			GPIO_AF_CAN2
-#define HW_CAN_DEV				CAND2
 
 // Default setting overrides
 #ifndef MCCONF_DEFAULT_MOTOR_TYPE

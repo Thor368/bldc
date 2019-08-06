@@ -46,6 +46,12 @@ void hw_init_gpio(void) {
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
 
+	// CAN_CP_ON
+	CAN_CP_ON();
+	palSetPadMode(GPIOB, 11,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
+
 	// LEDs
 	LED_GREEN_OFF();
 	LED_RED_OFF();
@@ -56,7 +62,7 @@ void hw_init_gpio(void) {
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
 
-	// 5V Power
+	// Trigger power
 	POWER_OFF();
 	palSetPadMode(GPIOE, 3,
 			PAL_MODE_OUTPUT_PUSHPULL |
@@ -82,9 +88,12 @@ void hw_init_gpio(void) {
 
 	// Charge Enable/Disable
 	CHG_DISABLE();
-	palSetPadMode(GPIOB, 12,
+	palSetPadMode(GPIOB, 10,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+
+	// FAULT pin
+	palSetPadMode(GPIOB, 2, PAL_MODE_INPUT_PULLUP);
 
 	// Button inputs
 	palSetPadMode(GPIOD, 3, PAL_MODE_INPUT_PULLUP);  // silver
