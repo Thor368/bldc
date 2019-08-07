@@ -20,50 +20,19 @@
 #ifndef HW_SCEN2_H_
 #define HW_SCEN2_H_
 
-#define HW_NAME					"SCEN2"
+#define HW_NAME					"VESC_dongle"
 
 // HW properties
 #define HW_HAS_3_SHUNTS
 
 // Macros
-#define LED_GREEN_ON()			palSetPad(GPIOE, 2)
-#define LED_GREEN_OFF()			palClearPad(GPIOE, 2)
-#define LED_RED_ON()			palSetPad(GPIOE, 1)
-#define LED_RED_OFF()			palClearPad(GPIOE, 1)
+#define LED_GREEN_ON()			palSetPad(GPIOC, 2)
+#define LED_GREEN_OFF()			palClearPad(GPIOC, 2)
+#define LED_RED_ON()			palSetPad(GPIOC, 1)
+#define LED_RED_OFF()			palClearPad(GPIOC, 1)
 
-#define CAN_STB_HI()			palSetPad(GPIOE, 0)
-#define CAN_STB_LO()			palClearPad(GPIOE, 0)
-
-#define POWER_ON()				palSetPad(GPIOE, 3)
-#define POWER_OFF()				palClearPad(GPIOE, 3)
-
-#define BAT_RIGHT_SPLY_ON()		palSetPad(GPIOE, 4)
-#define BAT_RIGHT_SPLY_OFF()	palClearPad(GPIOE, 4)
-
-#define BAT_LEFT_SPLY_ON()		palSetPad(GPIOE, 5)
-#define BAT_LEFT_SPLY_OFF()		palClearPad(GPIOE, 5)
-
-#define DISP_SPLY_ON()			palSetPad(GPIOD, 11)
-#define DISP_SPLY_OFF()			palClearPad(GPIOD, 11)
-
-#define CAN_CP_ON()				palSetPad(GPIOB, 11)
-#define CAN_CP_OFF()			palClearPad(GPIOB, 11)
-
-#define CHG_ENABLE()			palSetPad(GPIOB, 10)
-#define CHG_DISABLE()			palClearPad(GPIOB, 10)
-
-#define BUTTON_SILVER()			palReadPad(GPIOD, 3)
-#define BUTTON_GREEN()			palReadPad(GPIOD, 2)
-#define BUTTON_BLUE()			palReadPad(GPIOA, 0)
-#define BUTTON_RED()			palReadPad(GPIOE, 15)
-
-#define TRIGGER_1A()			palReadPad(GPIOC, 10)
-#define TRIGGER_1B()			palReadPad(GPIOC, 11)
-#define TRIGGER_2A()			palReadPad(GPIOC, 12)
-#define TRIGGER_2B()			palReadPad(GPIOD, 0)
-
-#define CHG_FAULT()				palReadPad(GPIOB, 2)
-
+#define CAN_STB_HI()			palSetPad(GPIOC, 0)
+#define CAN_STB_LO()			palClearPad(GPIOC, 0)
 
 /*
  * ADC Vector
@@ -186,6 +155,14 @@
 #define READ_HALL1()			0
 #define READ_HALL2()			0
 #define READ_HALL3()			0
+
+// CAN
+#define HW_CANH_PORT			GPIOB
+#define HW_CANH_PIN				8
+#define HW_CANL_PORT			GPIOB
+#define HW_CANL_PIN				9
+#define HW_CAN_GPIO_AF			GPIO_AF_CAN2
+#define HW_CAN_DEV				CAND1
 
 // Default setting overrides
 #ifndef MCCONF_DEFAULT_MOTOR_TYPE

@@ -79,7 +79,7 @@ static CANConfig cancfg = {
 };
 
 // CAN mode switch
-uint8_t CAN_mode = CAN_MODE_PASSIVE;
+uint8_t CAN_mode = CAN_MODE_VESC;
 
 // Private functions
 #if CAN_ENABLE
@@ -105,15 +105,6 @@ void comm_can_init(void) {
 
 	chMtxObjectInit(&can_mtx);
 	chMtxObjectInit(&can_rx_mtx);
-
-	palSetPadMode(GPIOB, 5,
-			PAL_MODE_ALTERNATE(GPIO_AF_CAN2) |
-			PAL_STM32_OTYPE_PUSHPULL |
-			PAL_STM32_OSPEED_MID1);
-	palSetPadMode(GPIOB, 6,
-			PAL_MODE_ALTERNATE(GPIO_AF_CAN2) |
-			PAL_STM32_OTYPE_PUSHPULL |
-			PAL_STM32_OSPEED_MID1);
 
 	palSetPadMode(GPIOB, 8,
 			PAL_MODE_ALTERNATE(GPIO_AF_CAN2) |

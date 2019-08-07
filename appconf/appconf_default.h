@@ -22,7 +22,7 @@
 
 // Default app configuration
 #ifndef APPCONF_CONTROLLER_ID
-#define APPCONF_CONTROLLER_ID				0 // Controller id. -1 means it should be calculated from UUID.
+#define APPCONF_CONTROLLER_ID				254 // Controller id. -1 means it should be calculated from UUID.
 #endif
 #ifndef APPCONF_TIMEOUT_MSEC
 #define APPCONF_TIMEOUT_MSEC				1000
