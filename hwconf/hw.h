@@ -276,25 +276,52 @@
 #define MCCONF_MAX_CURRENT_UNBALANCE_RATE	0.3
 #endif
 
-// CAN device and port (default CAN2)
-//#ifndef HW_CANH_PORT
-//#define HW_CANH_PORT			GPIOB
-//#endif
-//#ifndef HW_CANH_PIN
-//#define HW_CANH_PIN				5
-//#endif
-//#ifndef HW_CANL_PORT
-//#define HW_CANL_PORT			GPIOB
-//#endif
-//#ifndef HW_CANL_PIN
-//#define HW_CANL_PIN				6
-//#endif
-//#ifndef HW_CAN_GPIO_AF
-//#define HW_CAN_GPIO_AF			GPIO_AF_CAN2
-//#endif
-//#ifndef HW_CAN_DEV
-//#define HW_CAN_DEV				CAND2
-//#endif
+
+// NRF SW SPI (default to spi header pins)
+#ifndef NRF_PORT_CSN
+#define NRF_PORT_CSN			HW_SPI_PORT_NSS
+#endif
+#ifndef NRF_PIN_CSN
+#define NRF_PIN_CSN				HW_SPI_PIN_NSS
+#endif
+#ifndef NRF_PORT_SCK
+#define NRF_PORT_SCK			HW_SPI_PORT_SCK
+#endif
+#ifndef NRF_PIN_SCK
+#define NRF_PIN_SCK				HW_SPI_PIN_SCK
+#endif
+#ifndef NRF_PORT_MOSI
+#define NRF_PORT_MOSI			HW_SPI_PORT_MOSI
+#endif
+#ifndef NRF_PIN_MOSI
+#define NRF_PIN_MOSI			HW_SPI_PIN_MOSI
+#endif
+#ifndef NRF_PORT_MISO
+#define NRF_PORT_MISO			HW_SPI_PORT_MISO
+#endif
+#ifndef NRF_PIN_MISO
+#define NRF_PIN_MISO			HW_SPI_PIN_MISO
+#endif
+
+// CAN device and port (default CAN1)
+#ifndef HW_CANH_PORT
+#define HW_CANH_PORT			GPIOB
+#endif
+#ifndef HW_CANH_PIN
+#define HW_CANH_PIN				8
+#endif
+#ifndef HW_CANL_PORT
+#define HW_CANL_PORT			GPIOB
+#endif
+#ifndef HW_CANL_PIN
+#define HW_CANL_PIN				9
+#endif
+#ifndef HW_CAN_GPIO_AF
+#define HW_CAN_GPIO_AF			GPIO_AF_CAN1
+#endif
+#ifndef HW_CAN_DEV
+#define HW_CAN_DEV				CAND1
+#endif
 
 // Hook to call when trying to initialize the permanent NRF failed. Can be
 // used to e.g. reconfigure pins.

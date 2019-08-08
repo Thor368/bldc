@@ -112,8 +112,8 @@
 //#define HW_SOURCE "hw_binar_v1.c"
 //#define HW_HEADER "hw_binar_v1.h"
 
-#define HW_SOURCE "hw_SCEN2.c"
-#define HW_HEADER "hw_SCEN2.h"
+#define HW_SOURCE "hw_dongle.c"
+#define HW_HEADER "hw_dongle.h"
 #endif
 
 #ifndef HW_HEADER

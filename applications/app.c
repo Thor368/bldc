@@ -45,6 +45,10 @@ const app_configuration* app_get_configuration(void) {
 void app_set_configuration(app_configuration *conf) {
 	appconf = *conf;
 
+	app_adc_stop();
+	app_uartcomm_stop();
+	app_nunchuk_stop();
+
 #if CAN_ENABLE
 	comm_can_set_baud(conf->can_baud_rate);
 #endif
@@ -54,8 +58,39 @@ void app_set_configuration(app_configuration *conf) {
 #endif
 
 	switch (appconf.app_to_use) {
+	case APP_PPM:
+		break;
+
+	case APP_ADC:
+		app_adc_start(true);
+		break;
+
+	case APP_UART:
+		hw_stop_i2c();
+		app_uartcomm_start();
+		break;
+
+	case APP_PPM_UART:
+		hw_stop_i2c();
+		app_uartcomm_start();
+		break;
+
+	case APP_ADC_UART:
+		hw_stop_i2c();
+		app_adc_start(false);
+		app_uartcomm_start();
+		break;
+
+	case APP_NUNCHUK:
+		app_nunchuk_start();
+		break;
+
+	case APP_NRF:
+		break;
+
 	case APP_CUSTOM:
 #ifdef APP_CUSTOM_TO_USE
+		hw_stop_i2c();
 		app_custom_start();
 #endif
 		break;
@@ -63,6 +98,10 @@ void app_set_configuration(app_configuration *conf) {
 	default:
 		break;
 	}
+
+	app_adc_configure(&appconf.app_adc_conf);
+	app_uartcomm_configure(appconf.app_uart_baudrate, appconf.permanent_uart_enabled);
+	app_nunchuk_configure(&appconf.app_chuk_conf);
 
 #ifdef APP_CUSTOM_TO_USE
 	app_custom_configure(&appconf);
