@@ -92,9 +92,6 @@ endif
 # Define project name here
 PROJECT = BLDC_4_ChibiOS
 
-#git hash of HEAD
-githash=$(shell git rev-parse --short=7 HEAD)
-
 # Imported source files and paths
 CHIBIOS = ChibiOS_3.0.2
 # Startup files
@@ -109,6 +106,7 @@ include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 # Other files
 include hwconf/hwconf.mk
 include applications/applications.mk
+include nrf/nrf.mk
 include libcanard/canard.mk
 include imu/imu.mk
 include blackmagic/blackmagic.mk
@@ -136,6 +134,7 @@ CSRC = $(STARTUPSRC) \
        digital_filter.c \
        ledpwm.c \
        mcpwm.c \
+       servo_dec.c \
        utils.c \
        servo_simple.c \
        packet.c \
@@ -251,7 +250,7 @@ CPPWARN = -Wall -Wextra -Wundef
 #
 
 # List all user C define here, like -D_DEBUG=1
-UDEFS = -DHASH=0x$(githash)
+UDEFS =
 
 # Define ASM defines here
 UADEFS =
@@ -279,9 +278,6 @@ endif
 build/$(PROJECT).bin: build/$(PROJECT).elf 
 	$(BIN) build/$(PROJECT).elf build/$(PROJECT).bin --gap-fill 0xFF
 
-getver:
-	@echo GIT_COMMIT=$(githash)
-	
 # Program
 upload: build/$(PROJECT).bin
 #	qstlink2 --cli --erase --write build/$(PROJECT).bin

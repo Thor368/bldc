@@ -31,11 +31,13 @@
 #include "mc_interface.h"
 #include "app.h"
 #include "timeout.h"
+#include "servo_dec.h"
 #include "comm_can.h"
 #include "flash_helper.h"
 #include "utils.h"
 #include "packet.h"
 #include "encoder.h"
+#include "nrf_driver.h"
 #include "gpdrive.h"
 #include "confgenerator.h"
 #include "imu.h"
@@ -141,6 +143,7 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 	}
 
 	COMM_PACKET_ID packet_id;
+
 	// Static to save some stack space
 	static mc_configuration mcconf;
 	static app_configuration appconf;
@@ -194,6 +197,10 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		break;
 
 	case COMM_ERASE_NEW_APP_ALL_CAN:
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(6000);
+		}
+
 		data[-1] = COMM_ERASE_NEW_APP;
 		comm_can_send_buffer(255, data - 1, len + 1, 2);
 		chThdSleepMilliseconds(1500);
@@ -201,6 +208,10 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		/* no break */
 	case COMM_ERASE_NEW_APP: {
 		int32_t ind = 0;
+
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(6000);
+		}
 		uint16_t flash_res = flash_helper_erase_new_app(buffer_get_uint32(data, &ind));
 
 		ind = 0;
@@ -211,6 +222,10 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 	} break;
 
 	case COMM_WRITE_NEW_APP_DATA_ALL_CAN:
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(2000);
+		}
+
 		data[-1] = COMM_WRITE_NEW_APP_DATA;
 		comm_can_send_buffer(255, data - 1, len + 1, 2);
 		/* Falls through. */
@@ -219,6 +234,9 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		int32_t ind = 0;
 		uint32_t new_app_offset = buffer_get_uint32(data, &ind);
 
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(2000);
+		}
 		uint16_t flash_res = flash_helper_write_new_app_data(new_app_offset, data + ind, len - ind);
 
 		ind = 0;
@@ -457,12 +475,31 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		break;
 
 	case COMM_GET_DECODED_PPM: {
+		int32_t ind = 0;
+		uint8_t send_buffer[50];
+		send_buffer[ind++] = COMM_GET_DECODED_PPM;
+		buffer_append_int32(send_buffer, (int32_t)(app_ppm_get_decoded_level() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(servodec_get_last_pulse_len(0) * 1000000.0), &ind);
+		reply_func(send_buffer, ind);
 	} break;
 
 	case COMM_GET_DECODED_ADC: {
+		int32_t ind = 0;
+		uint8_t send_buffer[50];
+		send_buffer[ind++] = COMM_GET_DECODED_ADC;
+		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_decoded_level() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_voltage() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_decoded_level2() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_voltage2() * 1000000.0), &ind);
+		reply_func(send_buffer, ind);
 	} break;
 
 	case COMM_GET_DECODED_CHUK: {
+		int32_t ind = 0;
+		uint8_t send_buffer[50];
+		send_buffer[ind++] = COMM_GET_DECODED_CHUK;
+		buffer_append_int32(send_buffer, (int32_t)(app_nunchuk_get_decoded_chuk() * 1000000.0), &ind);
+		reply_func(send_buffer, ind);
 	} break;
 
 	case COMM_FORWARD_CAN:
@@ -470,6 +507,25 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		break;
 
 	case COMM_SET_CHUCK_DATA: {
+		chuck_data chuck_d_tmp;
+
+		int32_t ind = 0;
+		chuck_d_tmp.js_x = data[ind++];
+		chuck_d_tmp.js_y = data[ind++];
+		chuck_d_tmp.bt_c = data[ind++];
+		chuck_d_tmp.bt_z = data[ind++];
+		chuck_d_tmp.acc_x = buffer_get_int16(data, &ind);
+		chuck_d_tmp.acc_y = buffer_get_int16(data, &ind);
+		chuck_d_tmp.acc_z = buffer_get_int16(data, &ind);
+
+		if (len >= (unsigned int)ind + 2) {
+			chuck_d_tmp.rev_has_state = data[ind++];
+			chuck_d_tmp.is_rev = data[ind++];
+		} else {
+			chuck_d_tmp.rev_has_state = false;
+			chuck_d_tmp.is_rev = false;
+		}
+		app_nunchuk_update_output(&chuck_d_tmp);
 	} break;
 
 	case COMM_CUSTOM_APP_DATA:
@@ -479,6 +535,14 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		break;
 
 	case COMM_NRF_START_PAIRING: {
+		int32_t ind = 0;
+		nrf_driver_start_pairing(buffer_get_int32(data, &ind));
+
+		ind = 0;
+		uint8_t send_buffer[50];
+		send_buffer[ind++] = packet_id;
+		send_buffer[ind++] = NRF_PAIR_STARTED;
+		reply_func(send_buffer, ind);
 	} break;
 
 	case COMM_GPD_SET_FSW: {
@@ -749,9 +813,23 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 	} break;
 
 	case COMM_EXT_NRF_PRESENT: {
+		if (!conf_general_permanent_nrf_found) {
+			nrf_driver_init_ext_nrf();
+			if (!nrf_driver_is_pairing()) {
+				const app_configuration *appconf_ptr = app_get_configuration();
+				uint8_t send_buffer[50];
+				send_buffer[0] = COMM_EXT_NRF_ESB_SET_CH_ADDR;
+				send_buffer[1] = appconf_ptr->app_nrf_conf.channel;
+				send_buffer[2] = appconf_ptr->app_nrf_conf.address[0];
+				send_buffer[3] = appconf_ptr->app_nrf_conf.address[1];
+				send_buffer[4] = appconf_ptr->app_nrf_conf.address[2];
+				commands_send_packet_nrf(send_buffer, 5);
+			}
+		}
 	} break;
 
 	case COMM_EXT_NRF_ESB_RX_DATA: {
+		nrf_driver_process_packet(data, len);
 	} break;
 
 	case COMM_APP_DISABLE_OUTPUT: {

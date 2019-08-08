@@ -149,14 +149,10 @@
 #define READ_HALL3()			0
 
 // CAN
-//#define HW_CANH_PORT			GPIOB
-//#define HW_CANH_PIN				8
-//#define HW_CANL_PORT			GPIOB
-//#define HW_CANL_PIN				9
-//#define HW_CAN_GPIO_AF			GPIO_AF_CAN1
-//#define HW_CAN_DEV				CAND1
-
-#define HW_CAN_PORT				GPIOB
+#define HW_CANH_PORT			GPIOB
+#define HW_CANH_PIN				8
+#define HW_CANL_PORT			GPIOB
+#define HW_CANL_PIN				9
 #define HW_CAN_GPIO_AF			GPIO_AF_CAN1
 #define HW_CAN_DEV				CAND1
 

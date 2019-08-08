@@ -2283,25 +2283,32 @@ static THD_FUNCTION(timer_thread, arg) {
 }
 
 static void do_dc_cal(void) {
+	DCCAL_ON();
+
+	// Wait max 5 seconds
+	int cnt = 0;
+	while(IS_DRV_FAULT()){
+		chThdSleepMilliseconds(1);
+		cnt++;
+		if (cnt > 5000) {
+			break;
+		}
+	};
 
 	chThdSleepMilliseconds(1000);
-
 	m_curr0_sum = 0;
 	m_curr1_sum = 0;
-	#ifdef HW_HAS_3_SHUNTS
+#ifdef HW_HAS_3_SHUNTS
 	m_curr2_sum = 0;
-	#endif
-
+#endif
 	m_curr_samples = 0;
-	while (m_curr_samples < 4000);
-
+	while(m_curr_samples < 4000) {};
 	m_curr0_offset = m_curr0_sum / m_curr_samples;
 	m_curr1_offset = m_curr1_sum / m_curr_samples;
-
-	#ifdef HW_HAS_3_SHUNTS
+#ifdef HW_HAS_3_SHUNTS
 	m_curr2_offset = m_curr2_sum / m_curr_samples;
-	#endif
-
+#endif
+	DCCAL_OFF();
 	m_dccal_done = true;
 }
 

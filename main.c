@@ -44,6 +44,9 @@
 #include "encoder.h"
 #include "servo_simple.h"
 #include "utils.h"
+#include "nrf_driver.h"
+#include "rfhelp.h"
+#include "spi_sw.h"
 #include "timer.h"
 #include "imu.h"
 #include "flash_helper.h"
@@ -225,6 +228,7 @@ int main(void) {
 	app_configuration appconf;
 	conf_general_read_app_configuration(&appconf);
 	app_set_configuration(&appconf);
+	app_uartcomm_start_permanent();
 
 #ifdef HW_HAS_PERMANENT_NRF
 	conf_general_permanent_nrf_found = nrf_driver_init();
