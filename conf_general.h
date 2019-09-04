@@ -22,7 +22,7 @@
 
 // Firmware version
 #define FW_VERSION_MAJOR		3
-#define FW_VERSION_MINOR		58
+#define FW_VERSION_MINOR		59
 
 #include "datatypes.h"
 
@@ -92,7 +92,7 @@
 //#define HW75_300_VEDDER_FIRST_PCB
 
 // Second revision with separate UART for NRF51
-#define HW75_300_REV_2
+//#define HW75_300_REV_2
 
 //#define HW_SOURCE "hw_75_300.c"
 //#define HW_HEADER "hw_75_300.h"
@@ -106,15 +106,17 @@
 //#define HW_SOURCE "hw_uavc_qcube.c"
 //#define HW_HEADER "hw_uavc_qcube.h"
 
-//#define HW_SOURCE "hw_uavc_basic.c"
-//#define HW_HEADER "hw_uavc_basic.h"
+//#define HW_SOURCE "hw_uavc_omega.c"
+//#define HW_HEADER "hw_uavc_omega.h"
 
 //#define HW_SOURCE "hw_binar_v1.c"
 //#define HW_HEADER "hw_binar_v1.h"
 
+//#define HW_SOURCE "hw_hd.c"
+//#define HW_HEADER "hw_hd.h"
+
 #define HW_SOURCE "hw_HSWR3.c"
 #define HW_HEADER "hw_HSWR3.h"
-
 #endif
 
 #ifndef HW_SOURCE
@@ -125,29 +127,39 @@
 #error "No hardware header file set"
 #endif
 
-#include "hw.h"
+#ifdef USER_MC_CONF
+#include USER_MC_CONF
+#endif
+
+#ifdef USER_APP_CONF
+#include USER_APP_CONF
+#endif
 
 /*
  * Select default user motor configuration
  */
-//#define MCCONF_DEFAULT_USER			"mcconf_sten.h"
-//#define MCCONF_DEFAULT_USER			"mcconf_sp_540kv.h"
-//#define MCCONF_DEFAULT_USER			"mcconf_castle_2028.h"
-//#define MCCONF_DEFAULT_USER			"mcconf_ellwee.h"
+//#include			"mcconf_sten.h"
+//#include			"mcconf_sp_540kv.h"
+//#include			"mcconf_castle_2028.h"
+//#include			"mcconf_ellwee.h"
+//#include			"conf_test.h"
 
 /*
  * Select default user app configuration
  */
-//#define APPCONF_DEFAULT_USER		"appconf_example_ppm.h"
-//#define APPCONF_DEFAULT_USER		"appconf_custom.h"
-//#define APPCONF_DEFAULT_USER		"appconf_ellwee.h"
+//#include			"appconf_example_ppm.h"
+//#include			"appconf_custom.h"
+//#include			"appconf_ellwee.h"
 
 /*
  * Set APP_CUSTOM_TO_USE to the name of the main C file of the custom application.
  */
 #define APP_CUSTOM_TO_USE			"app_WS20.c"
 #define APPCONF_APP_TO_USE			APP_CUSTOM
-//#define MCCONF_FOC_F_SW				5000
+
+#include "hw.h"
+#include "mcconf_default.h"
+#include "appconf_default.h"
 
 /*
  * Enable blackmagic probe output on SWD port
