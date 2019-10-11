@@ -24,6 +24,8 @@
 
 // HW properties
 #define HW_HAS_3_SHUNTS
+#define HW_HAS_PHASE_SHUNTS
+
 
 // Macros
 #define LED_GREEN_ON()			palSetPad(GPIOC, 10)
@@ -82,10 +84,10 @@
 #define VIN_R2					4700.0
 #endif
 #ifndef CURRENT_AMP_GAIN
-#define CURRENT_AMP_GAIN		20.0
+#define CURRENT_AMP_GAIN		6.6
 #endif
 #ifndef CURRENT_SHUNT_RES
-#define CURRENT_SHUNT_RES		0.000521
+#define CURRENT_SHUNT_RES		0.001
 #endif
 #ifndef INVERTED_SHUNT_POLARITY
 #define INVERTED_SHUNT_POLARITY
