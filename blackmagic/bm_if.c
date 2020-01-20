@@ -133,6 +133,7 @@ static int idcode_to_device(uint32_t idcode) {
 		ret = 7; break;
 	case 0x00EB: /* nRF52840 Preview QIAA AA0 */
 	case 0x0150: /* nRF52840 QIAA C0 */
+	case 0x015B: /* nRF52840 ?? */
 		ret = 8; break;
 	default: ret = -2; break;
 	}
@@ -325,8 +326,8 @@ void bm_set_enabled(bool enabled) {
 		SWDIO_MODE_FLOAT();
 		palSetPadMode(SWCLK_PORT, SWCLK_PIN, PAL_MODE_OUTPUT_PUSHPULL | PAL_STM32_OSPEED_HIGHEST);
 	} else {
-		palSetPadMode(SWDIO_PORT, SWDIO_PIN, PAL_MODE_ALTERNATE(0));
-		palSetPadMode(SWCLK_PORT, SWCLK_PIN, PAL_MODE_ALTERNATE(0));
+		palSetPadMode(SWDIO_PORT, SWDIO_PIN, PAL_MODE_INPUT);
+		palSetPadMode(SWCLK_PORT, SWCLK_PIN, PAL_MODE_INPUT);
 
 		// The above does not activate SWD again, so do it explicitly for the SWD pins.
 		palSetPadMode(GPIOA, 13, PAL_MODE_ALTERNATE(0));
@@ -362,6 +363,9 @@ int bm_connect(void) {
 
 		if (cur_target) {
 			ret = idcode_to_device(target_idcode(cur_target));
+			if (ret < 0) {
+				commands_printf("Unknown idcode: 0x%04X\n", target_idcode(cur_target));
+			}
 		}
 	}
 
@@ -460,6 +464,35 @@ int bm_write_flash(uint32_t addr, const void *data, uint32_t len) {
 }
 
 /**
+ * Read target memory
+ *
+ * @param addr
+ * Address to read from
+ *
+ * @param data
+ * Store the data here
+ *
+ * @param len
+ * Length of the data
+ *
+ * @return
+ * -2: Read failed
+ * -1: Not connected
+ *  1: Success
+ */
+int bm_mem_read(uint32_t addr, void *data, uint32_t len) {
+	int ret = -1;
+
+	if (cur_target) {
+		target_print_en = false;
+		target_flash_done(cur_target);
+		ret = target_mem_read(cur_target, data, addr, len) ? -2 : 1;
+	}
+
+	return ret;
+}
+
+/**
  * Reboot target.
  *
  * @return
@@ -513,8 +546,8 @@ void bm_change_swd_pins(stm32_gpio_t *swdio_port, int swdio_pin,
 	bm_set_enabled(false);
 	platform_swdio_port = swdio_port;
 	platform_swdio_pin = swdio_pin;
-	platform_swdio_port = swclk_port;
-	platform_swdio_pin = swclk_pin;
+	platform_swclk_port = swclk_port;
+	platform_swclk_pin = swclk_pin;
 }
 
 /**
@@ -524,6 +557,6 @@ void bm_default_swd_pins(void) {
 	bm_set_enabled(false);
 	platform_swdio_port = SWDIO_PORT_DEFAULT;
 	platform_swdio_pin = SWDIO_PIN_DEFAULT;
-	platform_swdio_port = SWCLK_PORT_DEFAULT;
-	platform_swdio_pin = SWCLK_PIN_DEFAULT;
+	platform_swclk_port = SWCLK_PORT_DEFAULT;
+	platform_swclk_pin = SWCLK_PIN_DEFAULT;
 }

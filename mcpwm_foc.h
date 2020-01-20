@@ -43,6 +43,7 @@ void mcpwm_foc_set_openloop(float current, float rpm);
 void mcpwm_foc_set_openloop_phase(float current, float phase);
 void mcpwm_foc_set_openloop_duty(float dutyCycle, float rpm);
 void mcpwm_foc_set_openloop_duty_phase(float dutyCycle, float phase);
+int mcpwm_foc_set_tachometer_value(int steps);
 float mcpwm_foc_get_duty_cycle_set(void);
 float mcpwm_foc_get_duty_cycle_now(void);
 float mcpwm_foc_get_pid_pos_set(void);
@@ -80,7 +81,7 @@ float mcpwm_foc_get_last_adc_isr_duration(void);
 void mcpwm_foc_get_current_offsets(volatile int *curr0_offset, volatile int *curr1_offset, volatile int *curr2_offset);
 void mcpwm_foc_set_current_offsets(volatile int curr0_offset, volatile int curr1_offset, volatile int curr2_offset);
 float mcpwm_foc_get_ts(void);
-void mcpwm_foc_reset_vd_vq(void);
+bool mcpwm_foc_is_using_encoder(void);
 
 // Interrupt handlers
 void mcpwm_foc_tim_sample_int_handler(void);

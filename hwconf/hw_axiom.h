@@ -110,9 +110,12 @@
 #define PHASE_VOLTAGE_TRANSFER_FUNCTION	112.15			//[V/V]
 #else
 #define HVDC_TRANSFER_FUNCTION			185.0			//[V/V]
-#define PHASE_VOLTAGE_TRANSFER_FUNCTION	185.0			//[V/V]
+#define PHASE_VOLTAGE_TRANSFER_FUNCTION	367.7			//[V/V]
 #endif
 #define DEFAULT_CURRENT_AMP_GAIN		0.003761	//Transfer Function [V/A] for ISB-425-A
+//#define DEFAULT_CURRENT_AMP_GAIN		0.001249	//Transfer Function [V/A] for HTFS 800-P
+//#define DEFAULT_CURRENT_AMP_GAIN		0.001249	//Transfer Function [V/A] for HASS 400-S
+//#define DEFAULT_CURRENT_AMP_GAIN		0.0008324	//Transfer Function [V/A] for HASS 600-S
 
 // Component parameters (can be overridden)
 #ifndef V_REG
@@ -126,9 +129,6 @@
 #endif
 #ifndef CURRENT_AMP_GAIN
 #define CURRENT_AMP_GAIN				hw_axiom_get_current_sensor_gain()
-//#define CURRENT_AMP_GAIN				0.003761	//Transfer Function [V/A] for ISB-425-A
-//#define CURRENT_AMP_GAIN				0.001249	//Transfer Function [V/A] for HTFS 800-P
-//#define CURRENT_AMP_GAIN				0.0008324	//Transfer Function [V/A] for HASS 600-S
 #endif
 #ifndef CURRENT_SHUNT_RES
 #define CURRENT_SHUNT_RES				1.0 // Unity gain so we use a single transfer function defined as CURRENT_AMP_GAIN
@@ -193,6 +193,12 @@
 #ifndef CURR3_DOUBLE_SAMPLE
 #define CURR3_DOUBLE_SAMPLE		0
 #endif
+
+// COMM-port ADC GPIOs
+#define HW_ADC_EXT_GPIO			GPIOC
+#define HW_ADC_EXT_PIN			5
+#define HW_ADC_EXT2_GPIO		GPIOB
+#define HW_ADC_EXT2_PIN			0
 
 // UART Peripheral
 #define HW_UART_DEV				SD3

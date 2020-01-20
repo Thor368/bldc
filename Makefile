@@ -109,6 +109,7 @@ include applications/applications.mk
 include nrf/nrf.mk
 include libcanard/canard.mk
 include imu/imu.mk
+include compression/compression.mk
 include blackmagic/blackmagic.mk
 
 # Define linker script file here
@@ -155,11 +156,13 @@ CSRC = $(STARTUPSRC) \
        timer.c \
        i2c_bb.c \
        virtual_motor.c \
+       shutdown.c \
        $(HWSRC) \
        $(APPSRC) \
        $(NRFSRC) \
        $(CANARDSRC) \
        $(IMUSRC) \
+       $(COMPRESSIONSRC) \
        $(BLACKMAGICSRC)
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
@@ -200,6 +203,7 @@ INCDIR = $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC) \
          $(NRFINC) \
          $(CANARDINC) \
          $(IMUINC) \
+         $(COMPRESSIONINC) \
          $(BLACKMAGICINC)
 
 #
