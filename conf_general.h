@@ -22,7 +22,7 @@
 
 // Firmware version
 #define FW_VERSION_MAJOR		3
-#define FW_VERSION_MINOR		66
+#define FW_VERSION_MINOR		67
 
 #include "datatypes.h"
 
@@ -242,6 +242,9 @@
 // Use the pins for the hardware SPI port instead of the hall/encoder pins for the AS5047
 #ifndef AS5047_USE_HW_SPI_PINS
 #define AS5047_USE_HW_SPI_PINS		0
+#endif
+#ifndef AD2S1205_USE_HW_SPI_PINS
+#define AD2S1205_USE_HW_SPI_PINS	0
 #endif
 
 /*
