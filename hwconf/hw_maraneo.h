@@ -24,7 +24,6 @@
 
 // HW properties
 #define HW_HAS_3_SHUNTS
-#define HW_HAS_PERMANENT_NRF
 #define HW_HAS_PHASE_SHUNTS
 
 // Macros
@@ -56,9 +55,9 @@
  * 14:	IN1		SENS2
  */
 
-#define HW_ADC_CHANNELS			15
+#define HW_ADC_CHANNELS			12
 #define HW_ADC_INJ_CHANNELS		3
-#define HW_ADC_NBR_CONV			5
+#define HW_ADC_NBR_CONV			4
 
 // ADC Indexes
 #define ADC_IND_SENS1			0
@@ -67,12 +66,11 @@
 #define ADC_IND_CURR1			3
 #define ADC_IND_CURR2			4
 #define ADC_IND_CURR3			5
-#define ADC_IND_VIN_SENS		11
-#define ADC_IND_EXT				6
-#define ADC_IND_EXT2			7
 #define ADC_IND_TEMP_MOS		8
-#define ADC_IND_TEMP_MOTOR		9
-#define ADC_IND_VREFINT			12
+#define ADC_IND_VREFINT			10
+#define ADC_IND_VIN_SENS		11
+#define ADC_IND_TEMP_MOTOR		10
+#define ADC_IND_EXT				10
 
 // ADC macros and settings
 
@@ -100,8 +98,8 @@
 #define NTC_RES(adc_val)		((4095.0 * 10000.0) / adc_val - 10000.0)
 #define NTC_TEMP(adc_ind)		(1.0 / ((logf(NTC_RES(ADC_Value[adc_ind]) / 10000.0) / 3380.0) + (1.0 / 298.15)) - 273.15)
 
-#define NTC_RES_MOTOR(adc_val)	(10000.0 / ((4095.0 / (float)adc_val) - 1.0)) // Motor temp sensor on low side
-#define NTC_TEMP_MOTOR(beta)	(1.0 / ((logf(NTC_RES_MOTOR(ADC_Value[ADC_IND_TEMP_MOTOR]) / 10000.0) / beta) + (1.0 / 298.15)) - 273.15)
+#define NTC_RES_MOTOR(adc_val)	0
+#define NTC_TEMP_MOTOR(beta)	0
 
 // Voltage on ADC channel
 #define ADC_VOLTS(ch)			((float)ADC_Value[ch] / 4096.0 * V_REG)
@@ -118,6 +116,26 @@
 #define CURR3_DOUBLE_SAMPLE		0
 #endif
 
+// CAN device and port (default CAN1)
+#ifndef HW_CANH_PORT
+#define HW_CANH_PORT			GPIOB
+#endif
+#ifndef HW_CANH_PIN
+#define HW_CANH_PIN				5
+#endif
+#ifndef HW_CANL_PORT
+#define HW_CANL_PORT			GPIOB
+#endif
+#ifndef HW_CANL_PIN
+#define HW_CANL_PIN				6
+#endif
+#ifndef HW_CAN_GPIO_AF
+#define HW_CAN_GPIO_AF			GPIO_AF_CAN2
+#endif
+#ifndef HW_CAN_DEV
+#define HW_CAN_DEV				CAND2
+#endif
+
 // UART Peripheral
 #define HW_UART_DEV				SD3
 #define HW_UART_GPIO_AF			GPIO_AF_USART3
@@ -131,10 +149,10 @@
 #define HW_ICU_TIMER			TIM4
 #define HW_ICU_TIM_CLK_EN()		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE)
 #define HW_ICU_DEV				ICUD4
-#define HW_ICU_CHANNEL			ICU_CHANNEL_1
+#define HW_ICU_CHANNEL			ICU_CHANNEL_2
 #define HW_ICU_GPIO_AF			GPIO_AF_TIM4
 #define HW_ICU_GPIO				GPIOB
-#define HW_ICU_PIN				6
+#define HW_ICU_PIN				7
 
 // I2C Peripheral
 #define HW_I2C_DEV				I2CD2
@@ -197,8 +215,8 @@
 #endif
 
 // Setting limits
-#define HW_LIM_CURRENT			-120.0, 120.0
-#define HW_LIM_CURRENT_IN		-120.0, 120.0
+#define HW_LIM_CURRENT			-100.0, 100.0
+#define HW_LIM_CURRENT_IN		-100.0, 100.0
 #define HW_LIM_CURRENT_ABS		0.0, 160.0
 #define HW_LIM_VIN				6.0, 57.0
 #define HW_LIM_ERPM				-200e3, 200e3
