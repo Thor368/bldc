@@ -21,8 +21,8 @@
 #define CONF_GENERAL_H_
 
 // Firmware version
-#define FW_VERSION_MAJOR		3
-#define FW_VERSION_MINOR		62
+#define FW_VERSION_MAJOR		4
+#define FW_VERSION_MINOR		00
 
 #include "datatypes.h"
 
@@ -64,8 +64,8 @@
 //#define HW_SOURCE "hw_410.c" // Also for 4.11 and 4.12
 //#define HW_HEADER "hw_410.h" // Also for 4.11 and 4.12
 
-// Benjamins first HW60 PCB with PB5 and PB6 swapped
-//#define HW60_VEDDER_FIRST_PCB
+// Mark3 version of HW60 with power switch and separate NRF UART.
+//#define HW60_IS_MK3
 
 //#define HW_SOURCE "hw_60.c"
 //#define HW_HEADER "hw_60.h"
@@ -81,6 +81,9 @@
 
 //#define HW_SOURCE "hw_axiom.c"
 //#define HW_HEADER "hw_axiom.h"
+
+//#define HW_SOURCE "hw_luna_bbshd.c"
+//#define HW_HEADER "hw_luna_bbshd.h"
 
 //#define HW_SOURCE "hw_rh.c"
 //#define HW_HEADER "hw_rh.h"
@@ -117,6 +120,12 @@
 
 //#define HW_SOURCE "hw_a200s_v2.c"
 //#define HW_HEADER "hw_a200s_v2.h"
+
+//#define HW_SOURCE "hw_rd2.c"
+//#define HW_HEADER "hw_rd2.h"
+
+//#define HW_SOURCE "hw_100_250.c"
+//#define HW_HEADER "hw_100_250.h"
 
 #define HW_SOURCE "hw_HSWR3.c"
 #define HW_HEADER "hw_HSWR3.h"
@@ -228,6 +237,9 @@
 // Use the pins for the hardware SPI port instead of the hall/encoder pins for the AS5047
 #ifndef AS5047_USE_HW_SPI_PINS
 #define AS5047_USE_HW_SPI_PINS		0
+#endif
+#ifndef AD2S1205_USE_HW_SPI_PINS
+#define AD2S1205_USE_HW_SPI_PINS	0
 #endif
 
 /*
