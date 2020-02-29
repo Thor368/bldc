@@ -24,11 +24,14 @@
 
 // HW properties
 #define HW_HAS_3_SHUNTS
+#define INVERTED_SHUNT_POLARITY
+#define HW_DEAD_TIME_NSEC		300.0
+
 
 // Macros
-#define LED_GREEN_ON()			palSetPad(GPIOB, 0)
-#define LED_GREEN_OFF()			palClearPad(GPIOB, 0)
-#define LED_RED_ON()			palSetPad(GPIOC, 10)
+#define LED_GREEN_ON()			palSetPad(GPIOC, 10)
+#define LED_GREEN_OFF()			palClearPad(GPIOC, 10)
+#define LED_RED_ON()			palSetPad(GPIOC, 11)
 #define LED_RED_OFF()			palClearPad(GPIOC, 11)
 
 /*
@@ -76,16 +79,16 @@
 #define V_REG					3.3
 #endif
 #ifndef VIN_R1
-#define VIN_R1					440000.0
+#define VIN_R1					120000.0
 #endif
 #ifndef VIN_R2
 #define VIN_R2					3300.0
 #endif
 #ifndef CURRENT_AMP_GAIN
-#define CURRENT_AMP_GAIN		50.0
+#define CURRENT_AMP_GAIN		20.0
 #endif
 #ifndef CURRENT_SHUNT_RES
-#define CURRENT_SHUNT_RES		0.0005
+#define CURRENT_SHUNT_RES		0.001
 #endif
 
 // Input voltage

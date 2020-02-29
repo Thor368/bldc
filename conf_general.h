@@ -127,8 +127,12 @@
 //#define HW_SOURCE "hw_100_250.c"
 //#define HW_HEADER "hw_100_250.h"
 
-#define HW_SOURCE "hw_HSWR3.c"
-#define HW_HEADER "hw_HSWR3.h"
+#define HW_SOURCE "hw_AMALGA.c"
+#define HW_HEADER "hw_AMALGA.h"
+
+//#define HW_SOURCE "hw_HSWR3.c"
+//#define HW_HEADER "hw_HSWR3.h"
+
 #endif
 
 #ifndef HW_SOURCE
