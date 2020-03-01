@@ -76,7 +76,7 @@ void app_custom_stop(void)
 void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 {
 	(void) len;
-	float temp_F;
+	float temp_v, temp_I;
 
 	if ((id < CAN_DRIVE_CONTROLS_BASE) ||
 		(id > (CAN_DRIVE_CONTROLS_BASE + 0x20)))
@@ -86,13 +86,17 @@ void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 	switch (id)
 	{
 	case ID_DRIVE_CMD:
-		temp_F = *(float *) &data[4];
-		if (((*(float *) &data[0]) > 0)  &&
-			(temp_F >= 0) && (temp_F <= 1))
-		{
-			mc_interface_set_current((*(float *) &data[4])*mc_conf->l_current_max);
-			timeout_reset();
-		}
+		temp_v = *(float *) &data[0];
+		temp_I = *(float *) &data[4];
+
+		if (temp_v > 10.)
+			mc_interface_set_current(temp_I*mc_conf->l_current_max);
+		else if (temp_v < -10.)
+			mc_interface_set_current(-temp_I*mc_conf->l_current_max);
+		else
+			mc_interface_set_brake_current(temp_I*mc_conf->l_current_max);
+
+		timeout_reset();
 	break;
 	}
 }
@@ -187,7 +191,7 @@ static THD_FUNCTION(WS20_thread, arg)
 		}
 
 		static systime_t wait_200ms = 0;
-		if (chVTTimeElapsedSinceX(wait_200ms) > MS2ST(1000))
+		if (chVTTimeElapsedSinceX(wait_200ms) > MS2ST(200))
 		{
 			wait_200ms = chVTGetSystemTime();
 
