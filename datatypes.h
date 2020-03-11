@@ -156,7 +156,8 @@ typedef enum {
 	SENSOR_PORT_MODE_AS5047_SPI,
 	SENSOR_PORT_MODE_AD2S1205,
 	SENSOR_PORT_MODE_SINCOS,
-	SENSOR_PORT_MODE_TS5700N8501
+	SENSOR_PORT_MODE_TS5700N8501,
+	SENSOR_PORT_MODE_TS5700N8501_MULTITURN
 } sensor_port_mode;
 
 typedef struct {
@@ -191,7 +192,11 @@ typedef enum {
 	CAN_BAUD_125K = 0,
 	CAN_BAUD_250K,
 	CAN_BAUD_500K,
-	CAN_BAUD_1M
+	CAN_BAUD_1M,
+	CAN_BAUD_10K,
+	CAN_BAUD_20K,
+	CAN_BAUD_50K,
+	CAN_BAUD_75K
 } CAN_BAUD;
 
 typedef enum {
@@ -540,7 +545,8 @@ typedef struct {
 	uint16_t hertz;
 	float pitch_fault;
 	float roll_fault;
-	bool use_switches;
+	float adc1;
+	float adc2;
 	float overspeed_duty;
 	float tiltback_duty;
 	float tiltback_angle;
@@ -552,6 +558,15 @@ typedef struct {
 	float startup_speed;
 	float deadzone;
 	float current_boost;
+	bool multi_esc;
+	float yaw_kp;
+	float yaw_ki;
+	float yaw_kd;
+	float roll_steer_kp;
+	float brake_current;
+	uint16_t overspeed_delay;
+	uint16_t fault_delay;
+	float tiltback_constant;
 } balance_config;
 
 // CAN status modes
