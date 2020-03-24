@@ -46,6 +46,14 @@
  * as an argument.
  */
 #if !defined(HW_SOURCE) && !defined(HW_HEADER)
+
+//#define HW_SOURCE "hw_Revolter100_2.c"
+//#define HW_HEADER "hw_Revolter100_2.h"
+
+#define HW_SOURCE "hw_Revolter100_3.c"
+#define HW_HEADER "hw_Revolter100_3.h"
+
+
 //#define HW_SOURCE "hw_40.c"
 //#define HW_HEADER "hw_40.h"
 
@@ -95,7 +103,7 @@
 //#define HW75_300_VEDDER_FIRST_PCB
 
 // Second revision with separate UART for NRF51
-#define HW75_300_REV_2
+//#define HW75_300_REV_2
 
 //#define HW_SOURCE "hw_75_300.c"
 //#define HW_HEADER "hw_75_300.h"
@@ -117,28 +125,15 @@
 
 //#define HW_SOURCE "hw_hd.c"
 //#define HW_HEADER "hw_hd.h"
-<<<<<<< .mine
 
-=======
-
->>>>>>> .theirs
 //#define HW_SOURCE "hw_a200s_v2.c"
 //#define HW_HEADER "hw_a200s_v2.h"
 
 //#define HW_SOURCE "hw_rd2.c"
 //#define HW_HEADER "hw_rd2.h"
 
-//#define HW_SOURCE "hw_Revolter100_2.c"
-//#define HW_HEADER "hw_Revolter100_2.h"
-
-#define HW_SOURCE "hw_Revolter100_3.c"
-#define HW_HEADER "hw_Revolter100_3.h"<<<<<<< .mine
-
-
-=======
 //#define HW_SOURCE "hw_100_250.c"
 //#define HW_HEADER "hw_100_250.h"
->>>>>>> .theirs
 #endif
 
 #ifndef HW_SOURCE
