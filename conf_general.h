@@ -21,8 +21,8 @@
 #define CONF_GENERAL_H_
 
 // Firmware version
-#define FW_VERSION_MAJOR		3
-#define FW_VERSION_MINOR		59
+#define FW_VERSION_MAJOR		4
+#define FW_VERSION_MINOR		01
 
 #include "datatypes.h"
 
@@ -82,6 +82,9 @@
 //#define HW_SOURCE "hw_axiom.c"
 //#define HW_HEADER "hw_axiom.h"
 
+//#define HW_SOURCE "hw_luna_bbshd.c"
+//#define HW_HEADER "hw_luna_bbshd.h"
+
 //#define HW_SOURCE "hw_rh.c"
 //#define HW_HEADER "hw_rh.h"
 
@@ -114,12 +117,28 @@
 
 //#define HW_SOURCE "hw_hd.c"
 //#define HW_HEADER "hw_hd.h"
+<<<<<<< .mine
+
+=======
+
+>>>>>>> .theirs
+//#define HW_SOURCE "hw_a200s_v2.c"
+//#define HW_HEADER "hw_a200s_v2.h"
+
+//#define HW_SOURCE "hw_rd2.c"
+//#define HW_HEADER "hw_rd2.h"
 
 //#define HW_SOURCE "hw_Revolter100_2.c"
 //#define HW_HEADER "hw_Revolter100_2.h"
 
 #define HW_SOURCE "hw_Revolter100_3.c"
-#define HW_HEADER "hw_Revolter100_3.h"
+#define HW_HEADER "hw_Revolter100_3.h"<<<<<<< .mine
+
+
+=======
+//#define HW_SOURCE "hw_100_250.c"
+//#define HW_HEADER "hw_100_250.h"
+>>>>>>> .theirs
 #endif
 
 #ifndef HW_SOURCE
@@ -154,14 +173,16 @@
 //#include			"appconf_custom.h"
 //#include			"appconf_ellwee.h"
 
-#include "hw.h"
-#include "mcconf_default.h"
-#include "appconf_default.h"
-
 /*
  * Set APP_CUSTOM_TO_USE to the name of the main C file of the custom application.
  */
 //#define APP_CUSTOM_TO_USE			"app_custom_template.c"
+//#define APP_CUSTOM_TO_USE			"app_motor_heater.c"
+//#include "app_erockit_conf.h"
+
+#include "hw.h"
+#include "mcconf_default.h"
+#include "appconf_default.h"
 
 /*
  * Enable blackmagic probe output on SWD port
@@ -228,6 +249,9 @@
 #ifndef AS5047_USE_HW_SPI_PINS
 #define AS5047_USE_HW_SPI_PINS		0
 #endif
+#ifndef AD2S1205_USE_HW_SPI_PINS
+#define AD2S1205_USE_HW_SPI_PINS	0
+#endif
 
 /*
  * MCU
@@ -265,7 +289,7 @@ void conf_general_init(void);
 bool conf_general_read_eeprom_var_hw(eeprom_var *v, int address);
 bool conf_general_read_eeprom_var_custom(eeprom_var *v, int address);
 bool conf_general_store_eeprom_var_hw(eeprom_var *v, int address);
-bool conf_general_store_eeprom_var_hw(eeprom_var *v, int address);
+bool conf_general_store_eeprom_var_custom(eeprom_var *v, int address);
 void conf_general_read_app_configuration(app_configuration *conf);
 bool conf_general_store_app_configuration(app_configuration *conf);
 void conf_general_read_mc_configuration(mc_configuration *conf);

@@ -38,9 +38,9 @@
 
 // Threads
 static THD_FUNCTION(ppm_thread, arg);
-static THD_WORKING_AREA(ppm_thread_wa, 1024);
+static THD_WORKING_AREA(ppm_thread_wa, 1536);
 static thread_t *ppm_tp;
-virtual_timer_t vt;
+static volatile bool ppm_rx = false;
 
 // Private functions
 static void servodec_func(void);
@@ -54,7 +54,6 @@ static float input_val = 0.0;
 static volatile float direction_hyst = 0;
 
 // Private functions
-static void update(void *p);
 #endif
 
 void app_ppm_configure(ppm_config *conf) {
@@ -76,10 +75,6 @@ void app_ppm_start(void) {
 #if !SERVO_OUT_ENABLE
 	stop_now = false;
 	chThdCreateStatic(ppm_thread_wa, sizeof(ppm_thread_wa), NORMALPRIO, ppm_thread, NULL);
-
-	chSysLock();
-	chVTSetI(&vt, MS2ST(1), update, NULL);
-	chSysUnlock();
 #endif
 }
 
@@ -108,19 +103,8 @@ float app_ppm_get_decoded_level(void) {
 
 #if !SERVO_OUT_ENABLE
 static void servodec_func(void) {
+	ppm_rx = true;
 	chSysLockFromISR();
-	timeout_reset();
-	chEvtSignalI(ppm_tp, (eventmask_t) 1);
-	chSysUnlockFromISR();
-}
-
-static void update(void *p) {
-	if (!is_running) {
-		return;
-	}
-
-	chSysLockFromISR();
-	chVTSetI(&vt, MS2ST(2), update, p);
 	chEvtSignalI(ppm_tp, (eventmask_t) 1);
 	chSysUnlockFromISR();
 }
@@ -136,11 +120,16 @@ static THD_FUNCTION(ppm_thread, arg) {
 	is_running = true;
 
 	for(;;) {
-		chEvtWaitAny((eventmask_t) 1);
+		chEvtWaitAnyTimeout((eventmask_t)1, MS2ST(2));
 
 		if (stop_now) {
 			is_running = false;
 			return;
+		}
+
+		if (ppm_rx) {
+			ppm_rx = false;
+			timeout_reset();
 		}
 
 		const volatile mc_configuration *mcconf = mc_interface_get_configuration();
@@ -193,14 +182,17 @@ static THD_FUNCTION(ppm_thread, arg) {
 		static float servo_val_ramp = 0.0;
 		float ramp_time = fabsf(servo_val) > fabsf(servo_val_ramp) ? config.ramp_time_pos : config.ramp_time_neg;
 
-		if (fabsf(servo_val) > 0.001) {
-			ramp_time = fminf(config.ramp_time_pos, config.ramp_time_neg);
-		}
+		// TODO: Remember what this was about?
+//		if (fabsf(servo_val) > 0.001) {
+//			ramp_time = fminf(config.ramp_time_pos, config.ramp_time_neg);
+//		}
+
+		const float dt = (float)ST2MS(chVTTimeElapsedSinceX(last_time)) / 1000.0;
+		last_time = chVTGetSystemTimeX();
 
 		if (ramp_time > 0.01) {
-			const float ramp_step = (float)ST2MS(chVTTimeElapsedSinceX(last_time)) / (ramp_time * 1000.0);
+			const float ramp_step = dt / ramp_time;
 			utils_step_towards(&servo_val_ramp, servo_val, ramp_step);
-			last_time = chVTGetSystemTimeX();
 			servo_val = servo_val_ramp;
 		}
 
@@ -298,6 +290,7 @@ static THD_FUNCTION(ppm_thread, arg) {
 			break;
 
 		case PPM_CTRL_TYPE_CURRENT_NOREV_BRAKE:
+		case PPM_CTRL_TYPE_CURRENT_SMART_REV:
 			current_mode = true;
 			if (servo_val >= 0.0) {
 				current = servo_val * mcconf->lo_current_motor_max_now;
@@ -349,18 +342,64 @@ static THD_FUNCTION(ppm_thread, arg) {
 			continue;
 		}
 
-		// Find lowest RPM
+		const float duty_now = mc_interface_get_duty_cycle_now();
+		float current_highest_abs = fabsf(mc_interface_get_tot_current_directional_filtered());
+		float duty_highest_abs = fabsf(duty_now);
+
 		if (config.multi_esc) {
 			for (int i = 0;i < CAN_STATUS_MSGS_TO_STORE;i++) {
 				can_status_msg *msg = comm_can_get_status_msg_index(i);
 
 				if (msg->id >= 0 && UTILS_AGE_S(msg->rx_time) < MAX_CAN_AGE) {
-					float rpm_tmp = msg->rpm;
+					if (fabsf(msg->rpm) < fabsf(rpm_lowest)) {
+						rpm_lowest = msg->rpm;
+					}
 
-					if (fabsf(rpm_tmp) < fabsf(rpm_lowest)) {
-						rpm_lowest = rpm_tmp;
+					if (fabsf(msg->current) > current_highest_abs) {
+						current_highest_abs = fabsf(msg->current);
+					}
+
+					if (fabsf(msg->duty) > duty_highest_abs) {
+						duty_highest_abs = fabsf(msg->duty);
 					}
 				}
+			}
+		}
+
+		if (config.ctrl_type == PPM_CTRL_TYPE_CURRENT_SMART_REV) {
+			bool duty_control = false;
+			static bool was_duty_control = false;
+			static float duty_rev = 0.0;
+
+			if (servo_val < -0.92 && duty_highest_abs < (mcconf->l_min_duty * 1.5) &&
+					current_highest_abs < (mcconf->l_current_max * mcconf->l_current_max_scale * 0.7)) {
+				duty_control = true;
+			}
+
+			if (duty_control || (was_duty_control && servo_val < -0.1)) {
+				was_duty_control = true;
+
+				float goal = config.smart_rev_max_duty * -servo_val;
+				utils_step_towards(&duty_rev, -goal,
+						config.smart_rev_max_duty * dt / config.smart_rev_ramp_time);
+
+				mc_interface_set_duty(duty_rev);
+
+				// Send the same duty cycle to the other controllers
+				if (config.multi_esc) {
+					for (int i = 0;i < CAN_STATUS_MSGS_TO_STORE;i++) {
+						can_status_msg *msg = comm_can_get_status_msg_index(i);
+
+						if (msg->id >= 0 && UTILS_AGE_S(msg->rx_time) < MAX_CAN_AGE) {
+							comm_can_set_duty(msg->id, duty_rev);
+						}
+					}
+				}
+
+				current_mode = false;
+			} else {
+				duty_rev = duty_now;
+				was_duty_control = false;
 			}
 		}
 
