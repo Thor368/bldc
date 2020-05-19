@@ -218,7 +218,7 @@
 #endif
 #define STM32_ICU_USE_TIM5                  FALSE
 #define STM32_ICU_USE_TIM8                  FALSE
-#define STM32_ICU_USE_TIM9                  FALSE
+#define STM32_ICU_USE_TIM9                  TRUE
 #define STM32_ICU_TIM1_IRQ_PRIORITY         7
 #define STM32_ICU_TIM2_IRQ_PRIORITY         7
 #define STM32_ICU_TIM3_IRQ_PRIORITY         7
@@ -271,18 +271,18 @@
 /*
  * SERIAL driver system settings.
  */
-#define STM32_SERIAL_USE_USART1             FALSE
+#define STM32_SERIAL_USE_USART1             TRUE
 #define STM32_SERIAL_USE_USART2             FALSE
 #define STM32_SERIAL_USE_USART3             TRUE
 #define STM32_SERIAL_USE_UART4              TRUE
-#define STM32_SERIAL_USE_UART5              FALSE
+#define STM32_SERIAL_USE_UART5              TRUE
 #define STM32_SERIAL_USE_USART6             TRUE
-#define STM32_SERIAL_USART1_PRIORITY        12
-#define STM32_SERIAL_USART2_PRIORITY        12
-#define STM32_SERIAL_USART3_PRIORITY        12
-#define STM32_SERIAL_UART4_PRIORITY         12
-#define STM32_SERIAL_UART5_PRIORITY         12
-#define STM32_SERIAL_USART6_PRIORITY        12
+#define STM32_SERIAL_USART1_PRIORITY        4
+#define STM32_SERIAL_USART2_PRIORITY        4
+#define STM32_SERIAL_USART3_PRIORITY        4
+#define STM32_SERIAL_UART4_PRIORITY         4
+#define STM32_SERIAL_UART5_PRIORITY         4
+#define STM32_SERIAL_USART6_PRIORITY        4
 
 /*
  * SPI driver system settings.
@@ -307,7 +307,7 @@
 /*
  * ST driver system settings.
  */
-#define STM32_ST_IRQ_PRIORITY               8
+#define STM32_ST_IRQ_PRIORITY               3
 #define STM32_ST_USE_TIMER                  2
 
 /*
@@ -354,7 +354,7 @@
 #define STM32_USB_OTG2_IRQ_PRIORITY         14
 #define STM32_USB_OTG1_RX_FIFO_SIZE         1024
 #define STM32_USB_OTG2_RX_FIFO_SIZE         1024
-#define STM32_USB_OTG_THREAD_PRIO           LOWPRIO
+#define STM32_USB_OTG_THREAD_PRIO           (HIGHPRIO - 1)
 #define STM32_USB_OTG_THREAD_STACK_SIZE     128
 #define STM32_USB_OTGFIFO_FILL_BASEPRI      0
 

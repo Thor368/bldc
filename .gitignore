@@ -3,3 +3,6 @@
 build
 .dep
 build_all
+.project
+.cproject
+.settings/language.settings.xml

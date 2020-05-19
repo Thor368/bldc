@@ -20,7 +20,9 @@
 #ifndef HW_75_300_H_
 #define HW_75_300_H_
 
-#ifdef HW75_300_REV_2
+#ifdef HW75_300_REV_3
+#define HW_NAME					"75_300_R3"
+#elif defined(HW75_300_REV_2)
 #define HW_NAME					"75_300_R2"
 #else
 #define HW_NAME					"75_300"
@@ -104,6 +106,7 @@
 #define ADC_IND_VIN_SENS		11
 #define ADC_IND_EXT				6
 #define ADC_IND_EXT2			7
+#define ADC_IND_EXT3			10
 #ifdef HW75_300_VEDDER_FIRST_PCB
 #define ADC_IND_TEMP_MOS		8
 #define ADC_IND_TEMP_MOS_2		8
@@ -171,6 +174,12 @@
 #define CURR3_DOUBLE_SAMPLE		0
 #endif
 
+// COMM-port ADC GPIOs
+#define HW_ADC_EXT_GPIO			GPIOA
+#define HW_ADC_EXT_PIN			5
+#define HW_ADC_EXT2_GPIO		GPIOA
+#define HW_ADC_EXT2_PIN			6
+
 // UART Peripheral
 #define HW_UART_DEV				SD3
 #define HW_UART_GPIO_AF			GPIO_AF_USART3
@@ -179,7 +188,7 @@
 #define HW_UART_RX_PORT			GPIOB
 #define HW_UART_RX_PIN			11
 
-#ifdef HW75_300_REV_2
+#if defined(HW75_300_REV_2) || defined(HW75_300_REV_3)
 // Permanent UART Peripheral (for NRF51)
 #define HW_UART_P_BAUD			115200
 #define HW_UART_P_DEV			SD4
@@ -188,6 +197,14 @@
 #define HW_UART_P_TX_PIN		10
 #define HW_UART_P_RX_PORT		GPIOC
 #define HW_UART_P_RX_PIN		11
+#endif
+
+#ifdef HW75_300_REV_3
+// NRF SWD
+#define NRF5x_SWDIO_GPIO		GPIOA
+#define NRF5x_SWDIO_PIN			15
+#define NRF5x_SWCLK_GPIO		GPIOB
+#define NRF5x_SWCLK_PIN			3
 #endif
 
 // ICU Peripheral for servo decoding
@@ -253,6 +270,9 @@
 #define HW_DEAD_TIME_NSEC		660.0
 
 // Default setting overrides
+#ifndef MCCONF_L_MIN_VOLTAGE
+#define MCCONF_L_MIN_VOLTAGE			12.0		// Minimum input voltage
+#endif
 #ifndef MCCONF_L_MAX_VOLTAGE
 #define MCCONF_L_MAX_VOLTAGE			72.0	// Maximum input voltage
 #endif
@@ -276,10 +296,10 @@
 #endif
 
 // Setting limits
-#define HW_LIM_CURRENT			-300.0, 300.0
-#define HW_LIM_CURRENT_IN		-300.0, 300.0
-#define HW_LIM_CURRENT_ABS		0.0, 450.0
-#define HW_LIM_VIN				6.0, 72.0
+#define HW_LIM_CURRENT			-400.0, 400.0
+#define HW_LIM_CURRENT_IN		-400.0, 400.0
+#define HW_LIM_CURRENT_ABS		0.0, 480.0
+#define HW_LIM_VIN				11.0, 72.0
 #define HW_LIM_ERPM				-200e3, 200e3
 #define HW_LIM_DUTY_MIN			0.0, 0.1
 #define HW_LIM_DUTY_MAX			0.0, 0.99

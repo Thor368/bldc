@@ -29,7 +29,7 @@
 #define _CHCONF_H_
 
 #define CHPRINTF_USE_FLOAT				TRUE
-#define CORTEX_SIMPLIFIED_PRIORITY		FALSE
+#define CORTEX_SIMPLIFIED_PRIORITY		TRUE
 #define PORT_IDLE_THREAD_STACK_SIZE		64
 #define PORT_INT_REQUIRED_STACK			128
 
@@ -416,7 +416,7 @@
  * @details User fields added to the end of the @p thread_t structure.
  */
 #define CH_CFG_THREAD_EXTRA_FIELDS                                          \
-  /* Add threads custom fields here.*/
+  int motor_selected;
 
 /**
  * @brief   Threads initialization hook.
@@ -427,6 +427,7 @@
  */
 #define CH_CFG_THREAD_INIT_HOOK(tp) {                                       \
   /* Add threads initialization code here.*/                                \
+  tp->motor_selected = 1; \
 }
 
 /**

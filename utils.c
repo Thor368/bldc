@@ -20,8 +20,11 @@
 #include "utils.h"
 #include "ch.h"
 #include "hal.h"
+#include "app.h"
+#include "conf_general.h"
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 
 // Private variables
 static volatile int sys_lock_cnt = 0;
@@ -344,7 +347,7 @@ float utils_fast_atan2(float y, float x) {
  */
 bool utils_saturate_vector_2d(float *x, float *y, float max) {
 	bool retval = false;
-	float mag = sqrtf(*x * *x + *y * *y);
+	float mag = sqrtf(SQ(*x) + SQ(*y));
 	max = fabsf(max);
 
 	if (mag < 1e-10) {
@@ -638,3 +641,207 @@ uint32_t utils_crc32c(uint8_t *data, uint32_t len) {
 
 	return ~crc;
 }
+
+// Yes, this is only the average...
+void utils_fft32_bin0(float *real_in, float *real, float *imag) {
+	*real = 0.0;
+	*imag = 0.0;
+
+	for (int i = 0;i < 32;i++) {
+		*real += real_in[i];
+	}
+
+	*real /= 32.0;
+}
+
+void utils_fft32_bin1(float *real_in, float *real, float *imag) {
+	*real = 0.0;
+	*imag = 0.0;
+	for (int i = 0;i < 32;i++) {
+		*real += real_in[i] * utils_tab_cos_32_1[i];
+		*imag -= real_in[i] * utils_tab_sin_32_1[i];
+	}
+	*real /= 32.0;
+	*imag /= 32.0;
+}
+
+void utils_fft32_bin2(float *real_in, float *real, float *imag) {
+	*real = 0.0;
+	*imag = 0.0;
+	for (int i = 0;i < 32;i++) {
+		*real += real_in[i] * utils_tab_cos_32_2[i];
+		*imag -= real_in[i] * utils_tab_sin_32_2[i];
+	}
+	*real /= 32.0;
+	*imag /= 32.0;
+}
+
+void utils_fft16_bin0(float *real_in, float *real, float *imag) {
+	*real = 0.0;
+	*imag = 0.0;
+
+	for (int i = 0;i < 16;i++) {
+		*real += real_in[i];
+	}
+
+	*real /= 16.0;
+}
+
+void utils_fft16_bin1(float *real_in, float *real, float *imag) {
+	*real = 0.0;
+	*imag = 0.0;
+	for (int i = 0;i < 16;i++) {
+		*real += real_in[i] * utils_tab_cos_32_1[2 * i];
+		*imag -= real_in[i] * utils_tab_sin_32_1[2 * i];
+	}
+	*real /= 16.0;
+	*imag /= 16.0;
+}
+
+void utils_fft16_bin2(float *real_in, float *real, float *imag) {
+	*real = 0.0;
+	*imag = 0.0;
+	for (int i = 0;i < 16;i++) {
+		*real += real_in[i] * utils_tab_cos_32_2[2 * i];
+		*imag -= real_in[i] * utils_tab_sin_32_2[2 * i];
+	}
+	*real /= 16.0;
+	*imag /= 16.0;
+}
+
+void utils_fft8_bin0(float *real_in, float *real, float *imag) {
+	*real = 0.0;
+	*imag = 0.0;
+
+	for (int i = 0;i < 8;i++) {
+		*real += real_in[i];
+	}
+
+	*real /= 8.0;
+}
+
+void utils_fft8_bin1(float *real_in, float *real, float *imag) {
+	*real = 0.0;
+	*imag = 0.0;
+	for (int i = 0;i < 8;i++) {
+		*real += real_in[i] * utils_tab_cos_32_1[4 * i];
+		*imag -= real_in[i] * utils_tab_sin_32_1[4 * i];
+	}
+	*real /= 8.0;
+	*imag /= 8.0;
+}
+
+void utils_fft8_bin2(float *real_in, float *real, float *imag) {
+	*real = 0.0;
+	*imag = 0.0;
+	for (int i = 0;i < 8;i++) {
+		*real += real_in[i] * utils_tab_cos_32_2[4 * i];
+		*imag -= real_in[i] * utils_tab_sin_32_2[4 * i];
+	}
+	*real /= 8.0;
+	*imag /= 8.0;
+}
+
+/**
+ * Get ID of second motor.
+ *
+ * @return
+ * id for second motor. -1 if this hardware only has one motor.
+ */
+uint8_t utils_second_motor_id(void) {
+#ifdef HW_HAS_DUAL_MOTORS
+	uint8_t id_next = app_get_configuration()->controller_id + 1;
+	if (id_next == 255) {
+		id_next = 0;
+	}
+	return id_next;
+#else
+	return 0;
+#endif
+}
+
+int utils_read_hall(bool is_second_motor) {
+	int h1, h2, h3;
+
+	if (is_second_motor) {
+		h1 = READ_HALL1_2();
+		h2 = READ_HALL2_2();
+		h3 = READ_HALL3_2();
+
+		h1 += READ_HALL1_2();
+		h2 += READ_HALL2_2();
+		h3 += READ_HALL3_2();
+
+		h1 += READ_HALL1_2();
+		h2 += READ_HALL2_2();
+		h3 += READ_HALL3_2();
+	} else {
+		h1 = READ_HALL1();
+		h2 = READ_HALL2();
+		h3 = READ_HALL3();
+
+		h1 += READ_HALL1();
+		h2 += READ_HALL2();
+		h3 += READ_HALL3();
+
+		h1 += READ_HALL1();
+		h2 += READ_HALL2();
+		h3 += READ_HALL3();
+	}
+
+	return (h1 > 1) | ((h2 > 1) << 1) | ((h3 > 1) << 2);
+}
+
+// A mapping of a samsung 30q cell for % remaining capacity vs. voltage from
+// 4.2 to 3.2, note that the you lose 15% of the 3Ah rated capacity in this range
+float utils_batt_liion_norm_v_to_capacity(float norm_v) {
+	// constants for polynomial fit of lithium ion battery
+	const float li_p[] = {
+						  -2.979767, 5.487810, -3.501286, 1.675683, 0.317147};
+	utils_truncate_number(&norm_v,0.0,1.0);
+	float v2 = norm_v*norm_v;
+	float v3 = v2*norm_v;
+	float v4 = v3*norm_v;
+	float v5 = v4*norm_v;
+	float capacity = li_p[0] * v5 + li_p[1] * v4 + li_p[2] * v3 +
+			li_p[3] * v2 + li_p[4] * norm_v;
+	return capacity;
+}
+
+static int uint16_cmp_func (const void *a, const void *b) {
+	return (*(uint16_t*)a - *(uint16_t*)b);
+}
+
+uint16_t utils_median_filter_uint16_run(uint16_t *buffer,
+		unsigned int *buffer_index, unsigned int filter_len, uint16_t sample) {
+	buffer[*buffer_index++] = sample;
+	*buffer_index %= filter_len;
+	uint16_t buffer_sorted[filter_len]; // Assume we have enough stack space
+	memcpy(buffer_sorted, buffer, sizeof(uint16_t) * filter_len);
+	qsort(buffer_sorted, filter_len, sizeof(uint16_t), uint16_cmp_func);
+	return buffer_sorted[filter_len / 2];
+}
+
+const float utils_tab_sin_32_1[] = {
+	0.000000, 0.195090, 0.382683, 0.555570, 0.707107, 0.831470, 0.923880, 0.980785,
+	1.000000, 0.980785, 0.923880, 0.831470, 0.707107, 0.555570, 0.382683, 0.195090,
+	0.000000, -0.195090, -0.382683, -0.555570, -0.707107, -0.831470, -0.923880, -0.980785,
+	-1.000000, -0.980785, -0.923880, -0.831470, -0.707107, -0.555570, -0.382683, -0.195090};
+
+const float utils_tab_sin_32_2[] = {
+	0.000000, 0.382683, 0.707107, 0.923880, 1.000000, 0.923880, 0.707107, 0.382683,
+	0.000000, -0.382683, -0.707107, -0.923880, -1.000000, -0.923880, -0.707107, -0.382683,
+	-0.000000, 0.382683, 0.707107, 0.923880, 1.000000, 0.923880, 0.707107, 0.382683,
+	0.000000, -0.382683, -0.707107, -0.923880, -1.000000, -0.923880, -0.707107, -0.382683};
+
+const float utils_tab_cos_32_1[] = {
+	1.000000, 0.980785, 0.923880, 0.831470, 0.707107, 0.555570, 0.382683, 0.195090,
+	0.000000, -0.195090, -0.382683, -0.555570, -0.707107, -0.831470, -0.923880, -0.980785,
+	-1.000000, -0.980785, -0.923880, -0.831470, -0.707107, -0.555570, -0.382683, -0.195090,
+	-0.000000, 0.195090, 0.382683, 0.555570, 0.707107, 0.831470, 0.923880, 0.980785};
+
+const float utils_tab_cos_32_2[] = {
+	1.000000, 0.923880, 0.707107, 0.382683, 0.000000, -0.382683, -0.707107, -0.923880,
+	-1.000000, -0.923880, -0.707107, -0.382683, -0.000000, 0.382683, 0.707107, 0.923880,
+	1.000000, 0.923880, 0.707107, 0.382683, 0.000000, -0.382683, -0.707107, -0.923880,
+	-1.000000, -0.923880, -0.707107, -0.382683, -0.000000, 0.382683, 0.707107, 0.923880};

@@ -1,5 +1,5 @@
 /*
-	Copyright 2012 - 2019 Benjamin Vedder	benjamin@vedder.se
+	Copyright 2012 - 2020 Benjamin Vedder	benjamin@vedder.se
 
 	This file is part of the VESC firmware.
 
@@ -198,6 +198,21 @@
 #ifndef IS_DRV_FAULT
 #define IS_DRV_FAULT()			0
 #endif
+#ifndef IS_DRV_FAULT_2
+#define IS_DRV_FAULT_2()		IS_DRV_FAULT()
+#endif
+
+// Double samples in beginning and end for positive current measurement.
+// Useful when the shunt sense traces have noise that causes offset.
+#ifndef CURR1_DOUBLE_SAMPLE
+#define CURR1_DOUBLE_SAMPLE		0
+#endif
+#ifndef CURR2_DOUBLE_SAMPLE
+#define CURR2_DOUBLE_SAMPLE		0
+#endif
+#ifndef CURR3_DOUBLE_SAMPLE
+#define CURR3_DOUBLE_SAMPLE		0
+#endif
 
 #ifndef AUX_ON
 #define AUX_ON()
@@ -266,6 +281,29 @@
 #define GET_CURRENT3()		ADC_Value[ADC_IND_CURR3]
 #endif
 #endif
+
+#ifndef GET_CURRENT1_M2
+#ifdef INVERTED_SHUNT_POLARITY
+#define GET_CURRENT1_M2()	(4095 - ADC_Value[ADC_IND_CURR4])
+#else
+#define GET_CURRENT1_M2()	ADC_Value[ADC_IND_CURR4]
+#endif
+#endif
+#ifndef GET_CURRENT2_M2
+#ifdef INVERTED_SHUNT_POLARITY
+#define GET_CURRENT2_M2()	(4095 - ADC_Value[ADC_IND_CURR5])
+#else
+#define GET_CURRENT2_M2()	ADC_Value[ADC_IND_CURR5]
+#endif
+#endif
+#ifndef GET_CURRENT3_M2
+#ifdef INVERTED_SHUNT_POLARITY
+#define GET_CURRENT3_M2()	(4095 - ADC_Value[ADC_IND_CURR6])
+#else
+#define GET_CURRENT3_M2()	ADC_Value[ADC_IND_CURR6]
+#endif
+#endif
+
 #ifndef HW_MAX_CURRENT_OFFSET
 #define HW_MAX_CURRENT_OFFSET 				620
 #endif
@@ -276,6 +314,13 @@
 #define MCCONF_MAX_CURRENT_UNBALANCE_RATE	0.3
 #endif
 
+// ADC Channels
+#ifndef ADC_IND_EXT3
+#define ADC_IND_EXT3 			ADC_IND_EXT
+#endif
+#ifndef ADC_IND_EXT2
+#define ADC_IND_EXT2 			ADC_IND_EXT
+#endif
 
 // NRF SW SPI (default to spi header pins)
 #ifndef NRF_PORT_CSN
@@ -304,17 +349,17 @@
 #endif
 
 // CAN device and port (default CAN1)
-#ifndef HW_CANH_PORT
-#define HW_CANH_PORT			GPIOB
+#ifndef HW_CANRX_PORT
+#define HW_CANRX_PORT			GPIOB
 #endif
-#ifndef HW_CANH_PIN
-#define HW_CANH_PIN				8
+#ifndef HW_CANRX_PIN
+#define HW_CANRX_PIN			8
 #endif
-#ifndef HW_CANL_PORT
-#define HW_CANL_PORT			GPIOB
+#ifndef HW_CANTX_PORT
+#define HW_CANTX_PORT			GPIOB
 #endif
-#ifndef HW_CANL_PIN
-#define HW_CANL_PIN				9
+#ifndef HW_CANTX_PIN
+#define HW_CANTX_PIN			9
 #endif
 #ifndef HW_CAN_GPIO_AF
 #define HW_CAN_GPIO_AF			GPIO_AF_CAN1
@@ -351,6 +396,61 @@
 
 #ifndef HW_FOC_CURRENT_FILTER_LIM
 #define HW_FOC_CURRENT_FILTER_LIM	0.05, 1.0
+#endif
+
+#ifndef COMM_USE_USB
+#define COMM_USE_USB				1
+#endif
+
+#ifndef PTC_TEMP_MOTOR
+#if defined(NTC_RES_MOTOR) && defined(ADC_IND_TEMP_MOTOR)
+#define PTC_TEMP_MOTOR(res, con, tbase)			(((NTC_RES_MOTOR(ADC_Value[ADC_IND_TEMP_MOTOR]) - res) / res) * 100 / con + tbase)
+#define PTC_TEMP_MOTOR_2(res, con, tbase)			(((NTC_RES_MOTOR(ADC_Value[ADC_IND_TEMP_MOTOR_2]) - res) / res) * 100 / con + tbase)
+#else
+#define PTC_TEMP_MOTOR(res, con, tbase)			0.0
+#define PTC_TEMP_MOTOR_2(res, con, tbase)			0.0
+#endif
+#endif
+
+// Default second motor defines
+#ifndef READ_HALL1_2
+#define READ_HALL1_2()			READ_HALL1()
+#endif
+#ifndef READ_HALL2_2
+#define READ_HALL2_2()			READ_HALL2()
+#endif
+#ifndef READ_HALL3_2
+#define READ_HALL3_2()			READ_HALL3()
+#endif
+#ifndef ADC_IND_TEMP_MOS_M2
+#define ADC_IND_TEMP_MOS_M2		ADC_IND_TEMP_MOS
+#endif
+#ifndef NTC_TEMP_MOTOR_2
+#define NTC_TEMP_MOTOR_2(beta)	NTC_TEMP_MOTOR(beta)
+#endif
+#ifndef ADC_IND_TEMP_MOTOR_2
+#define ADC_IND_TEMP_MOTOR_2	ADC_IND_TEMP_MOTOR
+#endif
+#ifndef  MOTOR_TEMP_LPF
+#define MOTOR_TEMP_LPF 			0.01
+#endif
+#ifndef HW_ADC_CHANNELS_EXTRA
+#define HW_ADC_CHANNELS_EXTRA	0
+#endif
+#ifndef ADC_V_L4
+#define ADC_V_L4				ADC_V_L1
+#endif
+#ifndef ADC_V_L5
+#define ADC_V_L5				ADC_V_L2
+#endif
+#ifndef ADC_V_L6
+#define ADC_V_L6				ADC_V_L3
+#endif
+
+#ifdef HW_HAS_DRV8323S
+#ifndef DRV8323S_CUSTOM_SETTINGS
+#define DRV8323S_CUSTOM_SETTINGS()
+#endif
 #endif
 
 // Functions
