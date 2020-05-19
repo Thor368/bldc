@@ -119,15 +119,16 @@ void comm_can_init(void) {
 	chMtxObjectInit(&can_rx_mtx);
 
 	palSetPadMode(HW_CANRX_PORT, HW_CANRX_PIN,
-			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
-			PAL_STM32_OTYPE_PUSHPULL |
-			PAL_STM32_OSPEED_MID1);
+				PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
+				PAL_STM32_OTYPE_PUSHPULL |
+				PAL_STM32_OSPEED_MID1);
 	palSetPadMode(HW_CANTX_PORT, HW_CANTX_PIN,
-			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
-			PAL_STM32_OTYPE_PUSHPULL |
-			PAL_STM32_OSPEED_MID1);
+				PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
+				PAL_STM32_OTYPE_PUSHPULL |
+				PAL_STM32_OSPEED_MID1);
 
 	canStart(&HW_CAN_DEV, &cancfg);
+	canStart(&CAND2, &cancfg);
 
 	canard_driver_init();
 
@@ -204,6 +205,7 @@ void comm_can_transmit_eid_replace(uint32_t id, const uint8_t *data, uint8_t len
 
 	chMtxLock(&can_mtx);
 	canTransmit(&HW_CAN_DEV, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+	canTransmit(&CAND2, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	chMtxUnlock(&can_mtx);
 #else
 	(void)id;
@@ -1508,6 +1510,8 @@ static void set_timing(int brp, int ts1, int ts2) {
 	cancfg.btr = CAN_BTR_SJW(3) | CAN_BTR_TS2(ts2) |
 		CAN_BTR_TS1(ts1) | CAN_BTR_BRP(brp);
 
-	canStop(&HW_CAN_DEV);
-	canStart(&HW_CAN_DEV, &cancfg);
+	canStop(&CAND1);
+	canStop(&CAND2);
+	canStart(&CAND1, &cancfg);
+	canStart(&CAND2, &cancfg);
 }
