@@ -117,17 +117,17 @@
 #endif
 
 // CAN device and port (default CAN1)
-#ifndef HW_CANH_PORT
-#define HW_CANH_PORT			GPIOB
+#ifndef HW_CANRX_PORT
+#define HW_CANRX_PORT			GPIOB
 #endif
-#ifndef HW_CANH_PIN
-#define HW_CANH_PIN				5
+#ifndef HW_CANRX_PIN
+#define HW_CANRX_PIN			5
 #endif
-#ifndef HW_CANL_PORT
-#define HW_CANL_PORT			GPIOB
+#ifndef HW_CANTX_PORT
+#define HW_CANTX_PORT			GPIOB
 #endif
-#ifndef HW_CANL_PIN
-#define HW_CANL_PIN				6
+#ifndef HW_CANTX_PIN
+#define HW_CANTX_PIN			6
 #endif
 #ifndef HW_CAN_GPIO_AF
 #define HW_CAN_GPIO_AF			GPIO_AF_CAN2

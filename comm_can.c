@@ -128,7 +128,7 @@ void comm_can_init(void) {
 				PAL_STM32_OSPEED_MID1);
 
 	canStart(&HW_CAN_DEV, &cancfg);
-	canStart(&CAND2, &cancfg);
+//	canStart(&CAND2, &cancfg);
 
 	canard_driver_init();
 
@@ -205,7 +205,7 @@ void comm_can_transmit_eid_replace(uint32_t id, const uint8_t *data, uint8_t len
 
 	chMtxLock(&can_mtx);
 	canTransmit(&HW_CAN_DEV, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
-	canTransmit(&CAND2, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+//	canTransmit(&CAND2, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	chMtxUnlock(&can_mtx);
 #else
 	(void)id;
