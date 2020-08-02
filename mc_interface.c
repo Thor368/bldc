@@ -2162,7 +2162,7 @@ static void run_timer_tasks(volatile motor_if_state_t *motor) {
 #ifdef HW_HAS_DUAL_PARALLEL
 #define MIDDLE_ADC 4096
 #else
-#define MIDDLE_ADC 2048
+#define MIDDLE_ADC 994
 #endif
 
 		if (abs(curr0_offset - MIDDLE_ADC) > HW_MAX_CURRENT_OFFSET) {
