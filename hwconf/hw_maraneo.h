@@ -20,7 +20,9 @@
 #ifndef HW_MARANEO_H_
 #define HW_MARANEO_H_
 
-#define HW_NAME					"Maraneo"
+#define HW_NAME						"Maraneo"
+
+#define APP_CUSTOM_TO_USE			"app_maraneo.c"
 
 // HW properties
 #define HW_HAS_3_SHUNTS
@@ -136,6 +138,12 @@
 #define HW_CAN_DEV				CAND2
 #endif
 
+// COMM-port ADC GPIOs
+#define HW_ADC_EXT_GPIO			GPIOA
+#define HW_ADC_EXT_PIN			5
+#define HW_ADC_EXT2_GPIO		GPIOA
+#define HW_ADC_EXT2_PIN			6
+
 // UART Peripheral
 #define HW_UART_DEV				SD3
 #define HW_UART_GPIO_AF			GPIO_AF_USART3
@@ -149,10 +157,10 @@
 #define HW_ICU_TIMER			TIM4
 #define HW_ICU_TIM_CLK_EN()		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE)
 #define HW_ICU_DEV				ICUD4
-#define HW_ICU_CHANNEL			ICU_CHANNEL_2
+#define HW_ICU_CHANNEL			ICU_CHANNEL_1
 #define HW_ICU_GPIO_AF			GPIO_AF_TIM4
 #define HW_ICU_GPIO				GPIOB
-#define HW_ICU_PIN				7
+#define HW_ICU_PIN				6
 
 // I2C Peripheral
 #define HW_I2C_DEV				I2CD2
@@ -180,6 +188,16 @@
 #define HW_ENC_TIM_ISR_CH		TIM3_IRQn
 #define HW_ENC_TIM_ISR_VEC		TIM3_IRQHandler
 
+// NRF pins
+#define NRF_PORT_CSN			GPIOB
+#define NRF_PIN_CSN				12
+#define NRF_PORT_SCK			GPIOB
+#define NRF_PIN_SCK				4
+#define NRF_PORT_MOSI			GPIOB
+#define NRF_PIN_MOSI			3
+#define NRF_PORT_MISO			GPIOD
+#define NRF_PIN_MISO			2
+
 // SPI pins
 #define HW_SPI_DEV				SPID1
 #define HW_SPI_GPIO_AF			GPIO_AF_SPI1
@@ -191,6 +209,16 @@
 #define HW_SPI_PIN_MOSI			7
 #define HW_SPI_PORT_MISO		GPIOA
 #define HW_SPI_PIN_MISO			6
+
+// BMS SPI
+#define BMS_PORT_NSS			GPIOA
+#define BMS_PIN_NSS				15
+#define BMS_PORT_SCK			GPIOC
+#define BMS_PIN_SCK				10
+#define BMS_PORT_MOSI			GPIOC
+#define BMS_PIN_MOSI			12
+#define BMS_PORT_MISO			GPIOC
+#define BMS_PIN_MISO			11
 
 // Measurement macros
 #define ADC_V_L1				ADC_Value[ADC_IND_SENS1]
