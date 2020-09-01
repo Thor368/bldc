@@ -211,6 +211,8 @@
 #define HW_SPI_PIN_MISO			6
 
 // BMS SPI
+#define BMS_SPI_DEV				SPID3
+#define BMS_SPI_GPIO_AF			GPIO_AF_SPI3
 #define BMS_PORT_NSS			GPIOA
 #define BMS_PIN_NSS				15
 #define BMS_PORT_SCK			GPIOC
