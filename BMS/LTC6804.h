@@ -60,13 +60,12 @@
 
 
 // Voltage conversion Macros
-#define LTC_calc_Voltage(raw)			(((uint32_t) raw)*100)							// Calculate Voltage in uV
-#define LTC_calc_SOC_Voltage(raw)		(((uint32_t) raw)*2000)							// Calculate Sum Of Cell Voltage in uV
-#define LTC_calc_int_Temp(raw)			(((int32_t) raw)*13333/1000000 - 273)	 		// Calculate internal Temperature in Celsius
+#define LTC_calc_Voltage(raw)			(raw*0.0001)					// Calculate Voltage in V
+#define LTC_calc_SOC_Voltage(raw)		(raw*0.002)						// Calculate Sum Of Cell Voltage in V
+#define LTC_calc_int_Temp(raw)			(raw*0.013333 - 273)	 		// Calculate internal Temperature in Celsius
+#define LTC_NTC_RES(adc)				(-LTC_calc_Voltage(adc)*10000/(LTC_calc_Voltage(adc) - 3.0))
+#define LTC_TEMP(adc)					((1.0 / ((logf(LTC_NTC_RES(adc)) / 10000.0) / BMS_Temp_beta) + (1.0 / 298.15)) - 273.15)
 
-
-// Sub Millisecond Delay (hacky, I kown...)
-#define LTC_Delay(x)			        for (uint32_t i = 0; i < x; i++)
 
 // INIT AND CONFIG
 void LTC_Init(void);

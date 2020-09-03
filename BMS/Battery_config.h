@@ -12,7 +12,6 @@
 #include "hw.h"
 #include "hal.h"
 
-extern uint32_t BMS_chip_count;
 extern uint32_t BMS_cell_count;
 extern uint32_t BMS_temp_count;
 extern float BMS_OV;
@@ -44,9 +43,9 @@ extern float BMS_hard_UT;
 #define BMS_ITMP_HYST			8
 #endif
 
-#ifndef BMS_I_SENSOR			// [A/c] Counts per mA
+#ifndef BMS_I_SENSOR			// [A/c] Counts per A
 #define BMS_I_SENSOR
-#define BMS_C_PER_MA			0.0090909090909090909090909090909091
+#define BMS_C_PER_A				0.0090909090909090909090909090909091
 #endif
 
 #ifndef BMS_Temp_beta			// beta of connected NTCs

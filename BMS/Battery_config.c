@@ -1,7 +1,5 @@
 #include "Battery_config.h"
 
-uint32_t BMS_chip_count = 1;
-
 #ifdef BMS_cell_count_set						// Number of connected cells
 uint32_t BMS_cell_count = BMS_cell_count_set;
 #else
@@ -32,10 +30,10 @@ float BMS_hard_OV = BMS_hard_OV_set;
 float BMS_hard_OV = 4.3;
 #endif
 
-#ifdef BMS_OV_recovery_set					// [%] Percentage of OV limit where charging is reenabled
+#ifdef BMS_OV_recovery_set					// [V] Voltage where charging is reenabled
 float BMS_OV_recovery = BMS_OV_recovery_set;
 #else
-float BMS_OV_recovery = 0.95;
+float BMS_OV_recovery = 4.0;
 #endif
 
 #ifdef BMS_Balance_U_set					// [V] Voltage at which balancing is enabled

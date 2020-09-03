@@ -1,6 +1,6 @@
 #include "LTC6804_types.h"
 
-#define BMS_Calc_Current(index, offset)         (((int32_t) chips[index].chip.AVAR.G1V - offset)*BMS_C_PER_MA) // Calculate Current in mA
+#define BMS_Calc_Current(bms, offset)		(((int32_t) bms.chip.AVAR.G1V - offset)*BMS_C_PER_A) // Calculate Current in A
 
 typedef enum
 {
@@ -10,10 +10,8 @@ typedef enum
 	TEST_CV,			// 0x03
 	TEST_GPIO,			// 0x04
 	TEST_ST,			// 0x05
-	OPEN_SOURCE_TEST1,	// 0x06
-	OPEN_SOURCE_TEST2,	// 0x07
-	OPEN_SINK_TEST1,	// 0x08
-	OPEN_SINK_TEST2,	// 0x09
+	OPEN_SOURCE_TEST,	// 0x06
+	OPEN_SINK_TEST,		// 0x08
 	TEST_REF,			// 0x0A
 	TEST_STATUS,		// 0x0B
 	TEST_END,			// 0x0C
@@ -65,13 +63,13 @@ typedef struct
 	BMS_Health_t Health;
 	BMS_AUX_t Aux;
 	
-	uint32_t Cell_U[12];
-	uint32_t Cell_Min_U;
+	float Cell_U[12];
+	float Cell_Min_U;
 	uint32_t Cell_Min_index;
-	uint32_t Cell_Max_U;
+	float Cell_Max_U;
 	uint32_t Cell_Max_index;
-	uint32_t Cell_All_U;
-	uint32_t Cell_Avr_U;
+	float Cell_All_U;
+	float Cell_Avr_U;
 	uint32_t Cell_Count;
 	
 	bool Cell_OV[12];
@@ -84,13 +82,13 @@ typedef struct
 	uint32_t Balance_derating;
 	uint32_t Balance_timer;
 	
-	int32_t Cell_Sink_U[12];
-	int32_t Cell_Source_U[12];
+	float Cell_Sink_U[12];
+	float Cell_Source_U[12];
 
-	int32_t Temp_sensors[5];
+	float Temp_sensors[5];
 } BMS_t;
 
-extern BMS_t chips[5];
+extern BMS_t BMS;
 
 extern bool BMS_Balance_Scheduled;
 
