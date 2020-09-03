@@ -111,6 +111,7 @@ include libcanard/canard.mk
 include imu/imu.mk
 include compression/compression.mk
 include blackmagic/blackmagic.mk
+include BMS/bms.mk
 
 # Define linker script file here
 LDSCRIPT= ld_eeprom_emu.ld
@@ -165,6 +166,7 @@ CSRC = $(STARTUPSRC) \
        $(CANARDSRC) \
        $(IMUSRC) \
        $(COMPRESSIONSRC) \
+       $(BMSSRC) \
        $(BLACKMAGICSRC)
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
@@ -206,6 +208,7 @@ INCDIR = $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC) \
          $(CANARDINC) \
          $(IMUINC) \
          $(COMPRESSIONINC) \
+         $(BMSINC) \
          $(BLACKMAGICINC)
 
 #

@@ -16,7 +16,6 @@
     */
 
 #include "hw.h"
-
 #include "ch.h"
 #include "hal.h"
 #include "stm32f4xx_conf.h"
@@ -33,6 +32,7 @@ static const I2CConfig i2cfg = {
 };
 
 void hw_init_gpio(void) {
+
 	// GPIO clock enable
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
@@ -79,9 +79,6 @@ void hw_init_gpio(void) {
 	palSetPadMode(HW_HALL_ENC_GPIO1, HW_HALL_ENC_PIN1, PAL_MODE_INPUT_PULLUP);
 	palSetPadMode(HW_HALL_ENC_GPIO2, HW_HALL_ENC_PIN2, PAL_MODE_INPUT_PULLUP);
 	palSetPadMode(HW_HALL_ENC_GPIO3, HW_HALL_ENC_PIN3, PAL_MODE_INPUT_PULLUP);
-
-	// Fault pin
-	palSetPadMode(GPIOB, 7, PAL_MODE_INPUT_PULLUP);
 
 	// ADC Pins
 	palSetPadMode(GPIOA, 0, PAL_MODE_INPUT_ANALOG);
