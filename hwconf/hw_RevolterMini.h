@@ -20,13 +20,23 @@
 #ifndef HW_REVOLTERMINI_H_
 #define HW_REVOLTERMINI_H_
 
-#define HW_NAME					"RevolterMini"
+#define HW_NAME					"RevolterMini RevA"
+
+#define APP_CUSTOM_TO_USE		"app_tempcontrol.c"
+
+
+// Temperature control settings
+#define T_TARGET_DEFAULT		19.
+#define T_EVAPORATOR_DEFAULT	5.
+#define T_CONDENSER_START		35.
+#define T_CONDENSER_STOP		50.
+
+
 
 // HW properties
 #define HW_HAS_3_SHUNTS
 #define HW_HAS_PHASE_SHUNTS
 #define INVERTED_SHUNT_POLARITY
-
 
 // Macros
 #define LED_GREEN_ON()			palSetPad(GPIOB, 0)
@@ -68,8 +78,12 @@
 #define ADC_IND_VIN_SENS		8
 #define ADC_IND_EXT				9
 #define ADC_IND_EXT2			10
-#define ADC_IND_TEMP_MOS		7
+#define ADC_IND_TEMP_MOS		11
 #define ADC_IND_TEMP_MOTOR		6
+
+#define ADC_IND_T1				9
+#define ADC_IND_T2				10
+#define ADC_IND_T3				7
 
 // ADC macros and settings
 
@@ -194,9 +208,9 @@
 #endif
 
 // Setting limits
-#define HW_LIM_CURRENT			-23.0, 23.0
-#define HW_LIM_CURRENT_IN		-23.0, 23.0
-#define HW_LIM_CURRENT_ABS		0.0, 23.0
+#define HW_LIM_CURRENT			-30.0, 30.0
+#define HW_LIM_CURRENT_IN		-30.0, 30.0
+#define HW_LIM_CURRENT_ABS		0.0, 30.0
 #define HW_LIM_VIN				6.0, 45.0
 #define HW_LIM_ERPM				-200e3, 200e3
 #define HW_LIM_DUTY_MIN			0.0, 0.1
