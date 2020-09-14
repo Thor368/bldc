@@ -55,6 +55,8 @@ static volatile float U_DC = 0;
 // threads here and set up callbacks.
 void app_custom_start(void)
 {
+	CHRG_OFF;
+
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
 			NORMALPRIO, my_thread, NULL);
@@ -72,13 +74,15 @@ void app_custom_start(void)
 			"[d]",
 			BMS_charg_en);
 
-	charge_en = false;
+	charge_en = true;
 }
 
 // Called when the custom application is stopped. Stop our threads
 // and release callbacks.
 void app_custom_stop(void)
 {
+	CHRG_OFF;
+
 	mc_interface_set_pwm_callback(0);
 	terminal_unregister_callback(BMS_cb_status);
 
@@ -115,8 +119,13 @@ static THD_FUNCTION(my_thread, arg)
 		U_DC_filt += GET_INPUT_VOLTAGE();
 		U_DC = U_DC_filt/10;
 
-		if (charge_en && U_DC < 41)
-			CHRG_ON;
+		if (charge_en)
+		{
+			if (U_DC < 40.0)
+				CHRG_ON;
+			else if (U_DC > 41.0)
+				CHRG_OFF;
+		}
 		else
 			CHRG_OFF;
 
@@ -139,12 +148,13 @@ static void BMS_charg_en(int argc, const char **argv)
 	else if (argc == 2)
 	{
 		int ret;
-		if (sscanf(argv[1], "%d", &ret))
+		if (!sscanf(argv[1], "%d", &ret))
 			commands_printf("Illegal argument!");
 		if (ret)
 			charge_en = true;
 		else
 			charge_en = false;
+		commands_printf("charge enable = %d", charge_en);
 	}
 	else
 		commands_printf("Wrong argument count!");

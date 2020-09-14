@@ -92,6 +92,11 @@ void hw_init_gpio(void) {
 	palSetPadMode(GPIOC, 1, PAL_MODE_INPUT_ANALOG);
 	palSetPadMode(GPIOC, 2, PAL_MODE_INPUT_ANALOG);
 	palSetPadMode(GPIOC, 3, PAL_MODE_INPUT_ANALOG);
+
+	// Custom Pins
+	palSetPadMode(GPIOA, 6,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
 }
 
 void hw_setup_adc_channels(void) {
