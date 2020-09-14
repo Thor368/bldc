@@ -42,10 +42,14 @@ static THD_WORKING_AREA(my_thread_wa, 2048);
 
 // Private functions
 static void BMS_cb_status(int argc, const char **argv);
+static void BMS_charg_en(int argc, const char **argv);
 
 // Private variables
 static volatile bool stop_now = true;
 static volatile bool is_running = false;
+
+static volatile bool charge_en = false;
+static volatile float U_DC = 0;
 
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
@@ -61,6 +65,14 @@ void app_custom_start(void)
 			"Show BMS status",
 			"",
 			BMS_cb_status);
+
+	terminal_register_command_callback(
+			"BMS_charge_enable",
+			"Enable/disable charging (\"\" = report, 0 = off, 1 = on)",
+			"[d]",
+			BMS_charg_en);
+
+	charge_en = false;
 }
 
 // Called when the custom application is stopped. Stop our threads
@@ -84,6 +96,7 @@ void app_custom_configure(app_configuration *conf)
 static THD_FUNCTION(my_thread, arg)
 {
 	(void)arg;
+	float U_DC_filt = 0;
 
 	chRegSetThreadName("App Custom");
 
@@ -98,6 +111,14 @@ static THD_FUNCTION(my_thread, arg)
 
 		timeout_reset(); // Reset timeout if everything is OK.
 
+		U_DC_filt -= U_DC_filt/10;
+		U_DC_filt += GET_INPUT_VOLTAGE();
+		U_DC = U_DC_filt/10;
+
+		if (charge_en && U_DC < 41)
+			CHRG_ON;
+		else
+			CHRG_OFF;
 
 
 		chThdSleepMilliseconds(10);
@@ -110,6 +131,25 @@ static void BMS_cb_status(int argc, const char **argv)
 	(void) argv;
 //	commands_printf("You have entered %d", d);
 }
+
+static void BMS_charg_en(int argc, const char **argv)
+{
+	if (argc == 1)
+		commands_printf("charge enable = %d", charge_en);
+	else if (argc == 2)
+	{
+		int ret;
+		if (sscanf(argv[1], "%d", &ret))
+			commands_printf("Illegal argument!");
+		if (ret)
+			charge_en = true;
+		else
+			charge_en = false;
+	}
+	else
+		commands_printf("Wrong argument count!");
+}
+
 
 //static void terminal_test(int argc, const char **argv)
 //{

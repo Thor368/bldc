@@ -37,6 +37,9 @@
 #define LED_RED_ON()			palSetPad(GPIOB, 1)
 #define LED_RED_OFF()			palClearPad(GPIOB, 1)
 
+#define CHRG_ON					palSetPad(GPIOA, 6)
+#define CHRG_OFF				palClearPad(GPIOA, 6)
+
 /*
  * ADC Vector
  *
