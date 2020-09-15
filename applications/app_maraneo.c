@@ -103,7 +103,7 @@ static THD_FUNCTION(my_thread, arg)
 		LTC_handler();
 
 
-		chThdSleepMilliseconds(10);
+		chThdSleepMilliseconds(1000);
 	}
 }
 
