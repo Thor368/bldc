@@ -113,7 +113,8 @@ void LTC_handler_Init()
 	
 	BMS_Balance_Timer = chVTGetSystemTimeX();
 
-	BMS_RES_sets(0);
+	BMS_RES_sets(&BMS);
+	BMS.chip.address = LTC_ADDRESS(0);
 }
 
 void BMS_Check_Voltage(BMS_t *chip)
@@ -364,7 +365,7 @@ void LTC_handler()
 {
 	LTC_Balancing_handler();
 	BMS_IO_handler();
-	
+
 	switch (BMS.Status)
 	{
 		case RES:
@@ -405,7 +406,7 @@ void LTC_handler()
 				}
 
 				BMS.MUX_Test_Passed = !BMS.chip.STBR.MUXFAIL;
-					
+
 				BMS.chip.MD = 1;
 				LTC_Start(&(BMS.chip), LTC_START_CVST);
 				BMS.Status = TEST_GPIO;
@@ -443,7 +444,7 @@ void LTC_handler()
 					BMS.Status = RES;
 					break;
 				}
-				
+
 				uint32_t j;
 				for (j = 12; (j < 17) && (LTC_get_Voltage_raw(&(BMS.chip), j) == 0x9565); j++);
 				if (j < 17)
@@ -495,7 +496,7 @@ void LTC_handler()
 				BMS.chip.MD = 3;
 				BMS.chip.PUP = 0;
 				LTC_Start(&(BMS.chip), LTC_START_ADOW);
-				
+
 				BMS.Status = TEST_REF;
 			}
 		break;
@@ -694,7 +695,7 @@ void LTC_handler()
 			else if (chVTTimeElapsedSinceX(BMS.last_CV) > S2ST(1))
 			{
 				BMS.last_CV = chVTGetSystemTimeX();
-				
+
 				if (BMS_Balance_Scheduled)
 					BMS.Status = SAMPLE_ITMP;
 				else

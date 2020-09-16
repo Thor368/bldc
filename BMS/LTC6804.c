@@ -32,37 +32,77 @@
 #define LTC_CMD_RDCOMM		0x722				// Read COMM Register Group
 #define LTC_CMD_STCOMM		0x723				// Start I2C/SPI Comminuaction
 
+#define LTC_CS_LO			palClearPad(BMS_PORT_NSS, BMS_PIN_NSS)
+#define LTC_CS_HI			palSetPad(BMS_PORT_NSS, BMS_PIN_NSS)
+#define LTC_SCK_LO			palClearPad(BMS_PORT_SCK, BMS_PIN_SCK)
+#define LTC_SCK_HI			palSetPad(BMS_PORT_SCK, BMS_PIN_SCK)
+#define LTC_MOSI_LO			palClearPad(BMS_PORT_MOSI, BMS_PIN_MOSI)
+#define LTC_MOSI_HI			palSetPad(BMS_PORT_MOSI, BMS_PIN_MOSI)
+#define LTC_MISO_IN			palReadPad(BMS_PORT_MISO, BMS_PIN_MISO)
+
+#define LTC_SLEEP(x)		for (uint32_t cc = 0; cc < x; cc++) __ASM volatile ("nop")
+
+
 void LTC_Init(void)
 {
-	palSetPadMode(BMS_PORT_MISO, BMS_PIN_MISO, PAL_MODE_ALTERNATE(BMS_SPI_GPIO_AF) |
+	palSetPadMode(BMS_PORT_MISO, BMS_PIN_MISO,
+				PAL_MODE_INPUT |
 				PAL_STM32_OSPEED_HIGHEST |
 				PAL_STM32_PUDR_FLOATING);
 
-	palSetPadMode(BMS_PORT_SCK, BMS_PIN_SCK, PAL_MODE_ALTERNATE(BMS_SPI_GPIO_AF) |
+	palSetPadMode(BMS_PORT_SCK, BMS_PIN_SCK,
+				PAL_MODE_OUTPUT_PUSHPULL |
 				PAL_STM32_OSPEED_HIGHEST |
 				PAL_STM32_PUDR_FLOATING);
 
-	palSetPadMode(BMS_PORT_MOSI, BMS_PIN_MOSI, PAL_MODE_ALTERNATE(BMS_SPI_GPIO_AF) |
+	palSetPadMode(BMS_PORT_MOSI, BMS_PIN_MOSI,
+				PAL_MODE_OUTPUT_PUSHPULL |
 				PAL_STM32_OSPEED_HIGHEST |
 				PAL_STM32_PUDR_FLOATING);
 
-	palSetPadMode(BMS_PORT_NSS, BMS_PIN_NSS, PAL_MODE_OUTPUT_PUSHPULL | PAL_STM32_OSPEED_HIGHEST);
+	palSetPadMode(BMS_PORT_NSS, BMS_PIN_NSS,
+				PAL_MODE_OUTPUT_PUSHPULL |
+				PAL_STM32_OSPEED_HIGHEST);
 
-	SPIConfig spiconf;
-	spiconf.end_cb = NULL;
-	spiconf.ssport = BMS_PORT_NSS;
-	spiconf.sspad = BMS_PIN_NSS;
-	spiconf.cr1 = SPI_CR1_MSTR | SPI_CR1_BR_0 | SPI_CR1_BR_2 | SPI_CR1_SPE;  // 656kHz
+	LTC_CS_HI;
+	LTC_MOSI_LO;
+	LTC_SCK_HI;
+}
 
-	spiStop(&SPID3);
-	spiStart(&SPID3, &spiconf);
+uint8_t SPI_transceive_byte(uint8_t data)
+{
+	uint8_t ret = 0;
+
+	for (int8_t i = 7; i >= 0; i--)
+	{
+		if (data & (1 << i))
+			LTC_MOSI_HI;
+		else
+			LTC_MOSI_LO;
+		LTC_SCK_LO;
+		LTC_SLEEP(23);
+		LTC_SCK_HI;
+		ret |= (LTC_MISO_IN & 1) << i;
+		LTC_SLEEP(16);
+	}
+
+	return ret;
+}
+
+void SPI_transceive(uint8_t data[], uint8_t length)
+{
+	for (int8_t i = (length-1); i >= 0; i--)
+	{
+		data[i] = SPI_transceive_byte(data[i]);
+		LTC_SLEEP(10);  // debug
+	}
 }
 
 void LTC_wake_device(void)
 {
-	spiSelect(&SPID3);
-	chThdSleep(US2ST(1));
-	spiUnselect(&SPID3);
+	LTC_CS_LO;
+	LTC_SLEEP(40);
+	LTC_CS_HI;
 }
 
 bool LTC_read_CMD(uint16_t cmd, uint8_t ret[], uint16_t address)
@@ -71,24 +111,24 @@ bool LTC_read_CMD(uint16_t cmd, uint8_t ret[], uint16_t address)
 
 	uint16_t addcmd = cmd | address;  // Add Address to Command
 	PEC_Reset();
-	uint16_t addcmdpec = __builtin_bswap16(PEC_Compute16b(addcmd));
-	addcmd = __builtin_bswap16(addcmd);
+	uint16_t addcmdpec = PEC_Compute16b(addcmd);
 	
-	spiSelect(&SPID3);
+	LTC_CS_LO;
+	LTC_SLEEP(40);
 
-	spiSend(&SPID3, 2, &addcmd);		// Send CMD
-	spiSend(&SPID3, 2, &addcmdpec);		// Send CMDs PEC
-	spiReceive(&SPID3, 8, buf);			// Read register data
-	
-	spiUnselect(&SPID3);
-	
+	SPI_transceive((uint8_t *) &addcmd, 2);			// Send CMD
+	SPI_transceive((uint8_t *) &addcmdpec, 2);		// Send CMDs PEC
+	SPI_transceive(buf, 8);							// Read register data
+
+	LTC_CS_HI;
+
 	PEC_Reset();  // Calculate Registers PEC
 	for (uint8_t i = 0; i < 6; i++)
 	{
 		PEC_Compute8b(buf[i]);
 		ret[i] = buf[i];
 	}
-	
+
 	if (PEC_Get() == (buf[7] | (buf[6] << 8)))  // Compare PECs
 		return 0;
 	else
@@ -98,10 +138,8 @@ bool LTC_read_CMD(uint16_t cmd, uint8_t ret[], uint16_t address)
 void LTC_write_CMD(uint16_t cmd, uint8_t data[], uint16_t address)
 {
 	uint16_t addcmd = address | cmd;  // Add Address to Command;
-	
 	PEC_Reset();
-	uint16_t addcmdpec = __builtin_bswap16(PEC_Compute16b(addcmd));
-	addcmd = __builtin_bswap16(addcmd);
+	uint16_t addcmdpec = PEC_Compute16b(addcmd);
 	
 	uint8_t buf[6];
 	*((uint32_t *) &buf[0]) = *((uint32_t *) &data[0]);
@@ -113,16 +151,17 @@ void LTC_write_CMD(uint16_t cmd, uint8_t data[], uint16_t address)
  	PEC_Compute8b(data[2]);
  	PEC_Compute8b(data[3]);
  	PEC_Compute8b(data[4]);
- 	uint16_t datapec = __builtin_bswap16(PEC_Compute8b(data[5]));
+ 	uint16_t datapec = PEC_Compute8b(data[5]);
  	
-	spiSelect(&SPID3);
+	LTC_CS_LO;
+	LTC_SLEEP(40);
 
-	spiSend(&SPID3, 2, &addcmd);		// Send CMD
-	spiSend(&SPID3, 2, &addcmdpec);		// Send CMDs PEC
-	spiReceive(&SPID3, 6, buf);			// Send Registers
-	spiSend(&SPID3, 2, &datapec);		// Send Registers PEC
+	SPI_transceive((uint8_t *) &addcmd, 2);			// Send CMD
+	SPI_transceive((uint8_t *) &addcmdpec, 2);		// Send CMDs PEC
+	SPI_transceive(buf, 6);							// Send Registers
+	SPI_transceive((uint8_t *) &datapec, 2);		// Send Registers PEC
 
-	spiUnselect(&SPID3);
+	LTC_CS_HI;
 }
 
 uint8_t LTC_start_CMD(uint16_t cmd, uint16_t address)
@@ -130,18 +169,18 @@ uint8_t LTC_start_CMD(uint16_t cmd, uint16_t address)
 	uint16_t addcmd = address | cmd;	// Add Address to Command;
 	
 	PEC_Reset();
-	uint16_t addcmdpec = __builtin_bswap16(PEC_Compute16b(addcmd));
-	addcmd = __builtin_bswap16(addcmd);
+	uint16_t addcmdpec = PEC_Compute16b(addcmd);
 	
-	spiSelect(&SPID3);
+	LTC_CS_LO;
+	LTC_SLEEP(40);
 
-	spiSend(&SPID3, 2, &addcmd);		// Send CMD
-	spiSend(&SPID3, 2, &addcmdpec);		// Send CMDs PEC
+	SPI_transceive((uint8_t *) &addcmd, 2);			// Send CMD
+	SPI_transceive((uint8_t *) &addcmdpec, 2);		// Send CMDs PEC
 	
 	addcmd = 0;
-	spiReceive(&SPID3, 1, &addcmd);		// Read status of device
+	SPI_transceive((uint8_t *) &addcmd, 1);	// Read status of device
 	
-	spiUnselect(&SPID3);
+	LTC_CS_HI;
 	
 	if (addcmd)
 		return 1;  // Device busy
@@ -297,7 +336,7 @@ uint8_t LTC_Start(LTC_DATASET_t* set, uint8_t action)
 	switch (action)
 	{
 		case LTC_START_ADCV:
-			cmd = LTC_CMD_ADCV | set->CH | (set->DCP << 4) | (set->MD << 7);
+			cmd = LTC_CMD_ADCV;// | set->CH | (set->DCP << 4) | (set->MD << 7);
 			return LTC_start_CMD(cmd, set->address);
 		
 		case LTC_START_ADOW:

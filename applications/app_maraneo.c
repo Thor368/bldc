@@ -61,6 +61,8 @@ void app_custom_start(void)
 			"Show BMS status",
 			"",
 			BMS_cb_status);
+
+	LTC_handler_Init();
 }
 
 // Called when the custom application is stopped. Stop our threads
@@ -98,9 +100,10 @@ static THD_FUNCTION(my_thread, arg)
 
 		timeout_reset(); // Reset timeout if everything is OK.
 
+		LTC_handler();
 
 
-		chThdSleepMilliseconds(10);
+		chThdSleepMilliseconds(1000);
 	}
 }
 
