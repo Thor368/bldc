@@ -37,6 +37,9 @@
 #define LED_RED_ON()			palSetPad(GPIOB, 1)
 #define LED_RED_OFF()			palClearPad(GPIOB, 1)
 
+#define CHRG_ON					palSetPad(GPIOA, 6)
+#define CHRG_OFF				palClearPad(GPIOA, 6)
+
 /*
  * ADC Vector
  *
@@ -94,6 +97,7 @@
 #endif
 
 // Input voltage
+#define GET_VOLTAGE(ch)			((V_REG / 4095.0) * (float)ADC_Value[ch] * ((VIN_R1 + VIN_R2) / VIN_R2))
 #define GET_INPUT_VOLTAGE()		((V_REG / 4095.0) * (float)ADC_Value[ADC_IND_VIN_SENS] * ((VIN_R1 + VIN_R2) / VIN_R2))
 
 // NTC Termistors
@@ -119,17 +123,17 @@
 #endif
 
 // CAN device and port (default CAN1)
-#ifndef HW_CANH_PORT
-#define HW_CANH_PORT			GPIOB
+#ifndef HW_CANRX_PORT
+#define HW_CANRX_PORT			GPIOB
 #endif
-#ifndef HW_CANH_PIN
-#define HW_CANH_PIN				5
+#ifndef HW_CANRX_PIN
+#define HW_CANRX_PIN			5
 #endif
-#ifndef HW_CANL_PORT
-#define HW_CANL_PORT			GPIOB
+#ifndef HW_CANTX_PORT
+#define HW_CANTX_PORT			GPIOB
 #endif
-#ifndef HW_CANL_PIN
-#define HW_CANL_PIN				6
+#ifndef HW_CANTX_PIN
+#define HW_CANTX_PIN			6
 #endif
 #ifndef HW_CAN_GPIO_AF
 #define HW_CAN_GPIO_AF			GPIO_AF_CAN2
