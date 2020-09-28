@@ -103,6 +103,7 @@ void LTC_wake_device(void)
 	LTC_CS_LO;
 	LTC_SLEEP(40);
 	LTC_CS_HI;
+	chThdSleepMicroseconds(300);
 }
 
 bool LTC_read_CMD(uint16_t cmd, uint8_t ret[], uint16_t address)
@@ -167,7 +168,7 @@ void LTC_write_CMD(uint16_t cmd, uint8_t data[], uint16_t address)
 uint8_t LTC_start_CMD(uint16_t cmd, uint16_t address)
 {
 	uint16_t addcmd = address | cmd;	// Add Address to Command;
-	
+
 	PEC_Reset();
 	uint16_t addcmdpec = PEC_Compute16b(addcmd);
 	
