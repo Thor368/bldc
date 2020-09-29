@@ -370,6 +370,7 @@ void LTC_handler()
 	{
 		case RES:
 			BMS_RES_sets(&BMS);
+			BMS.chip.address = LTC_ADDRESS(0);
 
 			if (!(LTC_Write_Register(&(BMS.chip), LTC_REGISTER_CFGR | LTC_REGISTER_COMM)))
 			{

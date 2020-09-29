@@ -64,13 +64,13 @@ void app_custom_start(void)
 
 	// Terminal commands for the VESC Tool terminal can be registered.
 	terminal_register_command_callback(
-			"BMS_status",
+			"bms_status",
 			"Show BMS status",
 			"",
 			BMS_cb_status);
 
 	terminal_register_command_callback(
-			"BMS_charge_enable",
+			"bms_charge_enable",
 			"Enable/disable charging (\"\" = report, 0 = off, 1 = on)",
 			"[d]",
 			BMS_charg_en);
@@ -87,8 +87,8 @@ void app_custom_stop(void)
 {
 	CHRG_OFF;
 
-	mc_interface_set_pwm_callback(0);
 	terminal_unregister_callback(BMS_cb_status);
+	terminal_unregister_callback(BMS_charg_en);
 
 	stop_now = true;
 	while (is_running) {
@@ -119,6 +119,7 @@ static THD_FUNCTION(my_thread, arg)
 		}
 
 		timeout_reset(); // Reset timeout if everything is OK.
+		LTC_handler();
 
 		U_DC_filt -= U_DC_filt/10;
 		U_DC_filt += GET_INPUT_VOLTAGE();
@@ -155,13 +156,17 @@ static void BMS_cb_status(int argc, const char **argv)
 {
 	(void) argc;
 	(void) argv;
+
 	commands_printf("U_CHG = %.1f", (double) U_CHG);
+
 	if (charging)
 		commands_printf("Chargeport: Charging");
 	else if (charge_en)
 		commands_printf("Chargeport: Enabled");
 	else
 		commands_printf("Chargeport: Disabled");
+
+	commands_printf("BMS state: %d\n", BMS.Status);
 }
 
 static void BMS_charg_en(int argc, const char **argv)
