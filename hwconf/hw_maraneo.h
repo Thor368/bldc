@@ -37,6 +37,9 @@
 #define LED_RED_ON()			palSetPad(GPIOB, 1)
 #define LED_RED_OFF()			palClearPad(GPIOB, 1)
 
+#define CHRG_ON					palSetPad(GPIOA, 6)
+#define CHRG_OFF				palClearPad(GPIOA, 6)
+
 /*
  * ADC Vector
  *
@@ -94,6 +97,7 @@
 #endif
 
 // Input voltage
+#define GET_VOLTAGE(ch)			((V_REG / 4095.0) * (float)ADC_Value[ch] * ((VIN_R1 + VIN_R2) / VIN_R2))
 #define GET_INPUT_VOLTAGE()		((V_REG / 4095.0) * (float)ADC_Value[ADC_IND_VIN_SENS] * ((VIN_R1 + VIN_R2) / VIN_R2))
 
 // NTC Termistors
