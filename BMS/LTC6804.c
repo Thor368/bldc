@@ -2,6 +2,8 @@
 #include "PEC.h"
 #include "hal.h"
 
+#include "commands.h"  // debug
+
 #include <stdint.h>
 
 
@@ -46,23 +48,16 @@
 void LTC_Init(void)
 {
 	palSetPadMode(BMS_PORT_MISO, BMS_PIN_MISO,
-				PAL_MODE_INPUT |
-				PAL_STM32_OSPEED_HIGHEST |
-				PAL_STM32_PUDR_FLOATING);
+				PAL_MODE_INPUT_PULLUP);
 
 	palSetPadMode(BMS_PORT_SCK, BMS_PIN_SCK,
-				PAL_MODE_OUTPUT_PUSHPULL |
-				PAL_STM32_OSPEED_HIGHEST |
-				PAL_STM32_PUDR_FLOATING);
+				PAL_MODE_OUTPUT_PUSHPULL);
 
 	palSetPadMode(BMS_PORT_MOSI, BMS_PIN_MOSI,
-				PAL_MODE_OUTPUT_PUSHPULL |
-				PAL_STM32_OSPEED_HIGHEST |
-				PAL_STM32_PUDR_FLOATING);
+				PAL_MODE_OUTPUT_PUSHPULL);
 
 	palSetPadMode(BMS_PORT_NSS, BMS_PIN_NSS,
-				PAL_MODE_OUTPUT_PUSHPULL |
-				PAL_STM32_OSPEED_HIGHEST);
+				PAL_MODE_OUTPUT_PUSHPULL);
 
 	LTC_CS_HI;
 	LTC_MOSI_LO;
@@ -79,10 +74,13 @@ uint8_t SPI_transceive_byte(uint8_t data)
 			LTC_MOSI_HI;
 		else
 			LTC_MOSI_LO;
+
 		LTC_SCK_LO;
 		LTC_SLEEP(23);
 		LTC_SCK_HI;
-		ret |= (LTC_MISO_IN & 1) << i;
+
+		ret |= LTC_MISO_IN << i;
+
 		LTC_SLEEP(16);
 	}
 
@@ -91,7 +89,7 @@ uint8_t SPI_transceive_byte(uint8_t data)
 
 void SPI_transceive(uint8_t data[], uint8_t length)
 {
-	for (int8_t i = (length-1); i >= 0; i--)
+	for (int8_t i = 0; i < length; i++)
 	{
 		data[i] = SPI_transceive_byte(data[i]);
 		LTC_SLEEP(10);  // debug
@@ -112,7 +110,8 @@ bool LTC_read_CMD(uint16_t cmd, uint8_t ret[], uint16_t address)
 
 	uint16_t addcmd = cmd | address;  // Add Address to Command
 	PEC_Reset();
-	uint16_t addcmdpec = PEC_Compute16b(addcmd);
+	uint16_t addcmdpec = __builtin_bswap16(PEC_Compute16b(addcmd));
+	addcmd = __builtin_bswap16(addcmd);
 	
 	LTC_CS_LO;
 	LTC_SLEEP(40);
@@ -140,7 +139,8 @@ void LTC_write_CMD(uint16_t cmd, uint8_t data[], uint16_t address)
 {
 	uint16_t addcmd = address | cmd;  // Add Address to Command;
 	PEC_Reset();
-	uint16_t addcmdpec = PEC_Compute16b(addcmd);
+	uint16_t addcmdpec = __builtin_bswap16(PEC_Compute16b(addcmd));
+	addcmd = __builtin_bswap16(addcmd);
 	
 	uint8_t buf[6];
 	*((uint32_t *) &buf[0]) = *((uint32_t *) &data[0]);
@@ -168,9 +168,9 @@ void LTC_write_CMD(uint16_t cmd, uint8_t data[], uint16_t address)
 uint8_t LTC_start_CMD(uint16_t cmd, uint16_t address)
 {
 	uint16_t addcmd = address | cmd;	// Add Address to Command;
-
 	PEC_Reset();
-	uint16_t addcmdpec = PEC_Compute16b(addcmd);
+	uint16_t addcmdpec = __builtin_bswap16(PEC_Compute16b(addcmd));
+	addcmd = __builtin_bswap16(addcmd);
 	
 	LTC_CS_LO;
 	LTC_SLEEP(40);

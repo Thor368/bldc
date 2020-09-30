@@ -48,7 +48,7 @@ typedef struct
 	
 	bool BMS_present;
 	
-	uint32_t Int_Temp;
+	float Int_Temp;
 
 	bool Cell_Test_Passed;
 	bool GPIO_Test_Passed;

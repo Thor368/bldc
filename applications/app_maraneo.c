@@ -51,6 +51,7 @@ static volatile bool is_running = false;
 static volatile bool charge_en = false, charging = false;
 static volatile float U_DC = 0;
 static volatile float U_CHG = 0;
+static volatile float I_CHG = 0, I_CHG_offset = 0;
 
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
@@ -106,6 +107,7 @@ static THD_FUNCTION(my_thread, arg)
 	(void)arg;
 	float U_DC_filt = 0;
 	float U_CHG_filt = 0;
+	float I_CHG_filt = 0;
 
 	chRegSetThreadName("App Custom");
 
@@ -128,6 +130,15 @@ static THD_FUNCTION(my_thread, arg)
 		U_CHG_filt -= U_CHG_filt/10;
 		U_CHG_filt += GET_VOLTAGE(6);
 		U_CHG = U_CHG_filt/10;
+
+		I_CHG_filt -= I_CHG_filt/10;
+		I_CHG_filt += GET_VOLTAGE(7);
+		I_CHG = (I_CHG_filt - I_CHG_offset)/0.088;
+
+
+		if (!charging)
+			I_CHG_offset = I_CHG_filt;
+
 
 		if (charge_en)
 		{
@@ -157,7 +168,10 @@ static void BMS_cb_status(int argc, const char **argv)
 	(void) argc;
 	(void) argv;
 
-	commands_printf("U_CHG = %.1f", (double) U_CHG);
+	commands_printf("---CHARGEPORT---");
+	commands_printf("Port voltage: %.1fV", (double) U_CHG);
+	commands_printf("Port current: %.2fV", (double) I_CHG);
+	commands_printf("Port current offset: %.2fV", (double) I_CHG_offset);
 
 	if (charging)
 		commands_printf("Chargeport: Charging");
@@ -166,7 +180,59 @@ static void BMS_cb_status(int argc, const char **argv)
 	else
 		commands_printf("Chargeport: Disabled");
 
-	commands_printf("BMS state: %d\n", BMS.Status);
+	commands_printf("\n---BMS---");
+	commands_printf("State: %d", BMS.Status);
+	commands_printf("Present: %d", BMS.BMS_present);
+	commands_printf("Balance permission: %d", BMS.Balance_Permission);
+	commands_printf("Balance derating: %d", BMS.Balance_derating);
+
+	commands_printf("\nSELFCHECK");
+	commands_printf("Cell test passed: %d", BMS.Cell_Test_Passed);
+	commands_printf("GPIO test passed: %d", BMS.GPIO_Test_Passed);
+	commands_printf("Status test passed: %d", BMS.Status_Test_Passed);
+	commands_printf("MUX test passed: %d", BMS.MUX_Test_Passed);
+	commands_printf("Secondary reference OK: %d", BMS.Secondary_Reference_OK);
+	commands_printf("Internal temperature OK: %d", BMS.Int_Temp_OK);
+	commands_printf("VA OK: %d", BMS.VA_OK);
+	commands_printf("VD OK: %d", BMS.VD_OK);
+	commands_printf("Wrong cell count: %d", BMS.Wrong_Cell_Count);
+	commands_printf("Health: %d", BMS.Health);
+	for (uint8_t i = 0; i < 12; i++)
+		commands_printf("Open test #%d %.3fV %.3fV", i+1, (double) BMS.Cell_Source_U[i], (double) BMS.Cell_Sink_U[i]);
+
+	commands_printf("\nCELLS");
+	commands_printf("Pack voltage: %.2fV", (double) BMS.Cell_All_U);
+	commands_printf("Cell average voltage: %.3fV", (double) BMS.Cell_Avr_U);
+	commands_printf("Cell count: %d", BMS.Cell_Count);
+	for (uint8_t i = 0; i < 12; i++)
+	{
+		char flags[23] = "";
+
+		if (i == BMS.Cell_Min_index)
+			strcat(flags, "MIN ");
+
+		if (i == BMS.Cell_Max_index)
+			strcat(flags, "MAX ");
+
+		if (BMS.Cell_OV[i])
+			strcat(flags, "OV ");
+
+		if (BMS.Cell_UV[i])
+			strcat(flags, "UV ");
+
+		if (BMS.Cell_Bleed[i])
+			strcat(flags, "DIS ");
+
+		if (BMS.Open_Cell_Connection[i])
+			strcat(flags, "OPEN");
+
+		commands_printf("Cell %2d: %.3fV %s", i+1, (double) BMS.Cell_U[i], flags);
+	}
+
+	commands_printf("\nTEMPERATURES");
+	commands_printf("Internal temperature: %.1f°C", (double) BMS.Int_Temp);
+	for (uint8_t i = 0; i < 5; i++)
+		commands_printf("External temperature #%d: %.1f°C", i+1, (double) BMS.Temp_sensors[i]);
 }
 
 static void BMS_charg_en(int argc, const char **argv)
