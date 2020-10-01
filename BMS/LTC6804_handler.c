@@ -173,6 +173,7 @@ void BMS_Calc_Voltages(BMS_t *chip)
 	chip->Cell_Min_U = 6.0;
 	chip->Cell_Min_index = 0;
 	chip->Cell_Count = 0;
+	chip->Cell_Avr_U = 0;
 	
 	for (uint8_t i = 0; i < BMS_cell_count; i++)
 	{
@@ -491,7 +492,7 @@ void LTC_handler()
 					break;
 				}
 
-				for (uint8_t j = 0; j < BMS_cell_count; j++)
+				for (uint8_t j = 0; j < 12; j++)
 					BMS.Cell_Source_U[j] = LTC_calc_Voltage(LTC_get_Voltage_raw(&(BMS.chip), j));
 
 				BMS.chip.MD = 3;
@@ -511,7 +512,7 @@ void LTC_handler()
 					break;
 				}
 
-				for (uint32_t j = 1; j < BMS_cell_count; j++)
+				for (uint32_t j = 0; j < 12; j++)
 				{
 					BMS.Cell_Sink_U[j] = LTC_calc_Voltage(LTC_get_Voltage_raw(&(BMS.chip), j));
 
