@@ -511,7 +511,7 @@ void LTC_handler()
 					break;
 				}
 
-				for (uint32_t j = 0; j < BMS_cell_count; j++)
+				for (uint32_t j = 1; j < BMS_cell_count; j++)
 				{
 					BMS.Cell_Sink_U[j] = LTC_calc_Voltage(LTC_get_Voltage_raw(&(BMS.chip), j));
 
@@ -520,6 +520,10 @@ void LTC_handler()
 					else
 						BMS.Open_Cell_Connection[j] = true;
 				}
+				if (BMS.Cell_Source_U[0] < 0.4)
+					BMS.Open_Cell_Connection[0] = true;
+				if (BMS.Cell_Sink_U[11] < 0.4)
+					BMS.Open_Cell_Connection[11] = true;
 
 				BMS.chip.MD = 1;
 				BMS.chip.CHG = 6;
