@@ -97,6 +97,7 @@ void hw_init_gpio(void) {
 	palSetPadMode(GPIOA, 6,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+	CHRG_OFF;
 }
 
 void hw_setup_adc_channels(void) {

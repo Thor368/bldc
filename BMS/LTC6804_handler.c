@@ -351,15 +351,6 @@ void BMS_IO_handler(void)
 	}
 	else
 		BMS_Discharge_permitted = local_Discharge_permitted;
-
-
-	if (BMS_Charge_permitted && (Battery_I_offset != 0))
-	{
-		BMS_enable_charge;
-		BMS_charge_delay_timer = chVTGetSystemTimeX();
-	}
-	else if (chVTTimeElapsedSinceX(BMS_charge_delay_timer) > MS2ST(BMS_fault_delay))
-		BMS_disable_charge;
 }
 
 void LTC_handler()

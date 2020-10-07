@@ -52,14 +52,6 @@ extern float BMS_hard_UT;
 #define BMS_Temp_beta			3380
 #endif
 
-#ifndef BMS_enable_charge		// Define which IO is for charge enable
-#define BMS_enable_charge		palSetPad(GPIOA, 6)
-#endif
-
-#ifndef BMS_disable_charge
-#define BMS_disable_charge		palClearPad(GPIOA, 6)
-#endif
-
 #ifndef BMS_fault_delay
 #define BMS_fault_delay			10000
 #endif

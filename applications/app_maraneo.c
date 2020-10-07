@@ -30,7 +30,10 @@
 #include "hw.h"
 #include "commands.h"
 #include "timeout.h"
+
 #include "LTC6804_handler.h"
+#include "maraneo_vars.h"
+#include "charge_statemachine.h"
 
 #include <math.h>
 #include <string.h>
@@ -48,16 +51,15 @@ static void BMS_charg_en(int argc, const char **argv);
 static volatile bool stop_now = true;
 static volatile bool is_running = false;
 
-static volatile bool charge_en = false, charging = false;
-static volatile float U_DC = 0;
-static volatile float U_CHG = 0;
-static volatile float I_CHG = 0, I_CHG_offset = 0;
+volatile float U_DC = 0, U_DC_filt = 0;
+volatile float U_CHG = 0, U_CHG_filt = 0;
+volatile float I_CHG = 0, I_CHG_filt = 0, I_CHG_offset = 0;
 
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
 void app_custom_start(void)
 {
-	CHRG_OFF;
+	chg_init();
 
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
@@ -76,9 +78,6 @@ void app_custom_start(void)
 			"[d]",
 			BMS_charg_en);
 
-	charge_en = true;
-	charging = false;
-
 	LTC_handler_Init();
 }
 
@@ -86,6 +85,7 @@ void app_custom_start(void)
 // and release callbacks.
 void app_custom_stop(void)
 {
+	charge_en = false;
 	CHRG_OFF;
 
 	terminal_unregister_callback(BMS_cb_status);
@@ -105,9 +105,6 @@ void app_custom_configure(app_configuration *conf)
 static THD_FUNCTION(my_thread, arg)
 {
 	(void)arg;
-	float U_DC_filt = 0;
-	float U_CHG_filt = 0;
-	float I_CHG_filt = 0;
 
 	chRegSetThreadName("App Custom");
 
@@ -121,7 +118,6 @@ static THD_FUNCTION(my_thread, arg)
 		}
 
 		timeout_reset(); // Reset timeout if everything is OK.
-		LTC_handler();
 
 		U_DC_filt -= U_DC_filt/10;
 		U_DC_filt += GET_INPUT_VOLTAGE();
@@ -131,34 +127,13 @@ static THD_FUNCTION(my_thread, arg)
 		U_CHG_filt += GET_VOLTAGE(6);
 		U_CHG = U_CHG_filt/10;
 
-		I_CHG_filt -= I_CHG_filt/10;
-		I_CHG_filt += GET_VOLTAGE(7);
-		I_CHG = (I_CHG_filt - I_CHG_offset)/0.088;
+		I_CHG_filt -= I_CHG_filt/100;
+		I_CHG_filt += GET_VOLTAGE_RAW(7)/0.0088;
+		I_CHG = (I_CHG_filt - I_CHG_offset)/100;
 
 
-		if (!charging)
-			I_CHG_offset = I_CHG_filt;
-
-
-		if (charge_en)
-		{
-			if ((U_CHG > 30.0) && (U_DC < 40.0))
-			{
-				charging = true;
-				CHRG_ON;
-			}
-			else if (U_DC > 41.0)
-			{
-				charging = false;
-				CHRG_OFF;
-			}
-		}
-		else
-		{
-			charging = false;
-			CHRG_OFF;
-		}
-
+		LTC_handler();
+		charge_statemachine();
 		chThdSleepMilliseconds(10);
 	}
 }
@@ -170,15 +145,16 @@ static void BMS_cb_status(int argc, const char **argv)
 
 	commands_printf("---CHARGEPORT---");
 	commands_printf("Port voltage: %.1fV", (double) U_CHG);
-	commands_printf("Port current: %.2fV", (double) I_CHG);
-	commands_printf("Port current offset: %.2fV", (double) I_CHG_offset);
+	commands_printf("Port current: %.2fA", (double) I_CHG);
+	commands_printf("Port current offset: %.2fA", (double) I_CHG_offset/100);
 
-	if (charging)
-		commands_printf("Chargeport: Charging");
-	else if (charge_en)
-		commands_printf("Chargeport: Enabled");
-	else
+	if (!charge_en)
 		commands_printf("Chargeport: Disabled");
+	else if (chg_state == chgst_charging)
+		commands_printf("Chargeport: Enabled, Charging");
+	else
+		commands_printf("Chargeport: Enabled, Idle");
+	commands_printf("Chargestate: %d", chg_state);
 
 	commands_printf("\n---BMS---");
 	commands_printf("State: %d", BMS.Status);
@@ -233,6 +209,7 @@ static void BMS_cb_status(int argc, const char **argv)
 	commands_printf("Internal temperature: %.1f°C", (double) BMS.Int_Temp);
 	for (uint8_t i = 0; i < 5; i++)
 		commands_printf("External temperature #%d: %.1f°C", i+1, (double) BMS.Temp_sensors[i]);
+	commands_printf("\n");
 }
 
 static void BMS_charg_en(int argc, const char **argv)
