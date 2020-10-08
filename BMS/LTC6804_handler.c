@@ -24,7 +24,6 @@ uint32_t Battery_I_offset_timer = 0;
 bool BMS_Charge_permitted = true;
 bool BMS_Discharge_permitted = true;
 bool BMS_fault_latch = false;
-uint32_t BMS_fault_delay_timer = 0;
 uint32_t BMS_charge_delay_timer = 0;
 uint32_t BMS_discharge_delay_timer = 0;
 
@@ -321,36 +320,27 @@ void LTC_Balancing_handler(void)
 
 void BMS_IO_handler(void)
 {
-	bool local_Charge_permitted = true;
-	bool local_Discharge_permitted = true;
-	bool local_BMS_Health = true;
-
 	if (BMS.Health != BMS_Health_OK)
-		local_BMS_Health = false;
+	{
+		BMS_fault_latch = true;
+		BMS_Charge_permitted = false;
+		BMS_Discharge_permitted = false;
+		return;
+	}
 
 	for (uint8_t y = 0; y < BMS_cell_count; y++)
 	{
 		if (BMS.Cell_OV[y])
-			local_Charge_permitted = false;
+			BMS_Charge_permitted = false;
 		if (BMS.Cell_UV[y])
-			local_Discharge_permitted = false;
+			BMS_Discharge_permitted = false;
 	}
 
-	if (local_Charge_permitted && !BMS_Charge_permitted && local_BMS_Health)
-	{
-		if (Global_Max_U <= (BMS_OV_recovery))
-			BMS_Charge_permitted = true;
-	}
-	else
-		BMS_Charge_permitted = false;
+	if (!BMS_Charge_permitted && (Global_Max_U <= BMS_OV_recovery))
+		BMS_Charge_permitted = true;
 
-	if (local_Discharge_permitted && !BMS_Discharge_permitted && local_BMS_Health)
-	{
-		if (Global_Min_U >= BMS_UV_recovery)
-			BMS_Discharge_permitted = true;
-	}
-	else
-		BMS_Discharge_permitted = local_Discharge_permitted;
+	if (!BMS_Discharge_permitted && (Global_Min_U >= BMS_UV_recovery))
+		BMS_Discharge_permitted = true;
 }
 
 void LTC_handler()

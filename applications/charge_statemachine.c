@@ -10,6 +10,7 @@
 
 #include "maraneo_vars.h"
 #include "charge_statemachine.h"
+#include "LTC6804_handler.h"
 
 #include "commands.h"  // debug
 
@@ -58,6 +59,12 @@ void charge_statemachine()
 	case chgst_wait_for_charger:
 		I_CHG_offset = I_CHG_filt;
 
+		if (U_CHG > 20.0)
+		{
+			Motor_lock = true;
+			Motor_lock_timer = chVTGetSystemTimeX();
+		}
+
 		if ((U_CHG > U_DC) && (U_DC < 40.0))
 		{
 			CHRG_ON;
@@ -80,7 +87,7 @@ void charge_statemachine()
 	break;
 
 	case chgst_charging:
-		if ((U_DC >= 41.0) || (I_CHG < 0.5))
+		if ((U_DC >= 41.0) || (I_CHG < 0.5) || (!BMS_Charge_permitted))
 		{
 			CHRG_OFF;
 
@@ -89,6 +96,9 @@ void charge_statemachine()
 	break;
 
 	case chgst_charge_finished:
+		// count chagre cycle
+
+	case chgst_error:
 		if (U_CHG < 20.0)
 			chg_state = chgst_wait_for_charger;
 	break;

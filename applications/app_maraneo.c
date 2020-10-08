@@ -34,6 +34,7 @@
 #include "LTC6804_handler.h"
 #include "maraneo_vars.h"
 #include "charge_statemachine.h"
+#include "Battery_config.h"
 
 #include <math.h>
 #include <string.h>
@@ -44,8 +45,10 @@ static THD_FUNCTION(my_thread, arg);
 static THD_WORKING_AREA(my_thread_wa, 2048);
 
 // Private functions
+static void pwm_callback(void);
 static void BMS_cb_status(int argc, const char **argv);
 static void BMS_charg_en(int argc, const char **argv);
+static void BMS_config(int argc, const char **argv);
 
 // Private variables
 static volatile bool stop_now = true;
@@ -54,6 +57,9 @@ static volatile bool is_running = false;
 volatile float U_DC = 0, U_DC_filt = 0;
 volatile float U_CHG = 0, U_CHG_filt = 0;
 volatile float I_CHG = 0, I_CHG_filt = 0, I_CHG_offset = 0;
+
+volatile bool Motor_lock = true;
+volatile uint32_t Motor_lock_timer;
 
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
@@ -64,6 +70,8 @@ void app_custom_start(void)
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
 			NORMALPRIO, my_thread, NULL);
+
+	mc_interface_set_pwm_callback(pwm_callback);
 
 	// Terminal commands for the VESC Tool terminal can be registered.
 	terminal_register_command_callback(
@@ -78,6 +86,12 @@ void app_custom_start(void)
 			"[d]",
 			BMS_charg_en);
 
+	terminal_register_command_callback(
+			"bms_config",
+			"set BMS parameter",
+			"[s] [f]",
+			BMS_config);
+
 	LTC_handler_Init();
 }
 
@@ -88,8 +102,10 @@ void app_custom_stop(void)
 	charge_en = false;
 	CHRG_OFF;
 
+	mc_interface_set_pwm_callback(0);
 	terminal_unregister_callback(BMS_cb_status);
 	terminal_unregister_callback(BMS_charg_en);
+	terminal_unregister_callback(BMS_config);
 
 	stop_now = true;
 	while (is_running) {
@@ -100,6 +116,24 @@ void app_custom_stop(void)
 void app_custom_configure(app_configuration *conf)
 {
 	(void)conf;
+}
+
+void Safty_checks(void)
+{
+	if (!BMS_Discharge_permitted)
+	{
+		Motor_lock = true;
+		Motor_lock_timer = chVTGetSystemTimeX();
+	}
+
+	if (mc_interface_get_rpm() > 20000)
+	{
+		Motor_lock = true;
+		Motor_lock_timer = chVTGetSystemTimeX();
+	}
+
+	if (Motor_lock && (chVTTimeElapsedSinceX(BMS.last_CV) > S2ST(30)))
+		Motor_lock = false;
 }
 
 static THD_FUNCTION(my_thread, arg)
@@ -117,7 +151,8 @@ static THD_FUNCTION(my_thread, arg)
 			return;
 		}
 
-		timeout_reset(); // Reset timeout if everything is OK.
+		if (!Motor_lock)
+			timeout_reset(); // Reset timeout if everything is OK.
 
 		U_DC_filt -= U_DC_filt/10;
 		U_DC_filt += GET_INPUT_VOLTAGE();
@@ -134,9 +169,102 @@ static THD_FUNCTION(my_thread, arg)
 
 		LTC_handler();
 		charge_statemachine();
+		Safty_checks();
+
 		chThdSleepMilliseconds(10);
 	}
 }
+
+static void pwm_callback(void)
+{
+	if ((ADC_Value[7] > 3686) || (ADC_Value[7] < 1938))  // Chargeport Overcurrent or Short
+	{
+		CHRG_OFF;
+		chg_state =chgst_error;
+	}
+}
+
+static void BMS_config(int argc, const char **argv)
+{
+	if (argc == 1)  // print all parameters and their setting
+	{
+		commands_printf("%-20s: %d", "BMS_cell_count", BMS_cell_count);
+		commands_printf("%-20s: %d", "BMS_temp_count", BMS_temp_count);
+		commands_printf("%-20s: %.3fV", "BMS_OV", (double) BMS_OV);
+		commands_printf("%-20s: %.1fs", "BMS_OV_delay", (double) BMS_OV_delay);
+		commands_printf("%-20s: %.3fV", "BMS_hard_OV", (double) BMS_hard_OV);
+		commands_printf("%-20s: %.2fV", "BMS_OV_recovery", (double) BMS_OV_recovery);
+		commands_printf("%-20s: %.3fV", "BMS_Balance_U", (double) BMS_Balance_U);
+		commands_printf("%-20s: %.3fV", "BMS_soft_UV", (double) BMS_soft_UV);
+		commands_printf("%-20s: %.1fs", "BMS_UV_Delay", (double) BMS_UV_Delay);
+		commands_printf("%-20s: %.3fV", "BMS_hard_UV", (double) BMS_hard_UV);
+		commands_printf("%-20s: %.3fV", "BMS_UV_recovery", (double) BMS_UV_recovery);
+		commands_printf("%-20s: %.1f°C", "BMS_soft_COT", (double) BMS_soft_COT);
+		commands_printf("%-20s: %.1fs", "BMS_COT_Delay", (double) BMS_COT_Delay);
+		commands_printf("%-20s: %.1f°C", "BMS_hard_COT", (double) BMS_hard_COT);
+		commands_printf("%-20s: %.1f°C", "BMS_soft_DOT", (double) BMS_soft_DOT);
+		commands_printf("%-20s: %.1fs", "BMS_DOT_Delay", (double) BMS_DOT_Delay);
+		commands_printf("%-20s: %.1f°C", "BMS_soft_UT", (double) BMS_soft_UT);
+		commands_printf("%-20s: %.1fs", "BMS_UT_Delay", (double) BMS_UT_Delay);
+		commands_printf("%-20s: %.1f°C", "BMS_hard_UT", (double) BMS_hard_UT);
+		commands_printf("%-20s: %d\n", "BMS_Temp_beta", BMS_Temp_beta);
+	}
+	else if (argc == 3)
+	{
+		int ret = 0;
+
+		if (!strcmp(argv[1], "BMS_cell_count"))
+			ret = sscanf(argv[2], "%d", (int *) &BMS_cell_count);
+		else if (!strcmp(argv[1], "BMS_temp_count"))
+			ret = sscanf(argv[2], "%d", (int *) &BMS_temp_count);
+		else if (!strcmp(argv[1], "BMS_OV"))
+			ret = sscanf(argv[2], "%f", &BMS_OV);
+		else if (!strcmp(argv[1], "BMS_OV_delay"))
+			ret = sscanf(argv[2], "%f", &BMS_OV_delay);
+		else if (!strcmp(argv[1], "BMS_hard_OV"))
+			ret = sscanf(argv[2], "%f", &BMS_hard_OV);
+		else if (!strcmp(argv[1], "BMS_OV_recovery"))
+			ret = sscanf(argv[2], "%f", &BMS_OV_recovery);
+		else if (!strcmp(argv[1], "BMS_Balance_U"))
+			ret = sscanf(argv[2], "%f", &BMS_Balance_U);
+		else if (!strcmp(argv[1], "BMS_soft_UV"))
+			ret = sscanf(argv[2], "%f", &BMS_soft_UV);
+		else if (!strcmp(argv[1], "BMS_UV_Delay"))
+			ret = sscanf(argv[2], "%f", &BMS_UV_Delay);
+		else if (!strcmp(argv[1], "BMS_hard_UV"))
+			ret = sscanf(argv[2], "%f", &BMS_hard_UV);
+		else if (!strcmp(argv[1], "BMS_UV_recovery"))
+			ret = sscanf(argv[2], "%f", &BMS_UV_recovery);
+		else if (!strcmp(argv[1], "BMS_soft_COT"))
+			ret = sscanf(argv[2], "%f", &BMS_soft_COT);
+		else if (!strcmp(argv[1], "BMS_COT_Delay"))
+			ret = sscanf(argv[2], "%f", &BMS_COT_Delay);
+		else if (!strcmp(argv[1], "BMS_hard_COT"))
+			ret = sscanf(argv[2], "%f", &BMS_hard_COT);
+		else if (!strcmp(argv[1], "BMS_soft_DOT"))
+			ret = sscanf(argv[2], "%f", &BMS_soft_DOT);
+		else if (!strcmp(argv[1], "BMS_DOT_Delay"))
+			ret = sscanf(argv[2], "%f", &BMS_DOT_Delay);
+		else if (!strcmp(argv[1], "BMS_soft_UT"))
+			ret = sscanf(argv[2], "%f", &BMS_soft_UT);
+		else if (!strcmp(argv[1], "BMS_UT_Delay"))
+			ret = sscanf(argv[2], "%f", &BMS_UT_Delay);
+		else if (!strcmp(argv[1], "BMS_hard_UT"))
+			ret = sscanf(argv[2], "%f", &BMS_hard_UT);
+		else if (!strcmp(argv[1], "BMS_Temp_beta"))
+			ret = sscanf(argv[2], "%d", (int *) &BMS_Temp_beta);
+		else
+			commands_printf("Unrecognized parameter name\n");
+
+		if (ret == 1)
+			commands_printf("OK\n");
+		else
+			commands_printf("Illegal parameter value\n");
+	}
+	else
+		commands_printf("Wrong parameter count\n");
+}
+
 
 static void BMS_cb_status(int argc, const char **argv)
 {

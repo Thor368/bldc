@@ -23,9 +23,6 @@ extern float BMS_soft_UV;
 extern float BMS_UV_Delay;
 extern float BMS_hard_UV;
 extern float BMS_UV_recovery;
-extern float BMS_soft_OC;
-extern float BMS_OC_Delay;
-extern float BMS_hard_OC;
 extern float BMS_soft_COT;
 extern float BMS_COT_Delay;
 extern float BMS_hard_COT;
@@ -34,6 +31,7 @@ extern float BMS_DOT_Delay;
 extern float BMS_soft_UT;
 extern float BMS_UT_Delay;
 extern float BMS_hard_UT;
+extern uint32_t BMS_Temp_beta;
 
 #ifndef BMS_ITMP_LIM			// [°C] Temperature limit while balancing
 #define BMS_ITMP_LIM			70
@@ -41,19 +39,6 @@ extern float BMS_hard_UT;
 
 #ifndef BMS_ITMP_HYST			// [°C] Hysteresis for temperature limit
 #define BMS_ITMP_HYST			8
-#endif
-
-#ifndef BMS_I_SENSOR			// [A/c] Counts per A
-#define BMS_I_SENSOR
-#define BMS_C_PER_A				0.0090909090909090909090909090909091
-#endif
-
-#ifndef BMS_Temp_beta			// beta of connected NTCs
-#define BMS_Temp_beta			3380
-#endif
-
-#ifndef BMS_fault_delay
-#define BMS_fault_delay			10000
 #endif
 
 #endif /* BMS_BATTERY_CONFIG_H_ */

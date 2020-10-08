@@ -18,7 +18,8 @@ typedef enum
 	chgst_wait_for_charger,
 	chgst_wait_1s,
 	chgst_charging,
-	chgst_charge_finished
+	chgst_charge_finished,
+	chgst_error
 } CHG_state_t;
 
 extern CHG_state_t chg_state;

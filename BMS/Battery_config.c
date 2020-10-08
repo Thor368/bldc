@@ -3,7 +3,7 @@
 #ifdef BMS_cell_count_set						// Number of connected cells
 uint32_t BMS_cell_count = BMS_cell_count_set;
 #else
-uint32_t BMS_cell_count = 10;
+uint32_t BMS_cell_count = 12;
 #endif
 
 #ifdef BMS_temp_count_set						// Number of connected NTCs
@@ -66,24 +66,6 @@ float BMS_UV_recovery = BMS_UV_recovery_set;
 float BMS_UV_recovery = 3.0;
 #endif
 
-#ifdef BMS_soft_OC_set						// [A] Soft overcurrent threshold
-float BMS_soft_OC = BMS_soft_OC_set;
-#else
-float BMS_soft_OC = 25.0;
-#endif
-
-#ifdef BMS_OC_Delay_set						// [s] Soft overcurrent delay
-float BMS_OC_Delay = BMS_OC_Delay_set;
-#else
-float BMS_OC_Delay = 3.0;
-#endif
-
-#ifdef BMS_hard_OC_set						// [A] Hard overcurrent threshold
-float BMS_hard_OC = BMS_hard_OC_set;
-#else
-float BMS_hard_OC = 40.0;
-#endif
-
 #ifdef BMS_soft_COT_set						// [°C] Soft cell overtemperature while charging threshold
 float BMS_soft_COT = BMS_soft_COT_set;
 #else
@@ -130,4 +112,10 @@ float BMS_UT_Delay = 3.0;
 float BMS_hard_UT = BMS_hard_UT_set;
 #else
 float BMS_hard_UT = -5.0;
+#endif
+
+#ifdef BMS_Temp_beta_set					// B25/50 value of connected sensors
+uint23_t BMS_Temp_beta = BMS_Temp_beta_set;
+#else
+uint32_t BMS_Temp_beta = 3380;
 #endif
