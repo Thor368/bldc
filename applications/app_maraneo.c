@@ -61,6 +61,143 @@ volatile float I_CHG = 0, I_CHG_filt = 0, I_CHG_offset = 0;
 volatile bool Motor_lock = true;
 volatile uint32_t Motor_lock_timer;
 
+void mar_write_conf(void)
+{
+	eeprom_var mar_conf;
+
+	mar_conf.as_u32 = MAR_CONF_VERSION;
+	conf_general_store_eeprom_var_custom(&mar_conf, 0);
+
+	mar_conf.as_u32 = BMS_cell_count;
+	conf_general_store_eeprom_var_custom(&mar_conf, 1);
+
+	mar_conf.as_u32 = BMS_temp_count;
+	conf_general_store_eeprom_var_custom(&mar_conf, 2);
+
+	mar_conf.as_float = BMS_OV;
+	conf_general_store_eeprom_var_custom(&mar_conf, 3);
+
+	mar_conf.as_float = BMS_OV_delay;
+	conf_general_store_eeprom_var_custom(&mar_conf, 4);
+
+	mar_conf.as_float = BMS_hard_OV;
+	conf_general_store_eeprom_var_custom(&mar_conf, 5);
+
+	mar_conf.as_float = BMS_OV_recovery;
+	conf_general_store_eeprom_var_custom(&mar_conf, 6);
+
+	mar_conf.as_float = BMS_Balance_U;
+	conf_general_store_eeprom_var_custom(&mar_conf, 7);
+
+	mar_conf.as_float = BMS_soft_UV;
+	conf_general_store_eeprom_var_custom(&mar_conf, 8);
+
+	mar_conf.as_float = BMS_UV_Delay;
+	conf_general_store_eeprom_var_custom(&mar_conf, 9);
+
+	mar_conf.as_float = BMS_hard_UV;
+	conf_general_store_eeprom_var_custom(&mar_conf, 10);
+
+	mar_conf.as_float = BMS_UV_recovery;
+	conf_general_store_eeprom_var_custom(&mar_conf, 11);
+
+	mar_conf.as_float = BMS_soft_COT;
+	conf_general_store_eeprom_var_custom(&mar_conf, 12);
+
+	mar_conf.as_float = BMS_COT_Delay;
+	conf_general_store_eeprom_var_custom(&mar_conf, 13);
+
+	mar_conf.as_float = BMS_hard_COT;
+	conf_general_store_eeprom_var_custom(&mar_conf, 14);
+
+	mar_conf.as_float = BMS_soft_DOT;
+	conf_general_store_eeprom_var_custom(&mar_conf, 15);
+
+	mar_conf.as_float = BMS_DOT_Delay;
+	conf_general_store_eeprom_var_custom(&mar_conf, 16);
+
+	mar_conf.as_float = BMS_soft_UT;
+	conf_general_store_eeprom_var_custom(&mar_conf, 17);
+
+	mar_conf.as_float = BMS_UT_Delay;
+	conf_general_store_eeprom_var_custom(&mar_conf, 18);
+
+	mar_conf.as_float = BMS_hard_UT;
+	conf_general_store_eeprom_var_custom(&mar_conf, 19);
+
+	mar_conf.as_u32 = BMS_Temp_beta;
+	conf_general_store_eeprom_var_custom(&mar_conf, 20);
+}
+
+void mar_read_config(void)
+{
+	eeprom_var mar_conf;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 0);
+	if (mar_conf.as_u32 != MAR_CONF_VERSION)
+		mar_write_conf();
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 1);
+	BMS_cell_count = mar_conf.as_u32;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 2);
+	BMS_temp_count = mar_conf.as_u32;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 3);
+	BMS_OV = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 4);
+	BMS_OV_delay = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 5);
+	BMS_hard_OV = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 6);
+	BMS_OV_recovery = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 7);
+	BMS_Balance_U = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 8);
+	BMS_soft_UV = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 9);
+	BMS_UV_Delay = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 10);
+	BMS_hard_UV = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 11);
+	BMS_UV_recovery = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 12);
+	BMS_soft_COT = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 13);
+	BMS_COT_Delay = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 14);
+	BMS_hard_COT = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 15);
+	BMS_soft_DOT = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 16);
+	BMS_DOT_Delay = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 17);
+	BMS_soft_UT = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 18);
+	BMS_UT_Delay = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 19);
+	BMS_hard_UT = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, 20);
+	BMS_Temp_beta = mar_conf.as_u32;
+}
+
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
 void app_custom_start(void)
@@ -93,6 +230,7 @@ void app_custom_start(void)
 			BMS_config);
 
 	LTC_handler_Init();
+	mar_read_config();
 }
 
 // Called when the custom application is stopped. Stop our threads
@@ -257,7 +395,10 @@ static void BMS_config(int argc, const char **argv)
 			commands_printf("Unrecognized parameter name\n");
 
 		if (ret == 1)
+		{
 			commands_printf("OK\n");
+			mar_write_conf();
+		}
 		else
 			commands_printf("Illegal parameter value\n");
 	}

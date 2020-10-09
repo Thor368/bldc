@@ -8,6 +8,8 @@
 #ifndef APPLICATIONS_MARANEO_VARS_H_
 #define APPLICATIONS_MARANEO_VARS_H_
 
+#define MAR_CONF_VERSION	1
+
 extern volatile float U_DC, U_DC_filt;
 extern volatile float U_CHG, U_CHG_filt;
 extern volatile float I_CHG, I_CHG_filt, I_CHG_offset;
