@@ -61,6 +61,8 @@ volatile float I_CHG = 0, I_CHG_filt = 0, I_CHG_offset = 0;
 volatile bool Motor_lock = true;
 volatile uint32_t Motor_lock_timer;
 
+volatile uint32_t CAN_timer;
+
 void mar_write_conf(void)
 {
 	eeprom_var mar_conf;
@@ -198,6 +200,24 @@ void mar_read_config(void)
 	BMS_Temp_beta = mar_conf.as_u32;
 }
 
+void mar_CAN_status(void)
+{
+	float tmp = Global_Max_U;
+	comm_can_transmit_eid(0x00FEFF, (uint8_t *) &tmp, sizeof(tmp));
+
+	tmp = Global_Min_U;
+	comm_can_transmit_eid(0x01FEFF, (uint8_t *) &tmp, sizeof(tmp));
+
+	tmp = U_CHG;
+	comm_can_transmit_eid(0x01FEFF, (uint8_t *) &tmp, sizeof(tmp));
+
+	tmp = I_CHG;
+	comm_can_transmit_eid(0x01FEFF, (uint8_t *) &tmp, sizeof(tmp));
+
+	tmp = chg_state;
+	comm_can_transmit_eid(0x01FEFF, (uint8_t *) &tmp, sizeof(tmp));
+}
+
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
 void app_custom_start(void)
@@ -231,6 +251,8 @@ void app_custom_start(void)
 
 	LTC_handler_Init();
 	mar_read_config();
+
+	CAN_timer = chVTGetSystemTimeX();
 }
 
 // Called when the custom application is stopped. Stop our threads
@@ -309,6 +331,12 @@ static THD_FUNCTION(my_thread, arg)
 		charge_statemachine();
 		Safty_checks();
 
+		if (chVTTimeElapsedSinceX(BMS.last_CV) > MS2ST(100))
+		{
+			mar_CAN_status();
+			CAN_timer = chVTGetSystemTimeX();
+		}
+
 		chThdSleepMilliseconds(10);
 	}
 }
@@ -318,7 +346,7 @@ static void pwm_callback(void)
 	if ((ADC_Value[7] > 3686) || (ADC_Value[7] < 1938))  // Chargeport Overcurrent or Short
 	{
 		CHRG_OFF;
-		chg_state =chgst_error;
+		chg_state = chgst_error;
 	}
 }
 
@@ -391,6 +419,13 @@ static void BMS_config(int argc, const char **argv)
 			ret = sscanf(argv[2], "%f", &BMS_hard_UT);
 		else if (!strcmp(argv[1], "BMS_Temp_beta"))
 			ret = sscanf(argv[2], "%d", (int *) &BMS_Temp_beta);
+		else if (!strcmp(argv[1], "BMS_set_cycles"))
+		{
+			eeprom_var chg_cy;
+			conf_general_read_eeprom_var_custom(&chg_cy, 63);
+			ret = sscanf(argv[2], "%d", (int *) &chg_cy.as_u32);
+			conf_general_store_eeprom_var_custom(&chg_cy, 63);
+		}
 		else
 			commands_printf("Unrecognized parameter name\n");
 
@@ -430,6 +465,10 @@ static void BMS_cb_status(int argc, const char **argv)
 	commands_printf("Present: %d", BMS.BMS_present);
 	commands_printf("Balance permission: %d", BMS.Balance_Permission);
 	commands_printf("Balance derating: %d", BMS.Balance_derating);
+
+	eeprom_var chg_cy;
+	conf_general_read_eeprom_var_custom(&chg_cy, 63);
+	commands_printf("Charge cycles: %d", chg_cy.as_u32);
 
 	commands_printf("\nSELFCHECK");
 	commands_printf("Cell test passed: %d", BMS.Cell_Test_Passed);

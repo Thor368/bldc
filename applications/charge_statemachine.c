@@ -27,6 +27,14 @@ void chg_init()
 	charge_en = true;
 }
 
+void chg_increment_counter(void)
+{
+	eeprom_var chg_cy;
+	conf_general_read_eeprom_var_custom(&chg_cy, 63);
+	chg_cy.as_u32++;
+	conf_general_store_eeprom_var_custom(&chg_cy, 63);
+}
+
 
 void charge_statemachine()
 {
@@ -96,8 +104,7 @@ void charge_statemachine()
 	break;
 
 	case chgst_charge_finished:
-		// count chagre cycle
-
+		chg_increment_counter();
 	case chgst_error:
 		if (U_CHG < 20.0)
 			chg_state = chgst_wait_for_charger;
