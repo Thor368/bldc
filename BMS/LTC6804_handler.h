@@ -61,7 +61,6 @@ typedef struct
 	bool Open_Cell_Connection[12];
 	bool Wrong_Cell_Count;
 	BMS_Health_t Health;
-	BMS_AUX_t Aux;
 	
 	float Cell_U[12];
 	float Cell_Min_U;
@@ -98,6 +97,8 @@ extern float Global_Min_U;
 extern bool BMS_Charge_permitted;
 extern bool BMS_Discharge_permitted;
 extern bool BMS_fault_latch;
+
+extern float BMS_Discharge_Limit;
 
 void LTC_handler_Init(void);
 

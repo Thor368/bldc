@@ -66,137 +66,145 @@ volatile uint32_t CAN_timer;
 void mar_write_conf(void)
 {
 	eeprom_var mar_conf;
+	int pp = 0;
 
 	mar_conf.as_u32 = MAR_CONF_VERSION;
-	conf_general_store_eeprom_var_custom(&mar_conf, 0);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_u32 = BMS_cell_count;
-	conf_general_store_eeprom_var_custom(&mar_conf, 1);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_u32 = BMS_temp_count;
-	conf_general_store_eeprom_var_custom(&mar_conf, 2);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_OV;
-	conf_general_store_eeprom_var_custom(&mar_conf, 3);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_OV_delay;
-	conf_general_store_eeprom_var_custom(&mar_conf, 4);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_hard_OV;
-	conf_general_store_eeprom_var_custom(&mar_conf, 5);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_OV_recovery;
-	conf_general_store_eeprom_var_custom(&mar_conf, 6);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_Balance_U;
-	conf_general_store_eeprom_var_custom(&mar_conf, 7);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_soft_UV;
-	conf_general_store_eeprom_var_custom(&mar_conf, 8);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_UV_Delay;
-	conf_general_store_eeprom_var_custom(&mar_conf, 9);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_hard_UV;
-	conf_general_store_eeprom_var_custom(&mar_conf, 10);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_UV_recovery;
-	conf_general_store_eeprom_var_custom(&mar_conf, 11);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_soft_COT;
-	conf_general_store_eeprom_var_custom(&mar_conf, 12);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_COT_Delay;
-	conf_general_store_eeprom_var_custom(&mar_conf, 13);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_hard_COT;
-	conf_general_store_eeprom_var_custom(&mar_conf, 14);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_soft_DOT;
-	conf_general_store_eeprom_var_custom(&mar_conf, 15);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_DOT_Delay;
-	conf_general_store_eeprom_var_custom(&mar_conf, 16);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
+
+	mar_conf.as_float = BMS_hard_DOT;
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_soft_UT;
-	conf_general_store_eeprom_var_custom(&mar_conf, 17);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_UT_Delay;
-	conf_general_store_eeprom_var_custom(&mar_conf, 18);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_float = BMS_hard_UT;
-	conf_general_store_eeprom_var_custom(&mar_conf, 19);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_u32 = BMS_Temp_beta;
-	conf_general_store_eeprom_var_custom(&mar_conf, 20);
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 }
 
 void mar_read_config(void)
 {
 	eeprom_var mar_conf;
+	int pp = 0;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 0);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	if (mar_conf.as_u32 != MAR_CONF_VERSION)
 		mar_write_conf();
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 1);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_cell_count = mar_conf.as_u32;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 2);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_temp_count = mar_conf.as_u32;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 3);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_OV = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 4);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_OV_delay = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 5);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_hard_OV = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 6);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_OV_recovery = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 7);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_Balance_U = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 8);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_soft_UV = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 9);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_UV_Delay = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 10);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_hard_UV = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 11);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_UV_recovery = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 12);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_soft_COT = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 13);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_COT_Delay = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 14);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_hard_COT = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 15);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_soft_DOT = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 16);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_DOT_Delay = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 17);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
+	BMS_hard_DOT = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_soft_UT = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 18);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_UT_Delay = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 19);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_hard_UT = mar_conf.as_float;
 
-	conf_general_read_eeprom_var_custom(&mar_conf, 20);
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_Temp_beta = mar_conf.as_u32;
 }
 
@@ -209,13 +217,16 @@ void mar_CAN_status(void)
 	comm_can_transmit_eid(0x01FEFF, (uint8_t *) &tmp, sizeof(tmp));
 
 	tmp = U_CHG;
-	comm_can_transmit_eid(0x01FEFF, (uint8_t *) &tmp, sizeof(tmp));
+	comm_can_transmit_eid(0x02FEFF, (uint8_t *) &tmp, sizeof(tmp));
 
 	tmp = I_CHG;
-	comm_can_transmit_eid(0x01FEFF, (uint8_t *) &tmp, sizeof(tmp));
+	comm_can_transmit_eid(0x03FEFF, (uint8_t *) &tmp, sizeof(tmp));
 
 	tmp = chg_state;
-	comm_can_transmit_eid(0x01FEFF, (uint8_t *) &tmp, sizeof(tmp));
+	comm_can_transmit_eid(0x04FEFF, (uint8_t *) &tmp, sizeof(tmp));
+
+	tmp = BMS_Discharge_Limit;
+	comm_can_transmit_eid(0x05FEFF, (uint8_t *) &tmp, sizeof(tmp));
 }
 
 // Called when the custom application is started. Start our

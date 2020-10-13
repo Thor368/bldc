@@ -28,6 +28,7 @@ extern float BMS_COT_Delay;
 extern float BMS_hard_COT;
 extern float BMS_soft_DOT;
 extern float BMS_DOT_Delay;
+extern float BMS_hard_DOT;
 extern float BMS_soft_UT;
 extern float BMS_UT_Delay;
 extern float BMS_hard_UT;

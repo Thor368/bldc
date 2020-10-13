@@ -87,13 +87,19 @@ float BMS_hard_COT = 42.0;
 #ifdef BMS_soft_DOT_set						// [°C] Soft cell overtemperature while discharging threshold
 float BMS_soft_DOT = BMS_soft_DOT_set;
 #else
-float BMS_soft_DOT = 65;
+float BMS_soft_DOT = 55;
 #endif
 
 #ifdef BMS_DOT_Delay_set					// [s] Soft cell overtemperature while discharging delay
 float BMS_DOT_Delay = BMS_DOT_Delay_set;
 #else
 float BMS_DOT_Delay = 3.0;
+#endif
+
+#ifdef BMS_hard_DOT_set						// [°C] Soft cell overtemperature while discharging threshold
+float BMS_hard_DOT = BMS_hard_DOT_set;
+#else
+float BMS_hard_DOT = 65;
 #endif
 
 #ifdef BMS_soft_UT_set						// [°C] Soft cell undertemperature

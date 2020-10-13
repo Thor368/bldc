@@ -13,13 +13,7 @@ systime_t BMS_Balance_Timer;
 
 float Global_Max_U = 0;
 float Global_Min_U = 0;
-
-#ifdef BMS_I_SENSOR
-float Battery_I = 0;
-uint32_t Battery_I_offset = 0;
-uint32_t Battery_I_offset_coutner = 0;
-uint32_t Battery_I_offset_timer = 0;
-#endif
+float BMS_Discharge_Limit = 0;
 
 bool BMS_Charge_permitted = true;
 bool BMS_Discharge_permitted = true;
@@ -52,7 +46,6 @@ void BMS_RES_sets(BMS_t *chip)
 	chip->Balance_derating = 0;
 	chip->Balance_timer = 0;
 	chip->Health = BMS_Health_Error_Non_Operational;
-	chip->Aux = BMS_AUX_Current_Temp;
 	chip->chip.MD = 3;
 	chip->chip.DCP = 0;
 	chip->chip.CH = 0;
@@ -206,11 +199,40 @@ void BMS_Calc_Voltages(BMS_t *chip)
 
 void BMS_Calc_Temp(BMS_t *chip)
 {
-	chip->Temp_sensors[0] = LTC_TEMP(chip->chip.AVAR.G1V);
-	chip->Temp_sensors[1] = LTC_TEMP(chip->chip.AVAR.G2V);
-	chip->Temp_sensors[2] = LTC_TEMP(chip->chip.AVAR.G3V);
-	chip->Temp_sensors[3] = LTC_TEMP(chip->chip.AVBR.G4V);
-	chip->Temp_sensors[4] = LTC_TEMP(chip->chip.AVBR.G5V);
+	if (chip->chip.AVAR.G1V > 30000)
+		chip->Temp_sensors[0] = -20;
+	else if (chip->chip.AVAR.G1V < 2158)
+		chip->Temp_sensors[0] = 100;
+	else
+		chip->Temp_sensors[0] = LTC_TEMP(chip->chip.AVAR.G1V);
+
+	if (chip->chip.AVAR.G2V > 30000)
+		chip->Temp_sensors[1] = -20;
+	else if (chip->chip.AVAR.G2V < 2158)
+		chip->Temp_sensors[1] = 100;
+	else
+		chip->Temp_sensors[1] = LTC_TEMP(chip->chip.AVAR.G2V);
+
+	if (chip->chip.AVAR.G3V > 30000)
+		chip->Temp_sensors[2] = -20;
+	else if (chip->chip.AVAR.G3V < 2158)
+		chip->Temp_sensors[2] = 100;
+	else
+		chip->Temp_sensors[2] = LTC_TEMP(chip->chip.AVAR.G3V);
+
+	if (chip->chip.AVBR.G4V > 30000)
+		chip->Temp_sensors[3] = -20;
+	else if (chip->chip.AVBR.G4V < 2158)
+		chip->Temp_sensors[3] = 100;
+	else
+		chip->Temp_sensors[3] = LTC_TEMP(chip->chip.AVBR.G4V);
+
+	if (chip->chip.AVBR.G5V > 30000)
+		chip->Temp_sensors[4] = -20;
+	else if (chip->chip.AVBR.G5V < 2158)
+		chip->Temp_sensors[4] = 100;
+	else
+		chip->Temp_sensors[4] = LTC_TEMP(chip->chip.AVBR.G5V);
 }
 
 void BMS_Selfcheck(BMS_t* chip)
@@ -343,10 +365,53 @@ void BMS_IO_handler(void)
 		BMS_Discharge_permitted = true;
 }
 
+void BMS_Limits(void)
+{
+	static float UV_limit = 0;
+	static float OT_limit = 0;
+	static float UT_limit = 0;
+
+	if (Global_Min_U > BMS_soft_UV)
+		UV_limit = 1;
+	else if (Global_Min_U < BMS_hard_UV)
+		UV_limit = 0;
+	else
+		UV_limit = (Global_Min_U - BMS_hard_UV)/(BMS_soft_UV - BMS_hard_UV);
+
+	float temp = BMS.Temp_sensors[0];
+	for (uint8_t i = 1; i < 5; i++)
+		if (BMS.Temp_sensors[i] > temp)
+			temp = BMS.Temp_sensors[i];
+	if (temp < BMS_soft_DOT)
+		OT_limit = 1;
+	else if (temp > BMS_hard_DOT)
+		OT_limit = 0;
+	else
+		OT_limit = (BMS_hard_DOT - temp)/(BMS_hard_DOT - BMS_soft_DOT);
+
+	temp = BMS.Temp_sensors[0];
+	for (uint8_t i = 1; i < 5; i++)
+		if (BMS.Temp_sensors[i] < temp)
+			temp = BMS.Temp_sensors[i];
+	if (temp > BMS_soft_UT)
+		UT_limit = 1;
+	else if (temp < BMS_hard_UT)
+		UT_limit = 0;
+	else
+		UT_limit = (temp - BMS_hard_UT)/(BMS_soft_UT - BMS_hard_UT);
+
+	BMS_Discharge_Limit = UT_limit;
+	if (OT_limit < BMS_Discharge_Limit)
+		BMS_Discharge_Limit = OT_limit;
+	if (UV_limit < BMS_Discharge_Limit)
+		BMS_Discharge_Limit = UV_limit;
+}
+
 void LTC_handler()
 {
 	LTC_Balancing_handler();
 	BMS_IO_handler();
+	BMS_Limits();
 
 	switch (BMS.Status)
 	{
@@ -588,16 +653,10 @@ void LTC_handler()
 		case SAMPLE_AUX:
 			if (LTC_Start(&(BMS.chip), LTC_START_PLADC))
 			{
-				if ((BMS.Aux == BMS_AUX_Current_Temp) ||
-					(BMS.Aux == BMS_AUX_Temp))
-				{
-					BMS.chip.MD = 3;
-					BMS.chip.CHG = 0;
-					LTC_Start(&(BMS.chip), LTC_START_ADAX);
-					BMS.Status = READ_AUX;
-				}
-				else
-					BMS.Status = SAMPLE_CV;
+				BMS.chip.MD = 3;
+				BMS.chip.CHG = 0;
+				LTC_Start(&(BMS.chip), LTC_START_ADAX);
+				BMS.Status = READ_AUX;
 			}
 		break;
 
@@ -611,35 +670,6 @@ void LTC_handler()
 				}
 
 				BMS_Calc_Temp(&BMS);
-
-
-#ifdef BMS_I_SENSOR
-				if (Battery_I_offset_coutner < 10)
-				{
-					if ((BMS.chip.AVBR.G5V > 15500) &&
-						(BMS.chip.AVBR.G5V < 17500))
-					{
-						if (chVTTimeElapsedSinceX(Battery_I_offset_timer) > S2ST(1))
-						{
-							Battery_I_offset_timer = chVTGetSystemTimeX();  // 1s
-							Battery_I_offset_coutner++;
-							Battery_I_offset += BMS.chip.AVBR.G5V;
-						}
-					}
-				}
-				else if (Battery_I_offset < 100)
-				{
-					Battery_I_offset /= 10;
-					if ((Battery_I_offset > 15500) && (Battery_I_offset < 17500))
-					{
-						Battery_I_offset = 0;
-						Battery_I_offset_coutner = 0;
-						Battery_I_offset_timer = chVTGetSystemTimeX();  // 1s
-					}
-				}
-				else
-					Battery_I = BMS_Calc_Current(BMS, Battery_I_offset);
-#endif
 
 				BMS.Status = SAMPLE_CV;
 			}
