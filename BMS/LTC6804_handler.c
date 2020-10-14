@@ -117,7 +117,7 @@ void BMS_Check_Voltage(BMS_t *chip)
 			chip->Cell_OV[i] = false;
 		else if (chip->Cell_U[i] >= BMS_hard_OV)
 			chip->Cell_OV[i] = true;
-		else if (chip->Cell_U[i] >= BMS_OV)
+		else if (chip->Cell_U[i] >= BMS_soft_OV)
 		{
 			if (!(chip->Cell_OV_timer[i]))
 				chip->Cell_OV_timer[i] = chVTGetSystemTimeX();

@@ -5,8 +5,8 @@
  *      Author: alexander.schroeder
  */
 
-#ifndef APPLICATIONS_CHARGE_STATEMACHINE_H_
-#define APPLICATIONS_CHARGE_STATEMACHINE_H_
+#ifndef APPLICATIONS_MAR_CHARGE_STATEMACHINE_H_
+#define APPLICATIONS_MAR_CHARGE_STATEMACHINE_H_
 
 #include <stdbool.h>
 
@@ -29,4 +29,4 @@ void chg_init(void);
 
 void charge_statemachine(void);
 
-#endif /* APPLICATIONS_CHARGE_STATEMACHINE_H_ */
+#endif /* APPLICATIONS_MAR_CHARGE_STATEMACHINE_H_ */

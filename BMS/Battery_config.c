@@ -12,10 +12,10 @@ uint32_t BMS_temp_count = BMS_temp_count_set;
 uint32_t BMS_temp_count = 3;
 #endif
 
-#ifdef BMS_OV_set								// [V] Soft cell overvoltage threshold
-float BMS_OV = BMS_OV_set;
+#ifdef BMS_soft_OV_set								// [V] Soft cell overvoltage threshold
+float BMS_soft_OV = BMS_soft_OV_set;
 #else
-float BMS_OV = 4.2;
+float BMS_soft_OV = 4.2;
 #endif
 
 #ifdef BMS_OV_delay_set							// [s] Soft cell overvoltage trip time

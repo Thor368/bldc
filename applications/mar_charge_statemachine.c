@@ -5,11 +5,12 @@
  *      Author: alexander.schroeder
  */
 
+#include "mar_charge_statemachine.h"
+
 #include "hw.h"
 #include "hal.h"
 
 #include "maraneo_vars.h"
-#include "charge_statemachine.h"
 #include "LTC6804_handler.h"
 
 #include "commands.h"  // debug

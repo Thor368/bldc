@@ -14,7 +14,7 @@
 
 extern uint32_t BMS_cell_count;
 extern uint32_t BMS_temp_count;
-extern float BMS_OV;
+extern float BMS_soft_OV;
 extern float BMS_OV_delay;
 extern float BMS_hard_OV;
 extern float BMS_OV_recovery;
