@@ -1,4 +1,5 @@
 #include "LTC6804_types.h"
+#include "hal.h"
 
 #define BMS_Calc_Current(bms, offset)		(((int32_t) bms.chip.AVAR.G1V - offset)*BMS_C_PER_A) // Calculate Current in A
 
@@ -44,7 +45,7 @@ typedef struct
 	LTC_DATASET_t chip;
 	
 	BMS_Status_t Status;
-	int32_t last_CV, last_TEST;
+	systime_t last_CV, last_TEST;
 	
 	bool BMS_present;
 	
@@ -79,7 +80,7 @@ typedef struct
 	bool Cell_Bleed[12];
 	bool Balance_Permission;
 	uint32_t Balance_derating;
-	uint32_t Balance_timer;
+	systime_t Balance_timer;
 	
 	float Cell_Sink_U[12];
 	float Cell_Source_U[12];
@@ -89,13 +90,12 @@ typedef struct
 
 extern BMS_t BMS;
 
-extern bool BMS_Balance_Scheduled;
-
 extern float Global_Max_U;
 extern float Global_Min_U;
 
 extern bool BMS_Charge_permitted;
 extern bool BMS_Discharge_permitted;
+extern bool BMS_Balance_Scheduled;
 extern bool BMS_fault_latch;
 
 extern float BMS_Discharge_Limit;

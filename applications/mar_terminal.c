@@ -266,17 +266,21 @@ void BMS_config(int argc, const char **argv)
 		else if (!strcmp(argv[1], "BMS_set_cycles"))
 		{
 			eeprom_var chg_cy;
-			conf_general_read_eeprom_var_custom(&chg_cy, 63);
-			ret = sscanf(argv[2], "%d", (int *) &chg_cy.as_u32);
+			sscanf(argv[2], "%d", (int *) &chg_cy.as_u32);
 			conf_general_store_eeprom_var_custom(&chg_cy, 63);
+
+			commands_printf("OK\n");
+			return;
 		}
 		else
 			commands_printf("Unrecognized parameter name\n");
 
 		if (ret == 1)
 		{
-			commands_printf("OK\n");
 			mar_write_conf();
+			LTC_handler_Init();
+
+			commands_printf("OK\n");
 		}
 		else
 			commands_printf("Illegal parameter value\n");
@@ -308,6 +312,7 @@ void BMS_cb_status(int argc, const char **argv)
 	commands_printf("State: %d", BMS.Status);
 	commands_printf("Present: %d", BMS.BMS_present);
 	commands_printf("Balance permission: %d", BMS.Balance_Permission);
+	commands_printf("Balance scheduled: %d", BMS_Balance_Scheduled);
 	commands_printf("Balance derating: %d", BMS.Balance_derating);
 
 	eeprom_var chg_cy;
@@ -326,7 +331,7 @@ void BMS_cb_status(int argc, const char **argv)
 	commands_printf("Wrong cell count: %d", BMS.Wrong_Cell_Count);
 	commands_printf("Health: %d", BMS.Health);
 	for (uint8_t i = 0; i < 12; i++)
-		commands_printf("Open test #%d %.3fV %.3fV", i+1, (double) BMS.Cell_Source_U[i], (double) BMS.Cell_Sink_U[i]);
+		commands_printf("Open test %2d: %.3fV %.3fV", i+1, (double) BMS.Cell_Source_U[i], (double) BMS.Cell_Sink_U[i]);
 
 	commands_printf("\nCELLS");
 	commands_printf("Pack voltage: %.2fV", (double) BMS.Cell_All_U);
@@ -358,9 +363,9 @@ void BMS_cb_status(int argc, const char **argv)
 	}
 
 	commands_printf("\nTEMPERATURES");
-	commands_printf("Internal temperature: %.1f°C", (double) BMS.Int_Temp);
+	commands_printf("Internal temperature:  %.1f°C", (double) BMS.Int_Temp);
 	for (uint8_t i = 0; i < 5; i++)
-		commands_printf("External temperature #%d: %.1f°C", i+1, (double) BMS.Temp_sensors[i]);
+		commands_printf("External temperature %d: %.1f°C", i+1, (double) BMS.Temp_sensors[i]);
 	commands_printf("\n");
 }
 

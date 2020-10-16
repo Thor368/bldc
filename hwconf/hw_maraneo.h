@@ -24,6 +24,10 @@
 
 #define APP_CUSTOM_TO_USE			"app_maraneo.c"
 
+// BMS settings
+
+#define BMS_cell_count_set		10
+
 // HW properties
 #define HW_HAS_3_SHUNTS
 #define HW_HAS_PHASE_SHUNTS

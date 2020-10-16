@@ -8,18 +8,17 @@
 
 BMS_t BMS;
 
-bool BMS_Balance_Scheduled = false;
-systime_t BMS_Balance_Timer;
+bool BMS_Balance_Scheduled;
 
-float Global_Max_U = 0;
-float Global_Min_U = 0;
-float BMS_Discharge_Limit = 0;
+float Global_Max_U;
+float Global_Min_U;
+float BMS_Discharge_Limit;
 
-bool BMS_Charge_permitted = true;
-bool BMS_Discharge_permitted = true;
-bool BMS_fault_latch = false;
-uint32_t BMS_charge_delay_timer = 0;
-uint32_t BMS_discharge_delay_timer = 0;
+bool BMS_Charge_permitted;
+bool BMS_Discharge_permitted;
+bool BMS_fault_latch;
+uint32_t BMS_charge_delay_timer;
+uint32_t BMS_discharge_delay_timer;
 
 void BMS_RES_sets(BMS_t *chip)
 {
@@ -30,6 +29,7 @@ void BMS_RES_sets(BMS_t *chip)
 	chip->Status = RES;
 	chip->last_CV = chVTGetSystemTimeX();  // 1s
 	chip->last_TEST = chVTGetSystemTimeX();  // 10s
+	chip->Balance_timer = chVTGetSystemTimeX();
 	
 	chip->BMS_present = false;
 	
@@ -44,7 +44,6 @@ void BMS_RES_sets(BMS_t *chip)
 	chip->Wrong_Cell_Count = true;
 	chip->Balance_Permission = false;
 	chip->Balance_derating = 0;
-	chip->Balance_timer = 0;
 	chip->Health = BMS_Health_Error_Non_Operational;
 	chip->chip.MD = 3;
 	chip->chip.DCP = 0;
@@ -77,6 +76,7 @@ void BMS_RES_sets(BMS_t *chip)
 		
 		chip->Cell_Sink_U[j] = 0;
 		chip->Cell_Source_U[j] = 0;
+		chip->Open_Cell_Connection[j] = 0;
 	}
 	
 	for (uint8_t j = 0; j < 5; j++)
@@ -103,7 +103,17 @@ void LTC_handler_Init()
 {
 	LTC_Init();
 	
-	BMS_Balance_Timer = chVTGetSystemTimeX();
+	BMS_Balance_Scheduled = false;
+
+	Global_Max_U = 0;
+	Global_Min_U = 0;
+	BMS_Discharge_Limit = 0;
+
+	BMS_Charge_permitted = true;
+	BMS_Discharge_permitted = true;
+	BMS_fault_latch = false;
+	BMS_charge_delay_timer = 0;
+	BMS_discharge_delay_timer = 0;
 
 	BMS_RES_sets(&BMS);
 	BMS.chip.address = LTC_ADDRESS(0);
@@ -250,10 +260,10 @@ void BMS_Selfcheck(BMS_t* chip)
 
 void LTC_Balancing_handler(void)
 {
-	if (chVTTimeElapsedSinceX(BMS_Balance_Timer) < S2ST(1))
+	if (chVTTimeElapsedSinceX(BMS.Balance_timer) < S2ST(1))
 		return;
-	BMS_Balance_Timer = chVTGetSystemTimeX();
-	
+	BMS.Balance_timer = chVTGetSystemTimeX();
+
 	Global_Max_U = BMS.Cell_Max_U;
 	Global_Min_U = BMS.Cell_Min_U;
 
@@ -263,14 +273,13 @@ void LTC_Balancing_handler(void)
 	{
 		BMS.Balance_Permission = false;
 		BMS.Balance_derating = 0;
-		BMS.Balance_timer = 0;
 	}
 	
 	float delta = abs(Global_Max_U - Global_Min_U);
-	if ((Global_Max_U < BMS_Balance_U) || (delta <= 0.01))
-		BMS_Balance_Scheduled = false;
-	else if (delta > 0.02)
+	if ((delta > 0.02) && (Global_Max_U > BMS_Balance_U))
 		BMS_Balance_Scheduled = true;
+	else
+		BMS_Balance_Scheduled = false;
 	
 	bool Local_Balance_Permission = BMS.Balance_Permission;
 	if (BMS_Balance_Scheduled && Local_Balance_Permission)
@@ -278,24 +287,13 @@ void LTC_Balancing_handler(void)
 		float Balance_Threashold = Global_Min_U + 0.01;
 
 		if (BMS.Int_Temp > (BMS_ITMP_LIM + BMS_ITMP_HYST*2))
-		{
 			BMS.Balance_derating = 0;
-			BMS.Balance_timer = 0;
-		}
 		else
 		{
-			if (BMS.Balance_timer < 10)
-				BMS.Balance_timer++;
-			else if ((BMS.Balance_derating < BMS_cell_count) && (BMS.Int_Temp < (BMS_ITMP_LIM - BMS_ITMP_HYST/2)))
-			{
+			if ((BMS.Balance_derating < BMS_cell_count) && (BMS.Int_Temp < (BMS_ITMP_LIM - BMS_ITMP_HYST/2)))
 				BMS.Balance_derating++;
-				BMS.Balance_timer = 0;
-			}
-			else if ((BMS.Balance_derating > 0)              && (BMS.Int_Temp > (BMS_ITMP_LIM + BMS_ITMP_HYST/2)))
-			{
+			else if ((BMS.Balance_derating > 0)         && (BMS.Int_Temp > (BMS_ITMP_LIM + BMS_ITMP_HYST/2)))
 				BMS.Balance_derating--;
-				BMS.Balance_timer = 0;
-			}
 		}
 
 		for (uint8_t j = 0; j < 12; j++)
@@ -304,13 +302,11 @@ void LTC_Balancing_handler(void)
 		for (uint8_t j = 0; j < BMS.Balance_derating; j++)
 		{
 			uint8_t highest = 0;
-			for (uint8_t x = 1; x < (BMS_cell_count+1); x++)
-				if (!BMS.Cell_Bleed[x])
-					highest = x;
-			if (highest > BMS_cell_count)
-				break;
+			while ((!BMS.Cell_Bleed[highest]) && (highest++ < BMS_cell_count));  // find first cell that is not bleeding
+			if (highest >= BMS_cell_count)
+				break;  // all cells are bleeding
 
-			for (uint8_t x = 0; x < BMS_cell_count; x++)
+			for (uint8_t x = highest; x < BMS_cell_count; x++)  // find highest cell that is not already bleeding
 				if ((BMS.Cell_U[x] > BMS.Cell_U[highest]) && (!BMS.Cell_Bleed[x]))
 					highest = x;
 
@@ -567,9 +563,9 @@ void LTC_handler()
 					else
 						BMS.Open_Cell_Connection[j] = true;
 				}
-				if (BMS.Cell_Source_U[0] < 0.4)
+				if ((BMS_cell_count > 0) && BMS.Cell_Source_U[0] < 0.4)
 					BMS.Open_Cell_Connection[0] = true;
-				if (BMS.Cell_Sink_U[11] < 0.4)
+				if ((BMS_cell_count > 11) && BMS.Cell_Sink_U[11] < 0.4)
 					BMS.Open_Cell_Connection[11] = true;
 
 				BMS.chip.MD = 1;
