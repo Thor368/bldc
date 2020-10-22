@@ -130,8 +130,8 @@
 //#define HW_SOURCE "hw_AMALGA.c"
 //#define HW_HEADER "hw_AMALGA.h"
 
-#define HW_SOURCE "hw_HSWR31.c"
-#define HW_HEADER "hw_HSWR31.h"
+#define HW_SOURCE "hw_HSWR4.c"
+#define HW_HEADER "hw_HSWR4.h"
 
 #endif
 
