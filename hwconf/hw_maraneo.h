@@ -33,9 +33,6 @@
 #define HW_HAS_PHASE_SHUNTS
 
 // Macros
-#define ENABLE_GATE()			palClearPad(GPIOB, 2)
-#define DISABLE_GATE()			palSetPad(GPIOB, 2)
-
 #define LED_GREEN_ON()			palSetPad(GPIOB, 0)
 #define LED_GREEN_OFF()			palClearPad(GPIOB, 0)
 #define LED_RED_ON()			palSetPad(GPIOB, 1)

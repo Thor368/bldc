@@ -71,26 +71,15 @@ void CAN_Status(void)
 	{
 		CAN_timer = chVTGetSystemTimeX();
 
-		float tmp = Global_Max_U;
-		comm_can_transmit_eid(0x00FEFF, (uint8_t *) &tmp, sizeof(tmp));
+		comm_can_transmit_eid(0x00FFFF, (uint8_t *) &Global_Max_U, sizeof(Global_Max_U));
+		comm_can_transmit_eid(0x01FFFF, (uint8_t *) &Global_Min_U, sizeof(Global_Min_U));
+		comm_can_transmit_eid(0x02FFFF, (uint8_t *) &U_CHG, sizeof(U_CHG));
+		comm_can_transmit_eid(0x03FFFF, (uint8_t *) &I_CHG, sizeof(I_CHG));
 
-		tmp = Global_Min_U;
-		comm_can_transmit_eid(0x01FEFF, (uint8_t *) &tmp, sizeof(tmp));
-
-		tmp = U_CHG;
-		comm_can_transmit_eid(0x02FEFF, (uint8_t *) &tmp, sizeof(tmp));
-
-		tmp = I_CHG;
-		comm_can_transmit_eid(0x03FEFF, (uint8_t *) &tmp, sizeof(tmp));
-
-		tmp = chg_state;
-		comm_can_transmit_eid(0x04FEFF, (uint8_t *) &tmp, sizeof(tmp));
-
-		tmp = BMS_Discharge_Limit;
-		comm_can_transmit_eid(0x05FEFF, (uint8_t *) &tmp, sizeof(tmp));
-
-		tmp = SoC;
-		comm_can_transmit_eid(0x05FEFF, (uint8_t *) &tmp, sizeof(tmp));
+		uint8_t tmp = chg_state;
+		comm_can_transmit_eid(0x04FFFF, (uint8_t *) &tmp, sizeof(tmp));
+		comm_can_transmit_eid(0x05FFFF, (uint8_t *) &BMS_Discharge_Limit, sizeof(BMS_Discharge_Limit));
+		comm_can_transmit_eid(0x06FFFF, (uint8_t *) &SoC, sizeof(SoC));
 	}
 
 	if (chVTTimeElapsedSinceX(CAN_BATI_timeout) > MS2ST(250))

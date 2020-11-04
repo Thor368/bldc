@@ -4,7 +4,6 @@
 #include "Battery_config.h"
 
 #include <math.h>
-#include <stdlib.h>
 
 BMS_t BMS;
 
@@ -275,14 +274,16 @@ void LTC_Balancing_handler(void)
 		BMS.Balance_derating = 0;
 	}
 	
-	float delta = abs(Global_Max_U - Global_Min_U);
+	float delta = fabs(Global_Max_U - Global_Min_U);
 	if ((delta > 0.02) && (Global_Max_U > BMS_Balance_U))
 		BMS_Balance_Scheduled = true;
 	else
 		BMS_Balance_Scheduled = false;
 	
-	bool Local_Balance_Permission = BMS.Balance_Permission;
-	if (BMS_Balance_Scheduled && Local_Balance_Permission)
+	for (uint8_t j = 0; j < 12; j++)
+		BMS.Cell_Bleed[j] = false;
+
+	if (BMS_Balance_Scheduled && BMS.Balance_Permission)
 	{
 		float Balance_Threashold = Global_Min_U + 0.01;
 
@@ -296,13 +297,10 @@ void LTC_Balancing_handler(void)
 				BMS.Balance_derating--;
 		}
 
-		for (uint8_t j = 0; j < 12; j++)
-			BMS.Cell_Bleed[j] = false;
-
 		for (uint8_t j = 0; j < BMS.Balance_derating; j++)
 		{
 			uint8_t highest = 0;
-			while ((!BMS.Cell_Bleed[highest]) && (highest++ < BMS_cell_count));  // find first cell that is not bleeding
+			while (BMS.Cell_Bleed[highest] && (highest++ < BMS_cell_count));  // find first cell that is not bleeding
 			if (highest >= BMS_cell_count)
 				break;  // all cells are bleeding
 
@@ -316,9 +314,6 @@ void LTC_Balancing_handler(void)
 				break;
 		}
 	}
-	else
-		for (uint8_t j = 0; j < 12; j++)
-			BMS.Cell_Bleed[j] = false;
 	
 	BMS.chip.CFGR.DCC1 =  BMS.Cell_Bleed[0];
 	BMS.chip.CFGR.DCC2 =  BMS.Cell_Bleed[1];
@@ -332,6 +327,7 @@ void LTC_Balancing_handler(void)
 	BMS.chip.CFGR.DCC10 = BMS.Cell_Bleed[9];
 	BMS.chip.CFGR.DCC11 = BMS.Cell_Bleed[10];
 	BMS.chip.CFGR.DCC12 = BMS.Cell_Bleed[11];
+	BMS.chip.CFGR.B[0] |= 0xF8;
 
 	LTC_Write_Register(&(BMS.chip), LTC_REGISTER_CFGR);
 }
@@ -558,7 +554,7 @@ void LTC_handler()
 				{
 					BMS.Cell_Sink_U[j] = LTC_calc_Voltage(LTC_get_Voltage_raw(&(BMS.chip), j));
 
-					if (abs(BMS.Cell_Source_U[j] - BMS.Cell_Sink_U[j]) < 0.4)
+					if (fabs(BMS.Cell_Source_U[j] - BMS.Cell_Sink_U[j]) < (double) 0.4)
 						BMS.Open_Cell_Connection[j] = false;
 					else
 						BMS.Open_Cell_Connection[j] = true;
