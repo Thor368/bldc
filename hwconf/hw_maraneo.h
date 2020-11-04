@@ -99,6 +99,10 @@
 #ifndef CURRENT_SHUNT_RES
 #define CURRENT_SHUNT_RES		0.0005
 #endif
+#ifndef INVERTED_SHUNT_POLARITY
+#define INVERTED_SHUNT_POLARITY
+#endif
+
 
 // Input voltage
 #define GET_VOLTAGE_RAW(ch)		((V_REG / 4095.0) * (float)ADC_Value[ch])
@@ -251,6 +255,50 @@
 #endif
 #ifndef MCCONF_FOC_SAMPLE_V0_V7
 #define MCCONF_FOC_SAMPLE_V0_V7			false	// Run control loop in both v0 and v7 (requires phase shunts)
+#endif
+#ifndef MCCONF_L_CURRENT_MAX
+#define MCCONF_L_CURRENT_MAX			85.0	// Current limit in Amperes (Upper)
+#endif
+#ifndef MCCONF_L_CURRENT_MIN
+#define MCCONF_L_CURRENT_MIN			-0.0	// Current limit in Amperes (Lower)
+#endif
+#ifndef MCCONF_L_IN_CURRENT_MAX
+#define MCCONF_L_IN_CURRENT_MAX			60.0	// Input current limit in Amperes (Upper)
+#endif
+#ifndef MCCONF_L_IN_CURRENT_MIN
+#define MCCONF_L_IN_CURRENT_MIN			-0.0	// Input current limit in Amperes (Lower)
+#endif
+#ifndef MCCONF_L_BATTERY_CUT_START
+#define MCCONF_L_BATTERY_CUT_START		30.0	// Start limiting the positive current at this voltage
+#endif
+#ifndef MCCONF_L_BATTERY_CUT_END
+#define MCCONF_L_BATTERY_CUT_END		28.0		// Limit the positive current completely at this voltage
+#endif
+#ifndef MCCONF_L_MIN_VOLTAGE
+#define MCCONF_L_MIN_VOLTAGE			28.0		// Minimum input voltage
+#endif
+#ifndef MCCONF_L_MAX_VOLTAGE
+#define MCCONF_L_MAX_VOLTAGE			43.0	// Maximum input voltage
+#endif
+#ifndef MCCONF_FOC_F_SW
+#define MCCONF_FOC_F_SW					36000.0
+#endif
+#ifndef MCCONF_FOC_DT_US
+#define MCCONF_FOC_DT_US				0.1 // Microseconds for dead time compensation
+#endif
+
+// Default app setting override
+#ifndef APPCONF_APP_TO_USE
+#define APPCONF_APP_TO_USE					APP_NONE
+#endif
+#ifndef APPCONF_CAN_BAUD_RATE
+#define APPCONF_CAN_BAUD_RATE				CAN_BAUD_125K
+#endif
+#ifndef APPCONF_SEND_CAN_STATUS
+#define APPCONF_SEND_CAN_STATUS				CAN_STATUS_1_2_3_4_5
+#endif
+#ifndef APPCONF_SEND_CAN_STATUS_RATE_HZ
+#define APPCONF_SEND_CAN_STATUS_RATE_HZ		10
 #endif
 
 // Setting limits
