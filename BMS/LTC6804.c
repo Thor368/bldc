@@ -152,7 +152,7 @@ void LTC_write_CMD(uint16_t cmd, uint8_t data[], uint16_t address)
  	PEC_Compute8b(data[2]);
  	PEC_Compute8b(data[3]);
  	PEC_Compute8b(data[4]);
- 	uint16_t datapec = PEC_Compute8b(data[5]);
+ 	uint16_t datapec = __builtin_bswap16(PEC_Compute8b(data[5]));
  	
 	LTC_CS_LO;
 	LTC_SLEEP(40);

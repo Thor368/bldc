@@ -35,7 +35,7 @@ extern float BMS_hard_UT;
 extern uint32_t BMS_Temp_beta;
 
 #ifndef BMS_ITMP_LIM			// [°C] Temperature limit while balancing
-#define BMS_ITMP_LIM			70
+#define BMS_ITMP_LIM			30
 #endif
 
 #ifndef BMS_ITMP_HYST			// [°C] Hysteresis for temperature limit

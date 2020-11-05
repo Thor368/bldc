@@ -53,12 +53,15 @@ volatile float I_CHG = 0, I_CHG_filt = 0, I_CHG_offset = 0;
 volatile bool Motor_lock = true;
 volatile uint32_t Motor_lock_timer;
 
+volatile uint32_t Sleep_Time = Sleep_Time_default;
+volatile uint32_t sleep_timer;
 
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
 void app_custom_start(void)
 {
 	chg_init();
+	SHDN_OFF;
 
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
@@ -67,6 +70,9 @@ void app_custom_start(void)
 	mc_interface_set_pwm_callback(pwm_callback);
 
 	// Terminal commands for the VESC Tool terminal can be registered.
+
+	sleep_timer = chVTGetSystemTimeX();
+	Motor_lock_timer = chVTGetSystemTimeX();
 
 	mar_Init();
 	LTC_handler_Init();
@@ -112,6 +118,12 @@ void Safty_checks(void)
 
 	if (Motor_lock && (chVTTimeElapsedSinceX(BMS.last_CV) > S2ST(30)))
 		Motor_lock = false;
+
+	if (mc_interface_get_rpm() > 100)
+		sleep_timer = chVTGetSystemTimeX();
+
+	if (chVTTimeElapsedSinceX(sleep_timer) > S2ST(Sleep_Time))
+		SHDN_ON;
 }
 
 static THD_FUNCTION(my_thread, arg)

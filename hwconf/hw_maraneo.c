@@ -87,10 +87,15 @@ void hw_init_gpio(void) {
 	palSetPadMode(GPIOC, 3, PAL_MODE_INPUT_ANALOG);
 
 	// Custom Pins
-	palSetPadMode(GPIOA, 6,
+	palSetPadMode(GPIOA, 6,  // Charge enable
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
 	CHRG_OFF;
+
+	palSetPadMode(GPIOC, 5,  // Shutdown pin
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
+	SHDN_OFF;
 }
 
 void hw_setup_adc_channels(void) {

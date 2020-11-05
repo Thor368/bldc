@@ -15,6 +15,8 @@ extern volatile float U_CHG, U_CHG_filt;
 extern volatile float I_CHG, I_CHG_filt, I_CHG_offset;
 extern volatile float I_BAT;
 
+extern volatile uint32_t Sleep_Time;
+
 extern volatile bool charge_en;
 
 extern volatile bool Motor_lock;

@@ -28,6 +28,8 @@
 
 #define BMS_cell_count_set		10
 
+#define Sleep_Time_default		10800  // timer in seconds after which MC goes into deep sleep
+
 // HW properties
 #define HW_HAS_3_SHUNTS
 #define HW_HAS_PHASE_SHUNTS
@@ -40,6 +42,10 @@
 
 #define CHRG_ON					palSetPad(GPIOA, 6)
 #define CHRG_OFF				palClearPad(GPIOA, 6)
+
+#define SHDN_ON					palSetPad(GPIOC, 5)
+#define SHDN_OFF				palClearPad(GPIOC, 5)
+
 
 /*
  * ADC Vector

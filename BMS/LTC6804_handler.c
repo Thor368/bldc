@@ -168,6 +168,7 @@ void BMS_Calc_Voltages(BMS_t *chip)
 {
 	for (uint8_t i = 0; i < BMS_cell_count; i++)
 		chip->Cell_U[i] = LTC_calc_Voltage(LTC_get_Voltage_raw(&(chip->chip), i));
+	chip->Cell_U[0] += 0.043;
 	
 	chip->Cell_Max_U = 0;
 	chip->Cell_Max_index = 0;
@@ -259,7 +260,7 @@ void BMS_Selfcheck(BMS_t* chip)
 
 void LTC_Balancing_handler(void)
 {
-	if (chVTTimeElapsedSinceX(BMS.Balance_timer) < S2ST(1))
+	if (chVTTimeElapsedSinceX(BMS.Balance_timer) < S2ST(30))
 		return;
 	BMS.Balance_timer = chVTGetSystemTimeX();
 
@@ -315,18 +316,18 @@ void LTC_Balancing_handler(void)
 		}
 	}
 	
-	BMS.chip.CFGR.DCC1 =  BMS.Cell_Bleed[0];
-	BMS.chip.CFGR.DCC2 =  BMS.Cell_Bleed[1];
-	BMS.chip.CFGR.DCC3 =  BMS.Cell_Bleed[2];
-	BMS.chip.CFGR.DCC4 =  BMS.Cell_Bleed[3];
-	BMS.chip.CFGR.DCC5 =  BMS.Cell_Bleed[4];
-	BMS.chip.CFGR.DCC6 =  BMS.Cell_Bleed[5];
-	BMS.chip.CFGR.DCC7 =  BMS.Cell_Bleed[6];
-	BMS.chip.CFGR.DCC8 =  BMS.Cell_Bleed[7];
-	BMS.chip.CFGR.DCC9 =  BMS.Cell_Bleed[8];
-	BMS.chip.CFGR.DCC10 = BMS.Cell_Bleed[9];
-	BMS.chip.CFGR.DCC11 = BMS.Cell_Bleed[10];
-	BMS.chip.CFGR.DCC12 = BMS.Cell_Bleed[11];
+	BMS.chip.CFGR.DCC1 =  BMS.Cell_Bleed[0] & 1;
+	BMS.chip.CFGR.DCC2 =  BMS.Cell_Bleed[1] & 1;
+	BMS.chip.CFGR.DCC3 =  BMS.Cell_Bleed[2] & 1;
+	BMS.chip.CFGR.DCC4 =  BMS.Cell_Bleed[3] & 1;
+	BMS.chip.CFGR.DCC5 =  BMS.Cell_Bleed[4] & 1;
+	BMS.chip.CFGR.DCC6 =  BMS.Cell_Bleed[5] & 1;
+	BMS.chip.CFGR.DCC7 =  BMS.Cell_Bleed[6] & 1;
+	BMS.chip.CFGR.DCC8 =  BMS.Cell_Bleed[7] & 1;
+	BMS.chip.CFGR.DCC9 =  BMS.Cell_Bleed[8] & 1;
+	BMS.chip.CFGR.DCC10 = BMS.Cell_Bleed[9] & 1;
+	BMS.chip.CFGR.DCC11 = BMS.Cell_Bleed[10] & 1;
+	BMS.chip.CFGR.DCC12 = BMS.Cell_Bleed[11] & 1;
 	BMS.chip.CFGR.B[0] |= 0xF8;
 
 	LTC_Write_Register(&(BMS.chip), LTC_REGISTER_CFGR);
