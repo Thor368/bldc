@@ -23,7 +23,11 @@ volatile float SoC;
 
 void mar_calc_SoC(void)
 {
-	float corrected_U = Global_Min_U + I_BAT*0.1;
+	float corrected_U;
+	if (BMS.Health != BMS_Health_OK)
+		corrected_U = U_DC/10 + I_BAT*0.01;
+	else
+		corrected_U = Global_Min_U + I_BAT*0.1;
 	static float SoC_filt;
 
 	SoC_filt -= SoC_filt/100;
@@ -48,8 +52,6 @@ void CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 	case CAN_PACKET_STATUS_4:
 		CAN_BATI_timeout = chVTGetSystemTimeX();
 		I_BAT = mc_interface_get_tot_current_in_filtered() + ((data[4] << 8) | data[5])/10. + I_CHG;
-
-		mar_calc_SoC();
 	break;
 	}
 }
@@ -70,6 +72,7 @@ void CAN_Status(void)
 	if (chVTTimeElapsedSinceX(CAN_timer) > MS2ST(100))
 	{
 		CAN_timer = chVTGetSystemTimeX();
+		mar_calc_SoC();
 
 		comm_can_transmit_eid(0x00FFFF, (uint8_t *) &Global_Max_U, sizeof(Global_Max_U));
 		comm_can_transmit_eid(0x01FFFF, (uint8_t *) &Global_Min_U, sizeof(Global_Min_U));
