@@ -18,6 +18,7 @@ extern volatile float I_BAT;
 extern volatile uint32_t Sleep_Time;
 
 extern volatile bool charge_en;
+extern volatile float discharge_SoC;
 
 extern volatile bool Motor_lock;
 extern volatile uint32_t Motor_lock_timer;

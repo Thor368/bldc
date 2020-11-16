@@ -45,6 +45,7 @@ static void pwm_callback(void);
 // Private variables
 static volatile bool stop_now = true;
 static volatile bool is_running = false;
+volatile float discharge_SoC;
 
 volatile float U_DC = 0, U_DC_filt = 0;
 volatile float U_CHG = 0, U_CHG_filt = 0;
