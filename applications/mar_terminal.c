@@ -406,5 +406,20 @@ void BMS_charg_en(int argc, const char **argv)
 
 void BMS_cb_discharge(int argc, const char **argv)
 {
+	if (argc == 1)
+	{
+		if (discharge_enable)
+			commands_printf("discharge_SoC = %f", discharge_enable);
+		else
+			commands_printf("discharge_enable = false", discharge_enable);
+	}
+	else if (argc == 2)
+	{
+		if (!sscanf(argv[1], "%f", &discharge_SoC))
+			commands_printf("Illegal argument!");
 
+		commands_printf("charge enable = %d", charge_en);
+	}
+	else
+		commands_printf("Wrong argument count!");
 }

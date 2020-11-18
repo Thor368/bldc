@@ -18,6 +18,7 @@
 
 volatile uint32_t CAN_timer;
 volatile uint32_t CAN_BATI_timeout;
+volatile uint32_t CAN_HBT1_timeout, CAN_HBT2_timeout;
 volatile float I_BAT;
 volatile float SoC;
 
@@ -43,14 +44,35 @@ void CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 {
 	(void) len;
 
-	switch (id >> 8)
+	if ((id & 0xFFFF) == 0xFFFF)  // maraneo frames
 	{
-	case CAN_PACKET_STATUS_4:
-		CAN_BATI_timeout = chVTGetSystemTimeX();
-		I_BAT = mc_interface_get_tot_current_in_filtered() + ((data[4] << 8) | data[5])/10. + I_CHG;
+		switch (id >> 16)
+		{
+		case 0x07:
+			CAN_HBT2_timeout = chVTGetSystemTimeX();
+			break;
 
-		mar_calc_SoC();
-	break;
+		case 0x21:
+			discharge_SoC = *((float *) data);
+			discharge_enable = true;
+			break;
+		}
+	}
+	else
+	{
+		switch (id >> 8)  // VESC frames
+		{
+		case CAN_PACKET_SET_CURRENT_REL:
+			CAN_HBT1_timeout = chVTGetSystemTimeX();
+			break;
+
+		case CAN_PACKET_STATUS_4:
+			CAN_BATI_timeout = chVTGetSystemTimeX();
+			I_BAT = mc_interface_get_tot_current_in_filtered() + ((data[4] << 8) | data[5])/10. + I_CHG;
+
+			mar_calc_SoC();
+			break;
+		}
 	}
 }
 
@@ -60,6 +82,8 @@ void CAN_Init(void)
 
 	CAN_timer = chVTGetSystemTimeX();
 	CAN_BATI_timeout = chVTGetSystemTimeX();
+	CAN_HBT1_timeout = chVTGetSystemTimeX();
+	CAN_HBT2_timeout = chVTGetSystemTimeX();
 
 	I_BAT = 0;
 	SoC = 0;
