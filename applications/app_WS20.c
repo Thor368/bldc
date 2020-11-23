@@ -127,15 +127,15 @@ void UART_handler(void)
 			{
 			case 3:
 				pos1 = *((uint16_t *) if_buffer);
-			break;
+				break;
 
 			case 4:
 				temp1 = if_buffer[1];
-			break;
+				break;
 
 			case 5:
 				temp2 = if_buffer[1];
-			break;
+				break;
 
 			case 7:
 				pos2 = *((uint16_t *) if_buffer);
@@ -147,7 +147,7 @@ void UART_handler(void)
 				}
 
 				if_buffer_state = 0;
-			break;
+				break;
 			}
 		}
 
@@ -198,18 +198,16 @@ static THD_FUNCTION(WS20_thread, arg)
 			uint8_t data_B[8];
 			data_B[0] = 0;
 			if (mc_interface_get_duty_cycle_now() >= mc_conf->l_max_duty*0.95)
-				data_B[0] |= 0x01;
+				data_B[0] |= 0x02;
 			else if ((mc_interface_get_tot_current_in_filtered() >= mc_conf->l_in_current_max*0.95) ||
 					 (mc_interface_get_tot_current_in_filtered() <= mc_conf->l_in_current_min*0.95))
 				data_B[0] |= 0x08;
-			else if (GET_INPUT_VOLTAGE() >= mc_conf->l_max_vin*0.95)
-				data_B[0] |= 0x10;
 			else if (GET_INPUT_VOLTAGE() <= mc_conf->l_min_vin*1.05)
 				data_B[0] |= 0x20;
 			else if (mc_interface_temp_fet_filtered() >= mc_conf->l_temp_fet_start)
 				data_B[0] |= 0x40;
 			else
-				data_B[0] |= 0x02;
+				data_B[0] |= 0x01;
 			data_B[1] = 0;
 			data_B[2] = 0;
 			data_B[3] = 0;
@@ -220,8 +218,8 @@ static THD_FUNCTION(WS20_thread, arg)
 			comm_can_transmit_sid(ID_STATUS + CAN_DATA_BASE, (uint8_t *) data_B, sizeof(data_B));
 
 			float data_F[2];
-			data_F[0] = mc_interface_get_tot_current_in_filtered();
-			data_F[1] = GET_INPUT_VOLTAGE();
+			data_F[0] = GET_INPUT_VOLTAGE();
+			data_F[1] = mc_interface_get_tot_current_in_filtered();
 			comm_can_transmit_sid(ID_BUS + CAN_DATA_BASE, (uint8_t *) data_F, sizeof(data_F));
 
 			data_F[0] = mc_interface_get_rpm();
