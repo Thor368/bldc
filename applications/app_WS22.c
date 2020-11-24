@@ -29,9 +29,9 @@ static volatile bool is_running = false;
 
 
 uint32_t CAN_base_adr;
-#define CAN_DRIVE_CONTROLS_BASE		CAN_base_adr
-#define BASE_OFFSET					0x100
-#define CAN_DATA_BASE				(CAN_base_adr + BASE_OFFSET)
+#define DRV_CMD_OFFSET				-0x100
+#define CAN_DRIVE_CONTROLS_BASE		(CAN_base_adr + DRV_CMD_OFFSET)
+#define CAN_DATA_BASE				CAN_base_adr
 
 #define PACKET_HANDLER				1
 
@@ -88,6 +88,9 @@ void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 	case ID_DRIVE_CMD:
 		temp_v = *(float *) &data[0];
 		temp_I = *(float *) &data[4];
+
+		if ((temp_I > 1) || (temp_I < 0) || (mc_interface_get_rpm() < 500))  // low speed lockout without senors
+			temp_I = 0;
 
 		if (temp_v > 10.)
 			mc_interface_set_current(temp_I*mc_conf->l_current_max);
@@ -176,9 +179,12 @@ static THD_FUNCTION(WS22_thread, arg)
 		{
 			wait_1s = chVTGetSystemTime();
 
-			uint32_t data_B[8];
-			*((uint32_t *) data_B) = 0x4003;
-			*((uint32_t *) &data_B[4]) = STM32_UUID[0] + STM32_UUID[1];
+			uint8_t data_B[8];
+			data_B[0] = 'T';
+			data_B[1] = '0';
+			data_B[2] = '8';
+			data_B[3] = '8';
+			*(uint32_t *) &data_B[4] = STM32_UUID[0] + STM32_UUID[1];
 			comm_can_transmit_sid(ID_INFO + CAN_DATA_BASE, (uint8_t *) data_B, sizeof(data_B));
 
 			float data_f[2];
@@ -219,7 +225,7 @@ static THD_FUNCTION(WS22_thread, arg)
 			data_F[1] = mc_interface_get_tot_current_in_filtered();
 			comm_can_transmit_sid(ID_BUS + CAN_DATA_BASE, (uint8_t *) data_F, sizeof(data_F));
 
-			data_F[0] = mc_interface_get_rpm();
+			data_F[0] = mc_interface_get_rpm()/(mc_conf->si_motor_poles/2);
 			data_F[1] = mc_interface_get_speed();
 			comm_can_transmit_sid(ID_VELOCITY + CAN_DATA_BASE, (uint8_t *) data_F, sizeof(data_F));
 		}
