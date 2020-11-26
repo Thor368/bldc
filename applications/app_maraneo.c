@@ -168,7 +168,7 @@ static THD_FUNCTION(my_thread, arg)
 
 static void pwm_callback(void)
 {
-	if ((ADC_Value[7] > 3686) || (ADC_Value[7] < 1938))  // Chargeport Overcurrent or Short
+	if ((ADC_Value[7] > 3686) || (ADC_Value[7] < 1993))  // fast CP disconnect if curent >150A or <-5A
 	{
 		CHRG_OFF;
 		chg_state = chgst_error;

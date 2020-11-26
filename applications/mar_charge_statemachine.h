@@ -16,10 +16,11 @@ typedef enum
 	chgst_wait_for_init,
 	chgst_wait_for_enable,
 	chgst_wait_for_charger,
-	chgst_wait_1s,
+	chgst_wait_settle,
 	chgst_charging,
 	chgst_charge_finished,
-	chgst_error
+	chgst_error,
+	chgst_wait_for_reset
 } CHG_state_t;
 
 extern CHG_state_t chg_state;

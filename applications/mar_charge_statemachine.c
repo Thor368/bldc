@@ -33,7 +33,7 @@ void chg_increment_counter(void)
 	eeprom_var chg_cy;
 	conf_general_read_eeprom_var_custom(&chg_cy, 63);
 	chg_cy.as_u32++;
-	conf_general_store_eeprom_var_custom(&chg_cy, 63);
+//	conf_general_store_eeprom_var_custom(&chg_cy, 63);
 }
 
 
@@ -49,9 +49,11 @@ void charge_statemachine()
 
 		chg_timer = chVTGetSystemTimeX();
 		chg_state = chgst_wait_for_init;
-	break;
+		break;
 
 	case chgst_wait_for_init:
+		I_CHG_offset = I_CHG_filt;
+
 		if (chVTTimeElapsedSinceX(chg_timer) > S2ST(10))
 		{
 			if (charge_en)
@@ -59,11 +61,12 @@ void charge_statemachine()
 			else
 				chg_state = chgst_wait_for_enable;
 		}
-	break;
+		break;
+
 	case chgst_wait_for_enable:
 		if (charge_en)
 			chg_state = chgst_init;
-	break;
+		break;
 
 	case chgst_wait_for_charger:
 		I_CHG_offset = I_CHG_filt;
@@ -78,12 +81,13 @@ void charge_statemachine()
 		{
 			CHRG_ON;
 
+			commands_printf("Charger detected!");
 			chg_timer = chVTGetSystemTimeX();
-			chg_state = chgst_wait_1s;
+			chg_state = chgst_wait_settle;
 		}
-	break;
+		break;
 
-	case chgst_wait_1s:
+	case chgst_wait_settle:
 		if (U_DC >= 41.0)
 		{
 			CHRG_OFF;
@@ -93,23 +97,34 @@ void charge_statemachine()
 
 		if (chVTTimeElapsedSinceX(chg_timer) > S2ST(1))
 			chg_state = chgst_charging;
-	break;
+		break;
 
 	case chgst_charging:
-		if ((U_DC >= 41.0) || (I_CHG < 0.5) || (!BMS_Charge_permitted))
+		if ((U_DC >= 41.0) || (I_CHG < 0.5) || (!BMS_Charge_permitted && !Stand_Alone))
 		{
 			CHRG_OFF;
 
 			chg_state = chgst_charge_finished;
 		}
-	break;
+		break;
 
 	case chgst_charge_finished:
 		chg_increment_counter();
+		commands_printf("Charging finished!");
+
+		chg_state = chgst_wait_for_reset;
+		break;
+
 	case chgst_error:
+		commands_printf("Charging error!");
+
+		chg_state = chgst_wait_for_reset;
+		break;
+
+	case chgst_wait_for_reset:
 		if (U_CHG < 20.0)
 			chg_state = chgst_wait_for_charger;
-	break;
+		break;
 
 	default:
 		chg_state = chgst_init;
