@@ -44,32 +44,45 @@ static THD_FUNCTION(my_thread, arg);
 static THD_WORKING_AREA(my_thread_wa, 2048);
 
 // Private functions
+static void pwm_callback(void);
 static void temp_print_all(int argc, const char **argv);
 static void temp_config(int argc, const char **argv);
 
 // Private variables
 const volatile mc_configuration *mc_cfg;
 
-static volatile bool stop_now = true;
-static volatile bool is_running = false;
+volatile bool stop_now = true;
+volatile bool is_running = false;
+volatile uint8_t fan_pwm = 0;
+volatile uint8_t pump_pwm = 0;
 
-enum {
+enum
+{
 	init
 } tc_state;
 
-float T_tank = 0, T_liqu = 0, T_ice = 0;
+float T_tank = 0, T_cond = 0;
 
 float T_target = T_TARGET_DEFAULT;
-float T_evaporator = T_EVAPORATOR_DEFAULT;
 float T_fan_start = T_CONDENSER_START;
 float T_fan_stop = T_CONDENSER_STOP;
 
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
-void app_custom_start(void) {
+void app_custom_start(void)
+{
+	PUMP_OFF();
+	FAN1_OFF();
+	FAN2_OFF();
+
+	pump_pwm = 8.0/GET_INPUT_VOLTAGE()*255;
+
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
 			NORMALPRIO, my_thread, NULL);
+
+	// Register PWM callback for soft PWM
+	mc_interface_set_pwm_callback(pwm_callback);
 
 	// Terminal commands for the VESC Tool terminal can be registered.
 	terminal_register_command_callback(
@@ -91,11 +104,19 @@ void app_custom_start(void) {
 // and release callbacks.
 void app_custom_stop(void) {
 	terminal_unregister_callback(temp_print_all);
+	mc_interface_set_pwm_callback(0);
+
+	pump_pwm = 0;
+
 
 	stop_now = true;
 	while (is_running) {
 		chThdSleepMilliseconds(1);
 	}
+
+	PUMP_OFF();
+	FAN1_OFF();
+	FAN2_OFF();
 }
 
 void app_custom_configure(app_configuration *conf) {
@@ -126,8 +147,10 @@ static THD_FUNCTION(my_thread, arg)
 		T_tank_filt += EXT_TEMP(ADC_IND_T1);
 		T_tank = T_tank_filt/20;
 
-		T_liqu = EXT_TEMP(ADC_IND_T2);
-		T_ice = EXT_TEMP(ADC_IND_T3);
+		static float T_cond_filt = 0;
+		T_cond_filt -= T_cond_filt/20;
+		T_cond_filt += EXT_TEMP(ADC_IND_T2);
+		T_cond = T_cond_filt/20;
 
 		if (T_tank > -20)  // Tank sensor present
 		{
@@ -154,6 +177,9 @@ static THD_FUNCTION(my_thread, arg)
 		else
 			mc_interface_release_motor();
 
+		if (T_cond < -20)
+			fan_pwm = 255;
+
 		chThdSleepMilliseconds(100);
 	}
 }
@@ -164,11 +190,13 @@ static void temp_print_all(int argc, const char **argv)
 	(void) argc;
 	(void) argv;
 
-	commands_printf("T_tank: %.2fV -> %.1f°C", (double) ADC_VOLTS(ADC_IND_T1), (double) T_tank);
-	commands_printf("T_liqu: %.2fV -> %.1f°C", (double) ADC_VOLTS(ADC_IND_T2), (double) T_liqu);
-	commands_printf("T_ice: %.2fV -> %.1f°C", (double) ADC_VOLTS(ADC_IND_T3), (double) T_ice);
+	commands_printf("T_tank: %.1f°C", (double) T_tank);
+	commands_printf("T_liqu: %.1f°C", (double) T_cond);
 	commands_printf("TMOS: %.1f°C", (double) NTC_TEMP(ADC_IND_TEMP_MOS));
 	commands_printf("TMOT: %.1f°C", (double) NTC_TEMP_MOTOR(mc_cfg->m_ntc_motor_beta));
+	commands_printf("---------------------");
+	commands_printf("Pump_PWM: %d", pump_pwm);
+	commands_printf("Fan_PWM: %d\n", fan_pwm);
 }
 
 static void temp_config(int argc, const char **argv)
@@ -176,9 +204,8 @@ static void temp_config(int argc, const char **argv)
 	if (argc == 1)
 	{
 		commands_printf("T_target: %.1f°C", (double) T_target);
-		commands_printf("T_liquifier_min: %.1f°C", (double) T_evaporator);
 		commands_printf("T_fan_start: %.1fV -> %.2f°C", (double) T_fan_start);
-		commands_printf("T_fan_stop: %.1f°C", (double) T_fan_stop);
+		commands_printf("T_fan_stop: %.1f°C\n", (double) T_fan_stop);
 	}
 	else if (argc == 3)
 	{
@@ -191,8 +218,6 @@ static void temp_config(int argc, const char **argv)
 
 		if (strcmp(argv[2], "T_target"))
 			T_target = val;
-		else if (strcmp(argv[2], "T_evaporator"))
-			T_evaporator = val;
 		else if (strcmp(argv[2], "T_fan_start"))
 			T_fan_start = val;
 		else if (strcmp(argv[2], "T_fan_stop"))
@@ -204,4 +229,26 @@ static void temp_config(int argc, const char **argv)
 		commands_printf("Wrong argument count");
 
 	commands_printf(" ");
+}
+
+static void pwm_callback(void)
+{
+	static uint8_t cc = 0;
+	if (cc >= 255)
+	{
+		cc = 0;
+		PUMP_ON();
+		FAN1_ON();
+		FAN2_ON();
+	}
+	else
+		cc++;
+
+	if (cc == pump_pwm)
+		PUMP_OFF();
+	if (cc == fan_pwm)
+	{
+		FAN1_OFF();
+		FAN2_OFF();
+	}
 }
