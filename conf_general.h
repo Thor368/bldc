@@ -52,8 +52,8 @@
 //#define HW_SOURCE "hw_Revolter100_2.c"
 //#define HW_HEADER "hw_Revolter100_2.h"
 
-#define HW_SOURCE "hw_RevolterMini.c"
-#define HW_HEADER "hw_RevolterMini.h"
+#define HW_SOURCE "hw_Revolter100_3.c"
+#define HW_HEADER "hw_Revolter100_3.h"
 
 
 //#define HW_SOURCE "hw_40.c"
