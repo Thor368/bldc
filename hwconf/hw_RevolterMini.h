@@ -24,13 +24,17 @@
 
 #define APP_CUSTOM_TO_USE		"app_tempcontrol.c"
 
+#define REVOLTER_CONF_VERSION	1
 
 // Temperature control settings
 #define T_TARGET_DEFAULT		19.
-#define T_EVAPORATOR_DEFAULT	5.
-#define T_CONDENSER_START		35.
-#define T_CONDENSER_STOP		50.
+#define T_FAN_RAMP_START		35.
+#define T_FAN_RAMP_END			50.
+#define U_FAN_MIN				6.
+#define U_FAN_MAX				12.
+#define U_PUMP_STD				8.
 
+//#define BRIDGED_12V
 
 
 // HW properties

@@ -64,8 +64,66 @@ enum
 float T_tank = 0, T_cond = 0;
 
 float T_target = T_TARGET_DEFAULT;
-float T_fan_start = T_CONDENSER_START;
-float T_fan_stop = T_CONDENSER_STOP;
+float T_fan_ramp_start = T_FAN_RAMP_START;
+float T_fan_ramp_end = T_FAN_RAMP_END;
+float U_fan_min = U_FAN_MIN;
+float U_fan_max = U_FAN_MAX;
+float U_pump_std = U_PUMP_STD;
+
+void write_conf(void)
+{
+	eeprom_var eep_conf;
+	int pp = 0;
+
+	eep_conf.as_u32 = REVOLTER_CONF_VERSION;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = T_target;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = T_fan_ramp_start;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = T_fan_ramp_end;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = U_fan_min;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = U_fan_max;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = U_pump_std;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+}
+
+void read_conf(void)
+{
+	eeprom_var eep_conf;
+	int pp = 0;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	if (eep_conf.as_u32 != REVOLTER_CONF_VERSION)
+		write_conf();
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	T_target = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	T_fan_ramp_start = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	T_fan_ramp_end = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	U_fan_min = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	U_fan_max = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	U_pump_std = eep_conf.as_float;
+}
 
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
@@ -75,7 +133,10 @@ void app_custom_start(void)
 	FAN1_OFF();
 	FAN2_OFF();
 
-	pump_pwm = 8.0/GET_INPUT_VOLTAGE()*255;
+	pump_pwm = 0;
+	fan_pwm = 0;
+
+	read_conf();
 
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
@@ -107,6 +168,7 @@ void app_custom_stop(void) {
 	mc_interface_set_pwm_callback(0);
 
 	pump_pwm = 0;
+	fan_pwm = 0;
 
 
 	stop_now = true;
@@ -177,7 +239,23 @@ static THD_FUNCTION(my_thread, arg)
 		else
 			mc_interface_release_motor();
 
-		if (T_cond < -20)
+		if (T_cond > -20)
+		{
+			float fan_volt = U_fan_min;
+			if (T_cond > T_fan_ramp_end)
+				fan_volt = U_fan_max;
+			else
+				fan_volt = (T_cond - T_fan_ramp_start)/(T_fan_ramp_end - T_fan_ramp_start)*U_fan_max;
+
+#ifdef BRIDGED_12V
+			fan_pwm = fan_volt/GET_INPUT_VOLTAGE()*255;
+			pump_pwm = U_pump_std/GET_INPUT_VOLTAGE()*255;
+#else
+			fan_pwm = fan_volt/12*255;
+			pump_pwm = U_pump_std/12*255;
+#endif
+		}
+		else
 			fan_pwm = 255;
 
 		chThdSleepMilliseconds(100);
@@ -204,8 +282,11 @@ static void temp_config(int argc, const char **argv)
 	if (argc == 1)
 	{
 		commands_printf("T_target: %.1f°C", (double) T_target);
-		commands_printf("T_fan_start: %.1fV -> %.2f°C", (double) T_fan_start);
-		commands_printf("T_fan_stop: %.1f°C\n", (double) T_fan_stop);
+		commands_printf("T_fan_ramp_start: %.1f°C", (double) T_fan_ramp_start);
+		commands_printf("T_fan_ramp_end: %.1f°C", (double) T_fan_ramp_end);
+		commands_printf("T_fan_min: %.1fV", (double) U_fan_min);
+		commands_printf("T_fan_max: %.1fV", (double) U_fan_max);
+		commands_printf("pump_volt_std: %.1fV", (double) U_pump_std);
 	}
 	else if (argc == 3)
 	{
@@ -216,14 +297,29 @@ static void temp_config(int argc, const char **argv)
 			return;
 		}
 
+		bool success = true;
 		if (strcmp(argv[2], "T_target"))
 			T_target = val;
-		else if (strcmp(argv[2], "T_fan_start"))
-			T_fan_start = val;
-		else if (strcmp(argv[2], "T_fan_stop"))
-			T_fan_stop = val;
+		else if (strcmp(argv[2], "T_fan_ramp_start"))
+			T_fan_ramp_start = val;
+		else if (strcmp(argv[2], "T_fan_ramp_end"))
+			T_fan_ramp_end = val;
+		else if (strcmp(argv[2], "U_fan_min"))
+			U_fan_min = val;
+		else if (strcmp(argv[2], "U_fan_max"))
+			U_fan_max = val;
+		else if (strcmp(argv[2], "U_pump_std"))
+			U_pump_std = val;
+		else
+			success = false;
 
-		commands_printf("Value set");
+		if (success)
+		{
+			commands_printf("OK\n");
+			write_conf();
+		}
+		else
+			commands_printf("Unknown parameter\n");
 	}
 	else
 		commands_printf("Wrong argument count");
