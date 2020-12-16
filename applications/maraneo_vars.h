@@ -19,6 +19,8 @@ extern volatile float SoC;
 extern volatile uint32_t Sleep_Time;
 
 extern volatile bool charge_en;
+extern volatile float discharge_SoC;
+extern volatile bool discharge_enable;
 
 extern volatile bool Motor_lock;
 extern volatile uint32_t Motor_lock_timer;

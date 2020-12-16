@@ -20,6 +20,7 @@
 static void BMS_charg_en(int argc, const char **argv);
 static void BMS_cb_status(int argc, const char **argv);
 static void BMS_config(int argc, const char **argv);
+static void BMS_cb_discharge(int argc, const char **argv);
 
 void mar_Init(void)
 {
@@ -40,6 +41,12 @@ void mar_Init(void)
 			"set BMS parameter",
 			"[s] [f]",
 			BMS_config);
+
+	terminal_register_command_callback(
+			"bms_discharge",
+			"set SoC to which to discharge internal battery",
+			"[f]",
+			BMS_cb_discharge);
 }
 
 void mar_Deinit(void)
@@ -401,6 +408,26 @@ void BMS_charg_en(int argc, const char **argv)
 			charge_en = true;
 		else
 			charge_en = false;
+		commands_printf("charge enable = %d", charge_en);
+	}
+	else
+		commands_printf("Wrong argument count!");
+}
+
+void BMS_cb_discharge(int argc, const char **argv)
+{
+	if (argc == 1)
+	{
+		if (discharge_enable)
+			commands_printf("discharge_SoC = %f", discharge_enable);
+		else
+			commands_printf("discharge_enable = false", discharge_enable);
+	}
+	else if (argc == 2)
+	{
+		if (!sscanf(argv[1], "%f", &discharge_SoC))
+			commands_printf("Illegal argument!");
+
 		commands_printf("charge enable = %d", charge_en);
 	}
 	else

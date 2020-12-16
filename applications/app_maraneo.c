@@ -25,6 +25,7 @@
 
 // Some useful includes
 #include "mc_interface.h"
+#include "mcpwm_foc.h"
 #include "utils.h"
 #include "hw.h"
 #include "timeout.h"
@@ -45,6 +46,9 @@ static void pwm_callback(void);
 // Private variables
 static volatile bool stop_now = true;
 static volatile bool is_running = false;
+
+volatile float discharge_SoC;
+volatile bool discharge_enable;
 
 volatile float U_DC = 0, U_DC_filt = 0;
 volatile float U_CHG = 0, U_CHG_filt = 0;
@@ -164,6 +168,18 @@ static THD_FUNCTION(my_thread, arg)
 		I_CHG_filt += GET_VOLTAGE_RAW(7)/0.0088;
 		I_CHG = (I_CHG_filt - I_CHG_offset)/100;
 
+		if (discharge_enable)
+		{
+			if (SoC < discharge_SoC)
+			{
+				discharge_SoC = 2;
+				mc_interface_release_motor();
+				discharge_enable = false;
+				return;
+			}
+
+			mcpwm_foc_set_openloop(20, 10);
+		}
 
 		LTC_handler();
 		charge_statemachine();
