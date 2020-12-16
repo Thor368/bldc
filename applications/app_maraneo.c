@@ -110,7 +110,15 @@ void Safty_checks(void)
 		Motor_lock_timer = chVTGetSystemTimeX();
 	}
 
-	if (mc_interface_get_rpm() > 20000)
+	// I-n check
+	static uint32_t RPM_check_timer;
+	float I = mc_interface_get_tot_current_filtered();
+	float RPM = mc_interface_get_rpm();
+	float RPM_check = 0.0859*I*I*I - 13.47*I*I + 883*I + 2691.4;
+	if ((RPM < RPM_check*1.1) && (RPM > RPM_check*0.9))
+		RPM_check_timer = chVTGetSystemTimeX();
+
+	if ((chVTTimeElapsedSinceX(RPM_check_timer) > S2ST(2)) || (RPM > 30000))
 	{
 		Motor_lock = true;
 		Motor_lock_timer = chVTGetSystemTimeX();
