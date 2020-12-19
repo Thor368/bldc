@@ -364,6 +364,12 @@ void BMS_Limits(void)
 	static float OT_limit = 0;
 	static float UT_limit = 0;
 
+	if (BMS.Health != BMS_Health_OK)
+	{
+		BMS_Discharge_Limit = 0;
+		return;
+	}
+
 	if (Global_Min_U > BMS_soft_UV)
 		UV_limit = 1;
 	else if (Global_Min_U < BMS_hard_UV)

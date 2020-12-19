@@ -22,11 +22,17 @@ volatile uint32_t CAN_HBT1_timeout, CAN_HBT2_timeout;
 volatile float I_BAT;
 volatile float SoC;
 
+volatile bool Stand_Alone;
+
 void mar_calc_SoC(void)
 {
-	float corrected_U = Global_Min_U + I_BAT*0.1;
-	static float SoC_filt;
+	float corrected_U;
+	if (BMS.Health == BMS_Health_OK)
+		corrected_U = Global_Min_U + I_BAT*0.01;
+	else
+		corrected_U = U_DC/BMS_cell_count + I_BAT*0.01;
 
+	static float SoC_filt;
 	SoC_filt -= SoC_filt/100;
 
 	if (corrected_U > BMS_soft_OV)
@@ -87,6 +93,7 @@ void CAN_Init(void)
 
 	I_BAT = 0;
 	SoC = 0;
+	Stand_Alone = false;
 }
 
 void CAN_Status(void)
@@ -94,6 +101,7 @@ void CAN_Status(void)
 	if (chVTTimeElapsedSinceX(CAN_timer) > MS2ST(100))
 	{
 		CAN_timer = chVTGetSystemTimeX();
+		mar_calc_SoC();
 
 		comm_can_transmit_eid(0x00FFFF, (uint8_t *) &Global_Max_U, sizeof(Global_Max_U));
 		comm_can_transmit_eid(0x01FFFF, (uint8_t *) &Global_Min_U, sizeof(Global_Min_U));
@@ -102,8 +110,12 @@ void CAN_Status(void)
 
 		uint8_t tmp = chg_state;
 		comm_can_transmit_eid(0x04FFFF, (uint8_t *) &tmp, sizeof(tmp));
-		comm_can_transmit_eid(0x05FFFF, (uint8_t *) &BMS_Discharge_Limit, sizeof(BMS_Discharge_Limit));
 		comm_can_transmit_eid(0x06FFFF, (uint8_t *) &SoC, sizeof(SoC));
+
+		if (Stand_Alone)
+			BMS_Discharge_Limit = 1;
+
+		comm_can_transmit_eid(0x05FFFF, (uint8_t *) &BMS_Discharge_Limit, sizeof(BMS_Discharge_Limit));
 	}
 
 	if (chVTTimeElapsedSinceX(CAN_BATI_timeout) > MS2ST(250))

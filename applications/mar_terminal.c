@@ -129,6 +129,9 @@ void mar_write_conf(void)
 
 	mar_conf.as_u32 = Sleep_Time;
 	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
+
+	mar_conf.as_u32 = Stand_Alone;
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 }
 
 void mar_read_config(void)
@@ -205,6 +208,9 @@ void mar_read_config(void)
 
 	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	Sleep_Time = mar_conf.as_u32;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
+	Stand_Alone = mar_conf.as_u32;
 }
 
 void BMS_config(int argc, const char **argv)
@@ -231,7 +237,8 @@ void BMS_config(int argc, const char **argv)
 		commands_printf("%-20s: %.1fs", "BMS_UT_Delay", (double) BMS_UT_Delay);
 		commands_printf("%-20s: %.1f°C", "BMS_hard_UT", (double) BMS_hard_UT);
 		commands_printf("%-20s: %d", "BMS_Temp_beta", BMS_Temp_beta);
-		commands_printf("%-20s: %d\n", "Sleep_Time", Sleep_Time);
+		commands_printf("%-20s: %d", "Sleep_Time", Sleep_Time);
+		commands_printf("%-20s: %d\n", "Stand_Alone", Stand_Alone);
 	}
 	else if (argc == 3)
 	{
@@ -279,6 +286,8 @@ void BMS_config(int argc, const char **argv)
 			ret = sscanf(argv[2], "%d", (int *) &BMS_Temp_beta);
 		else if (!strcmp(argv[1], "Sleep_Time"))
 			ret = sscanf(argv[2], "%d", (int *) &Sleep_Time);
+		else if (!strcmp(argv[1], "Stand_Alone"))
+			ret = sscanf(argv[2], "%d", (int *) &Stand_Alone);
 		else if (!strcmp(argv[1], "BMS_set_cycles"))
 		{
 			eeprom_var chg_cy;
@@ -325,6 +334,7 @@ void BMS_cb_status(int argc, const char **argv)
 	commands_printf("Chargestate: %d", chg_state);
 
 	commands_printf("\n---BMS---");
+	commands_printf("SoC: %.1f%%", (double) SoC*100);
 	commands_printf("State: %d", BMS.Status);
 	commands_printf("Present: %d", BMS.BMS_present);
 	commands_printf("Balance permission: %d", BMS.Balance_Permission);
