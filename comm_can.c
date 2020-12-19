@@ -61,8 +61,9 @@ static mutex_t can_rx_mtx;
 static uint8_t rx_buffer[RX_BUFFER_SIZE];
 static unsigned int rx_buffer_last_id;
 static CANRxFrame rx_frames[RX_FRAMES_SIZE];
-static int rx_frame_read;
-static int rx_frame_write;
+static CANRxFrame rx_frames2[RX_FRAMES_SIZE];
+static int rx_frame_read, rx_frame_read2;
+static int rx_frame_write, rx_frame_write2;
 static thread_t *process_tp = 0;
 static thread_t *ping_tp = 0;
 #endif
@@ -102,6 +103,8 @@ static void send_status5(uint8_t id, bool replace);
 // Function pointers
 static void(*sid_callback)(uint32_t id, uint8_t *data, uint8_t len) = 0;
 static void(*eid_callback)(uint32_t id, uint8_t *data, uint8_t len) = 0;
+static void(*sid_callback2)(uint32_t id, uint8_t *data, uint8_t len) = 0;
+static void(*eid_callback2)(uint32_t id, uint8_t *data, uint8_t len) = 0;
 
 void comm_can_init(void) {
 	for (int i = 0;i < CAN_STATUS_MSGS_TO_STORE;i++) {
@@ -113,22 +116,32 @@ void comm_can_init(void) {
 
 #if CAN_ENABLE
 	rx_frame_read = 0;
+	rx_frame_read2 = 0;
 	rx_frame_write = 0;
+	rx_frame_write2 = 0;
 
 	chMtxObjectInit(&can_mtx);
 	chMtxObjectInit(&can_rx_mtx);
 
 	palSetPadMode(HW_CANRX_PORT, HW_CANRX_PIN,
-				PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
-				PAL_STM32_OTYPE_PUSHPULL |
-				PAL_STM32_OSPEED_MID1);
+			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
+			PAL_STM32_OTYPE_PUSHPULL |
+			PAL_STM32_OSPEED_MID1);
 	palSetPadMode(HW_CANTX_PORT, HW_CANTX_PIN,
-				PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
-				PAL_STM32_OTYPE_PUSHPULL |
-				PAL_STM32_OSPEED_MID1);
+			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
+			PAL_STM32_OTYPE_PUSHPULL |
+			PAL_STM32_OSPEED_MID1);
+	palSetPadMode(GPIOB, 5,
+			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
+			PAL_STM32_OTYPE_PUSHPULL |
+			PAL_STM32_OSPEED_MID1);
+	palSetPadMode(GPIOB, 6,
+			PAL_MODE_ALTERNATE(HW_CAN_GPIO_AF) |
+			PAL_STM32_OTYPE_PUSHPULL |
+			PAL_STM32_OSPEED_MID1);
 
 	canStart(&HW_CAN_DEV, &cancfg);
-//	canStart(&CAND2, &cancfg);
+	canStart(&CAND2, &cancfg);
 
 	canard_driver_init();
 
@@ -205,7 +218,60 @@ void comm_can_transmit_eid_replace(uint32_t id, const uint8_t *data, uint8_t len
 
 	chMtxLock(&can_mtx);
 	canTransmit(&HW_CAN_DEV, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
-//	canTransmit(&CAND2, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+	chMtxUnlock(&can_mtx);
+#else
+	(void)id;
+	(void)data;
+	(void)len;
+	(void)replace;
+#endif
+}
+
+/**
+ * Transmit CAN packet with extended ID. CAN2
+ *
+ * @param id
+ * EID
+ *
+ * @param data
+ * Data
+ *
+ * @param len
+ * Length of data, max 8 bytes.
+ *
+ * @param replace
+ * Process packets for motor2 directly instead of sending them. Unused
+ * on single motor hardware.
+ */
+void comm_can_transmit_eid_replace2(uint32_t id, const uint8_t *data, uint8_t len, bool replace) {
+	if (len > 8) {
+		len = 8;
+	}
+
+#if CAN_ENABLE
+#ifdef HW_HAS_DUAL_MOTORS
+	if (app_get_configuration()->can_mode == CAN_MODE_VESC) {
+		if (replace && ((id & 0xFF) == utils_second_motor_id() ||
+				(id & 0xFF) == app_get_configuration()->controller_id)) {
+			uint8_t data_tmp[10];
+			memcpy(data_tmp, data, len);
+			decode_msg(id, data_tmp, len, true);
+			return;
+		}
+	}
+#else
+	(void)replace;
+#endif
+
+	CANTxFrame txmsg;
+	txmsg.IDE = CAN_IDE_EXT;
+	txmsg.EID = id;
+	txmsg.RTR = CAN_RTR_DATA;
+	txmsg.DLC = len;
+	memcpy(txmsg.data8, data, len);
+
+	chMtxLock(&can_mtx);
+	canTransmit(&CAND2, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	chMtxUnlock(&can_mtx);
 #else
 	(void)id;
@@ -217,6 +283,10 @@ void comm_can_transmit_eid_replace(uint32_t id, const uint8_t *data, uint8_t len
 
 void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len) {
 	comm_can_transmit_eid_replace(id, data, len, true);
+}
+
+void comm_can_transmit_eid2(uint32_t id, const uint8_t *data, uint8_t len) {
+	comm_can_transmit_eid_replace2(id, data, len, true);
 }
 
 void comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
@@ -234,6 +304,29 @@ void comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len) {
 
 	chMtxLock(&can_mtx);
 	canTransmit(&HW_CAN_DEV, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
+	chMtxUnlock(&can_mtx);
+#else
+	(void)id;
+	(void)data;
+	(void)len;
+#endif
+}
+
+void comm_can_transmit_sid2(uint32_t id, uint8_t *data, uint8_t len) {
+	if (len > 8) {
+		len = 8;
+	}
+
+#if CAN_ENABLE
+	CANTxFrame txmsg;
+	txmsg.IDE = CAN_IDE_STD;
+	txmsg.SID = id;
+	txmsg.RTR = CAN_RTR_DATA;
+	txmsg.DLC = len;
+	memcpy(txmsg.data8, data, len);
+
+	chMtxLock(&can_mtx);
+	canTransmit(&CAND2, CAN_ANY_MAILBOX, &txmsg, MS2ST(5));
 	chMtxUnlock(&can_mtx);
 #else
 	(void)id;
@@ -261,6 +354,27 @@ void comm_can_set_sid_rx_callback(void (*p_func)(uint32_t id, uint8_t *data, uin
  */
 void comm_can_set_eid_rx_callback(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len)) {
 	eid_callback = p_func;
+}
+
+/**
+ * Set function to be called when standard CAN frames are received. CAN2
+ *
+ * @param p_func
+ * Pointer to the function.
+ */
+void comm_can_set_sid_rx_callback2(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len)) {
+	sid_callback2 = p_func;
+}
+
+/**
+ * Set function to be called when extended CAN frames are received. Will only be called when
+ * the CAN mode is CAN_MODE_COMM_BRIDGE. CAN2
+ *
+ * @param p_func
+ * Pointer to the function.
+ */
+void comm_can_set_eid_rx_callback2(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len)) {
+	eid_callback2 = p_func;
 }
 
 /**
@@ -846,6 +960,7 @@ static THD_FUNCTION(cancom_read_thread, arg) {
 			continue;
 		}
 
+		// std CAN controller
 		msg_t result = canReceive(&HW_CAN_DEV, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
 
 		while (result == MSG_OK) {
@@ -860,7 +975,23 @@ static THD_FUNCTION(cancom_read_thread, arg) {
 
 			result = canReceive(&HW_CAN_DEV, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
 		}
-	}
+
+		// CAN2 controller
+		result = canReceive(&CAND2, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
+
+		while (result == MSG_OK) {
+			chMtxLock(&can_rx_mtx);
+			rx_frames2[rx_frame_write2++] = rxmsg;
+			if (rx_frame_write2 == RX_FRAMES_SIZE) {
+				rx_frame_write2 = 0;
+			}
+			chMtxUnlock(&can_rx_mtx);
+
+			chEvtSignal(process_tp, (eventmask_t) 1);
+
+			result = canReceive(&CAND2, CAN_ANY_MAILBOX, &rxmsg, TIME_IMMEDIATE);
+		}
+}
 
 	chEvtUnregister(&HW_CAN_DEV.rxfull_event, &el);
 }
@@ -1510,8 +1641,6 @@ static void set_timing(int brp, int ts1, int ts2) {
 	cancfg.btr = CAN_BTR_SJW(3) | CAN_BTR_TS2(ts2) |
 		CAN_BTR_TS1(ts1) | CAN_BTR_BRP(brp);
 
-	canStop(&CAND1);
-	canStop(&CAND2);
-	canStart(&CAND1, &cancfg);
-	canStart(&CAND2, &cancfg);
+	canStop(&HW_CAN_DEV);
+	canStart(&HW_CAN_DEV, &cancfg);
 }

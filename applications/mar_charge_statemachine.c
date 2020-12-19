@@ -9,6 +9,7 @@
 
 #include "hw.h"
 #include "hal.h"
+#include "comm_can.h"
 
 #include "maraneo_vars.h"
 #include "LTC6804_handler.h"
@@ -20,12 +21,20 @@ uint32_t chg_timer;
 volatile bool charge_en;
 CHG_state_t chg_state;
 
+void CP_CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
+{
+	(void) len;
+
+}
+
 void chg_init()
 {
 	CHRG_OFF;
 
 	chg_state = chgst_init;
 	charge_en = true;
+
+	comm_can_set_eid_rx_callback2(&CP_CAN_callback);
 }
 
 void chg_increment_counter(void)

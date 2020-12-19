@@ -134,26 +134,6 @@
 #define CURR3_DOUBLE_SAMPLE		0
 #endif
 
-// CAN device and port (default CAN1)
-#ifndef HW_CANRX_PORT
-#define HW_CANRX_PORT			GPIOB
-#endif
-#ifndef HW_CANRX_PIN
-#define HW_CANRX_PIN			5
-#endif
-#ifndef HW_CANTX_PORT
-#define HW_CANTX_PORT			GPIOB
-#endif
-#ifndef HW_CANTX_PIN
-#define HW_CANTX_PIN			6
-#endif
-#ifndef HW_CAN_GPIO_AF
-#define HW_CAN_GPIO_AF			GPIO_AF_CAN2
-#endif
-#ifndef HW_CAN_DEV
-#define HW_CAN_DEV				CAND2
-#endif
-
 // COMM-port ADC GPIOs
 #define HW_ADC_EXT_GPIO			GPIOA
 #define HW_ADC_EXT_PIN			5

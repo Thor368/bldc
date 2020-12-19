@@ -30,10 +30,15 @@
 void comm_can_init(void);
 void comm_can_set_baud(CAN_BAUD baud);
 void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len);
+void comm_can_transmit_eid2(uint32_t id, const uint8_t *data, uint8_t len);
 void comm_can_transmit_eid_replace(uint32_t id, const uint8_t *data, uint8_t len, bool replace);
+void comm_can_transmit_eid_replace2(uint32_t id, const uint8_t *data, uint8_t len, bool replace);
 void comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len);
+void comm_can_transmit_sid2(uint32_t id, uint8_t *data, uint8_t len);
 void comm_can_set_sid_rx_callback(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len));
 void comm_can_set_eid_rx_callback(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len));
+void comm_can_set_sid_rx_callback2(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len));
+void comm_can_set_eid_rx_callback2(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len));
 void comm_can_send_buffer(uint8_t controller_id, uint8_t *data, unsigned int len, uint8_t send);
 void comm_can_set_duty(uint8_t controller_id, float duty);
 void comm_can_set_current(uint8_t controller_id, float current);
