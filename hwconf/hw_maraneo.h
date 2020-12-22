@@ -43,8 +43,14 @@
 #define CHRG_ON					palSetPad(GPIOA, 6)
 #define CHRG_OFF				palClearPad(GPIOA, 6)
 
+#define BAT_ON					palSetPad(GPIOC, 15)
+#define BAT_OFF					palClearPad(GPIOC, 15)
+
 #define SHDN_ON					palSetPad(GPIOC, 5)
 #define SHDN_OFF				palClearPad(GPIOC, 5)
+
+#define CAN_ON					palSetPad(GPIOD, 2)
+#define CAN_OFF					palClearPad(GPIOD, 2)
 
 
 /*
