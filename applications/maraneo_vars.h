@@ -24,6 +24,7 @@ extern volatile bool discharge_enable;
 
 extern volatile bool Motor_lock;
 extern volatile uint32_t Motor_lock_timer;
+extern volatile uint32_t CAN_HBT1_timeout, CAN_HBT2_timeout;
 
 extern volatile bool Stand_Alone;
 

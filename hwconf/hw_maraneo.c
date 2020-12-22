@@ -74,17 +74,19 @@ void hw_init_gpio(void) {
 	palSetPadMode(HW_HALL_ENC_GPIO3, HW_HALL_ENC_PIN3, PAL_MODE_INPUT_PULLUP);
 
 	// ADC Pins
-	palSetPadMode(GPIOA, 0, PAL_MODE_INPUT_ANALOG);
-	palSetPadMode(GPIOA, 1, PAL_MODE_INPUT_ANALOG);
-	palSetPadMode(GPIOA, 2, PAL_MODE_INPUT_ANALOG);
-	palSetPadMode(GPIOA, 3, PAL_MODE_INPUT_ANALOG);
-	palSetPadMode(GPIOA, 4, PAL_MODE_INPUT_ANALOG);
-	palSetPadMode(GPIOA, 5, PAL_MODE_INPUT_ANALOG);
+	palSetPadMode(GPIOA, 0, PAL_MODE_INPUT_ANALOG);  // U1
+	palSetPadMode(GPIOA, 1, PAL_MODE_INPUT_ANALOG);  // U2
+	palSetPadMode(GPIOA, 2, PAL_MODE_INPUT_ANALOG);  // U3
+	palSetPadMode(GPIOA, 3, PAL_MODE_INPUT_ANALOG);  // TEMP_MOS
+	palSetPadMode(GPIOA, 4, PAL_MODE_INPUT_ANALOG);  // U_CHG
+	palSetPadMode(GPIOA, 5, PAL_MODE_INPUT_ANALOG);  // I_CHG
+	palSetPadMode(GPIOA, 7, PAL_MODE_INPUT_ANALOG);  // UH
 
-	palSetPadMode(GPIOC, 0, PAL_MODE_INPUT_ANALOG);
-	palSetPadMode(GPIOC, 1, PAL_MODE_INPUT_ANALOG);
-	palSetPadMode(GPIOC, 2, PAL_MODE_INPUT_ANALOG);
-	palSetPadMode(GPIOC, 3, PAL_MODE_INPUT_ANALOG);
+	palSetPadMode(GPIOC, 0, PAL_MODE_INPUT_ANALOG);  // I1
+	palSetPadMode(GPIOC, 1, PAL_MODE_INPUT_ANALOG);  // I2
+	palSetPadMode(GPIOC, 2, PAL_MODE_INPUT_ANALOG);  // I3
+	palSetPadMode(GPIOC, 3, PAL_MODE_INPUT_ANALOG);  // U_DC
+	palSetPadMode(GPIOC, 4, PAL_MODE_INPUT_ANALOG);  // UL
 
 	// Custom Pins
 	palSetPadMode(GPIOA, 6,  // Charge enable
@@ -113,13 +115,13 @@ void hw_setup_adc_channels(void) {
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 1, ADC_SampleTime_15Cycles);   // 0:  U3
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_10, 2, ADC_SampleTime_15Cycles);  // 3:  I1
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 3, ADC_SampleTime_15Cycles);   // 6:  UCH
-	ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 4, ADC_SampleTime_15Cycles);   // 9:  U1
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_14, 4, ADC_SampleTime_15Cycles);  // 9:  UL
 
 	// ADC2 regular channels
 	ADC_RegularChannelConfig(ADC2, ADC_Channel_1, 1, ADC_SampleTime_15Cycles);   // 1:  U2
 	ADC_RegularChannelConfig(ADC2, ADC_Channel_11, 2, ADC_SampleTime_15Cycles);  // 4:  I2
 	ADC_RegularChannelConfig(ADC2, ADC_Channel_5, 3, ADC_SampleTime_15Cycles);   // 7:  ICH
-	ADC_RegularChannelConfig(ADC2, ADC_Channel_Vrefint, 4, ADC_SampleTime_15Cycles);  // 10: VREF
+	ADC_RegularChannelConfig(ADC2, ADC_Channel_7, 4, ADC_SampleTime_15Cycles);   // 10: UH
 
 	// ADC3 regular channels
 	ADC_RegularChannelConfig(ADC3, ADC_Channel_0, 1, ADC_SampleTime_15Cycles);   // 2:  U1

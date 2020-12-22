@@ -131,11 +131,79 @@ void Safty_checks(void)
 	if (Motor_lock && (chVTTimeElapsedSinceX(BMS.last_CV) > S2ST(30)))
 		Motor_lock = false;
 
+	// Sleeptimer logic
 	if (mc_interface_get_rpm() > 100)
 		sleep_timer = chVTGetSystemTimeX();
 
 	if (chVTTimeElapsedSinceX(sleep_timer) > S2ST(Sleep_Time))
 		SHDN_ON;
+
+	// HBT checks
+	static bool HBT1_safe = false, HBT2_safe = false;
+	static uint8_t CAN_sample_counter = 0;
+	static uint32_t CAN_sample_timer = 0;
+	if (chVTTimeElapsedSinceX(CAN_HBT1_timeout) > S2ST(1))  // HBT1 timeout triped?
+	{
+		if (HBT1_safe)  // HBT was present before?
+		{
+			CAN_OFF;  // deactivate CAN
+			CAN_sample_counter = 0;  // and sample resistance
+			CAN_sample_timer = chVTGetSystemTimeX();
+		}
+	}
+	else
+		HBT1_safe = true;  // remember HBT was present
+
+	if (chVTTimeElapsedSinceX(CAN_HBT2_timeout) > S2ST(1))  // HBT2 timeout triped?
+	{
+		if (HBT2_safe)  // HBT was present before?
+		{
+			CAN_OFF;  // deactivate CAN
+			CAN_sample_counter = 0;  // and sample resistance
+			CAN_sample_timer = chVTGetSystemTimeX();
+		}
+	}
+	else
+		HBT2_safe = true;  // remember HBT was present
+
+	static float UL, UH;
+	if (CAN_sample_counter == 200) {}  // chatch deactivated state
+	else if ((CAN_sample_counter == 101) && (chVTTimeElapsedSinceX(CAN_sample_timer) >= S2ST(1)))  // last sample was negativ and 1s passed?
+	{
+		CAN_sample_counter = 0;  // start new sample
+		CAN_sample_timer = chVTGetSystemTimeX();
+	}
+	else if (CAN_sample_counter == 100)  // CAN sampling finished
+	{
+		if ((UL > 1.577) && (UH < 1.723))  // sample inside allowed window?
+		{
+			CAN_sample_counter = 200;  // deactivate sampling
+			HBT1_safe = false;
+			HBT2_safe = false;  // reset timeout memory
+
+			CAN_ON;
+		}
+		else
+		{
+			CAN_sample_counter = 101;  // deactivate sampling
+			CAN_sample_timer = chVTGetSystemTimeX();
+		}
+	}
+	else if ((chVTTimeElapsedSinceX(CAN_sample_timer) >= MS2ST(100)) && (CAN_sample_counter < 100))  // CAN sample
+	{
+		CAN_sample_counter++;
+		CAN_sample_timer = chVTGetSystemTimeX();
+
+		static float UL_filt = 0;
+		UL_filt -= UL_filt/10;
+		UL_filt += GET_VOLTAGE_RAW(9);
+		UL = U_DC_filt/10;
+
+		static float UH_filt = 0;
+		UH_filt -= UH_filt/10;
+		UH_filt += GET_VOLTAGE_RAW(10);
+		UH = U_DC_filt/10;
+	}
 }
 
 static THD_FUNCTION(my_thread, arg)
