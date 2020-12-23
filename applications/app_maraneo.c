@@ -29,6 +29,7 @@
 #include "utils.h"
 #include "hw.h"
 #include "timeout.h"
+#include "commands.h"
 
 #include "maraneo_vars.h"
 #include "LTC6804_handler.h"
@@ -66,6 +67,8 @@ void app_custom_start(void)
 {
 	chg_init();
 	SHDN_OFF;
+	CAN_OFF;
+	BAT_ON;
 
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
@@ -90,6 +93,8 @@ void app_custom_stop(void)
 {
 	charge_en = false;
 	CHRG_OFF;
+	CAN_OFF;
+	BAT_OFF;
 
 	mc_interface_set_pwm_callback(0);
 
@@ -140,13 +145,15 @@ void Safty_checks(void)
 
 	// HBT checks
 	static bool HBT1_safe = false, HBT2_safe = false;
-	static uint8_t CAN_sample_counter = 0;
+	static uint8_t CAN_sample_counter = 200;
 	static uint32_t CAN_sample_timer = 0;
 	if (chVTTimeElapsedSinceX(CAN_HBT1_timeout) > S2ST(1))  // HBT1 timeout triped?
 	{
-		if (HBT1_safe)  // HBT was present before?
+		if (HBT1_safe && (CAN_sample_counter == 200))  // HBT was present before?
 		{
+			commands_printf("lost HBT1, start sampling");
 			CAN_OFF;  // deactivate CAN
+
 			CAN_sample_counter = 0;  // and sample resistance
 			CAN_sample_timer = chVTGetSystemTimeX();
 		}
@@ -156,8 +163,9 @@ void Safty_checks(void)
 
 	if (chVTTimeElapsedSinceX(CAN_HBT2_timeout) > S2ST(1))  // HBT2 timeout triped?
 	{
-		if (HBT2_safe)  // HBT was present before?
+		if (HBT2_safe && (CAN_sample_counter == 200))  // HBT was present before?
 		{
+			commands_printf("lost HBT2, start sampling");
 			CAN_OFF;  // deactivate CAN
 			CAN_sample_counter = 0;  // and sample resistance
 			CAN_sample_timer = chVTGetSystemTimeX();
@@ -170,13 +178,16 @@ void Safty_checks(void)
 	if (CAN_sample_counter == 200) {}  // chatch deactivated state
 	else if ((CAN_sample_counter == 101) && (chVTTimeElapsedSinceX(CAN_sample_timer) >= S2ST(1)))  // last sample was negativ and 1s passed?
 	{
+		commands_printf("restart sampling");
 		CAN_sample_counter = 0;  // start new sample
 		CAN_sample_timer = chVTGetSystemTimeX();
 	}
 	else if (CAN_sample_counter == 100)  // CAN sampling finished
 	{
-		if ((UL > 1.577) && (UH < 1.723))  // sample inside allowed window?
+		commands_printf("UL %.3f\nUH %.3f", (double) UL, (double) UH);
+		if ((UL > 1.314) && (UH < 1.558))  // sample inside allowed window?
 		{
+			commands_printf("HBT found, endable CAN");
 			CAN_sample_counter = 200;  // deactivate sampling
 			HBT1_safe = false;
 			HBT2_safe = false;  // reset timeout memory
@@ -185,11 +196,12 @@ void Safty_checks(void)
 		}
 		else
 		{
+			commands_printf("no HBT found, waiting 1s");
 			CAN_sample_counter = 101;  // deactivate sampling
 			CAN_sample_timer = chVTGetSystemTimeX();
 		}
 	}
-	else if ((chVTTimeElapsedSinceX(CAN_sample_timer) >= MS2ST(100)) && (CAN_sample_counter < 100))  // CAN sample
+	else if ((chVTTimeElapsedSinceX(CAN_sample_timer) >= MS2ST(1)) && (CAN_sample_counter < 100))  // CAN sample
 	{
 		CAN_sample_counter++;
 		CAN_sample_timer = chVTGetSystemTimeX();
@@ -197,12 +209,12 @@ void Safty_checks(void)
 		static float UL_filt = 0;
 		UL_filt -= UL_filt/10;
 		UL_filt += GET_VOLTAGE_RAW(9);
-		UL = U_DC_filt/10;
+		UL = UL_filt/10;
 
 		static float UH_filt = 0;
 		UH_filt -= UH_filt/10;
 		UH_filt += GET_VOLTAGE_RAW(10);
-		UH = U_DC_filt/10;
+		UH = UH_filt/10;
 	}
 }
 
