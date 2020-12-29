@@ -23,6 +23,7 @@
 
 // Some useful includes
 #include "mc_interface.h"
+#include "mcpwm_foc.h"
 #include "utils.h"
 #include "encoder.h"
 #include "terminal.h"
@@ -53,13 +54,19 @@ const volatile mc_configuration *mc_cfg;
 
 volatile bool stop_now = true;
 volatile bool is_running = false;
+
 volatile uint8_t fan_pwm = 0;
 volatile uint8_t pump_pwm = 0;
+volatile bool compressor_call = false;
 
 enum
 {
-	init
-} tc_state;
+	cmp_init,
+	cmp_wait_for_start,
+	cmp_ramp_up,
+	cmp_running,
+	cmp_equalize
+} compressor_state;
 
 float T_tank = 0, T_cond = 0;
 
@@ -185,6 +192,51 @@ void app_custom_configure(app_configuration *conf) {
 	(void)conf;
 }
 
+void sm_compressor(void)
+{
+	static systime_t cmp_timer = 0;
+
+	switch(compressor_state)
+	{
+	case cmp_init:
+		cmp_timer = chVTGetSystemTime();
+		compressor_state = cmp_wait_for_start;
+		break;
+
+	case cmp_wait_for_start:
+		if (compressor_call)
+		{
+			cmp_timer = chVTGetSystemTime();
+			compressor_state = cmp_ramp_up;
+		}
+		break;
+
+	case cmp_ramp_up:
+		mcpwm_foc_set_openloop(mc_cfg->l_current_max, ST2MS(chVTTimeElapsedSinceX(cmp_timer))*10000/t_RAMP_TIME);
+
+		if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(t_RAMP_TIME))
+		{
+			mc_interface_set_pid_speed(10000);
+			compressor_state = cmp_running;
+		}
+		break;
+
+	case cmp_running:
+		if (!compressor_call)
+		{
+			mc_interface_release_motor();
+			cmp_timer = chVTGetSystemTime();
+			compressor_state = cmp_equalize;
+		}
+		break;
+
+	case cmp_equalize:
+		if (chVTTimeElapsedSinceX(cmp_timer) >= S2ST(30))
+			compressor_state = cmp_wait_for_start;
+		break;
+	}
+}
+
 static THD_FUNCTION(my_thread, arg)
 {
 	(void)arg;
@@ -216,25 +268,10 @@ static THD_FUNCTION(my_thread, arg)
 
 		if (T_tank > -20)  // Tank sensor present
 		{
-			static bool running = false;
 			if (T_tank > (T_target + 0.5))
-			{
-				if (!running)
-				{
-					running = true;
-					mc_interface_set_pid_speed(10000);
-					commands_printf("Compressor start");
-				}
-			}
+				compressor_call = true;
 			else if (T_tank < (T_target - 0.5))
-			{
-				if (running)
-				{
-					running = false;
-					mc_interface_release_motor();
-					commands_printf("Compressor stop");
-				}
-			}
+				compressor_call = false;
 		}
 		else
 			mc_interface_release_motor();
