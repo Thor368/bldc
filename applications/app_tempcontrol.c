@@ -44,11 +44,6 @@
 static THD_FUNCTION(my_thread, arg);
 static THD_WORKING_AREA(my_thread_wa, 2048);
 
-// Private functions
-static void pwm_callback(void);
-static void temp_print_all(int argc, const char **argv);
-static void temp_config(int argc, const char **argv);
-
 // Private variables
 const volatile mc_configuration *mc_cfg;
 
@@ -57,7 +52,6 @@ volatile bool is_running = false;
 
 volatile uint8_t fan_pwm = 0;
 volatile uint8_t pump_pwm = 0;
-volatile bool compressor_call = false;
 
 enum
 {
@@ -68,7 +62,11 @@ enum
 	cmp_equalize
 } compressor_state;
 
+bool compressor_call = false;
+bool manual_mode = false;
+
 float T_tank = 0, T_cond = 0;
+float U_fan = 0;
 
 float T_target = T_TARGET_DEFAULT;
 float T_fan_ramp_start = T_FAN_RAMP_START;
@@ -132,6 +130,101 @@ void read_conf(void)
 	U_pump_std = eep_conf.as_float;
 }
 
+// Callback function for the terminal command with arguments.
+static void temp_print_all(int argc, const char **argv)
+{
+	(void) argc;
+	(void) argv;
+
+	commands_printf("T_tank: %.1f°C", (double) T_tank);
+	commands_printf("T_liqu: %.1f°C", (double) T_cond);
+	commands_printf("TMOS: %.1f°C", (double) NTC_TEMP(ADC_IND_TEMP_MOS));
+	commands_printf("TMOT: %.1f°C", (double) NTC_TEMP_MOTOR(mc_cfg->m_ntc_motor_beta));
+	commands_printf("---------------------");
+	commands_printf("Pump_PWM: %d", pump_pwm);
+	commands_printf("Fan_PWM: %d\n", fan_pwm);
+}
+
+static void temp_config(int argc, const char **argv)
+{
+	if (argc == 1)
+	{
+		commands_printf("T_target: %.1f°C", (double) T_target);
+		commands_printf("T_fan_ramp_start: %.1f°C", (double) T_fan_ramp_start);
+		commands_printf("T_fan_ramp_end: %.1f°C", (double) T_fan_ramp_end);
+		commands_printf("T_fan_min: %.1fV", (double) U_fan_min);
+		commands_printf("T_fan_max: %.1fV", (double) U_fan_max);
+		commands_printf("U_pump_std: %.1fV", (double) U_pump_std);
+	}
+	else if (argc == 3)
+	{
+		float val;
+		if (sscanf(argv[2], "%f", &val) != 1)
+		{
+			commands_printf("Invalid value");
+			return;
+		}
+
+		bool success = true;
+		if (!strcmp(argv[1], "T_target"))
+			T_target = val;
+		else if (!strcmp(argv[1], "T_fan_ramp_start"))
+			T_fan_ramp_start = val;
+		else if (!strcmp(argv[1], "T_fan_ramp_end"))
+			T_fan_ramp_end = val;
+		else if (!strcmp(argv[1], "U_fan_min"))
+			U_fan_min = val;
+		else if (!strcmp(argv[1], "U_fan_max"))
+			U_fan_max = val;
+		else if (!strcmp(argv[1], "U_pump_std"))
+			U_pump_std = val;
+		else
+			success = false;
+
+		if (success)
+		{
+			commands_printf("OK.\n");
+			write_conf();
+		}
+		else
+			commands_printf("Unknown parameter\n");
+	}
+	else
+		commands_printf("Wrong argument count\n");
+
+	commands_printf(" ");
+}
+
+static void temp_manual(int argc, const char **argv)
+{
+	(void) argc;
+	(void) argv;
+	manual_mode = true;
+	commands_printf("Manual override activated.\n");
+}
+
+static void pwm_callback(void)
+{
+	static uint8_t cc = 0;
+	if (cc >= 255)
+	{
+		cc = 0;
+		PUMP_ON();
+		FAN1_ON();
+		FAN2_ON();
+	}
+	else
+		cc++;
+
+	if (cc == pump_pwm)
+		PUMP_OFF();
+	if (cc == fan_pwm)
+	{
+		FAN1_OFF();
+		FAN2_OFF();
+	}
+}
+
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
 void app_custom_start(void)
@@ -142,6 +235,9 @@ void app_custom_start(void)
 
 	pump_pwm = 0;
 	fan_pwm = 0;
+
+	U_fan = 0;
+	manual_mode = false;
 
 	read_conf();
 
@@ -164,6 +260,12 @@ void app_custom_start(void)
 			"Print/set configuration",
 			"[s]",
 			temp_config);
+
+	terminal_register_command_callback(
+			"manual_mode",
+			"Activate manual override",
+			"",
+			temp_manual);
 
 	mc_cfg = mc_interface_get_configuration();
 }
@@ -204,9 +306,10 @@ void sm_compressor(void)
 		break;
 
 	case cmp_wait_for_start:
-		if (compressor_call)
+		if (compressor_call && !manual_mode)
 		{
 			cmp_timer = chVTGetSystemTime();
+			U_fan = U_fan_min;
 			compressor_state = cmp_ramp_up;
 		}
 		break;
@@ -222,17 +325,26 @@ void sm_compressor(void)
 		break;
 
 	case cmp_running:
-		if (!compressor_call)
+		if ((T_cond < -20) || (T_cond > 40))
+			U_fan = U_fan_max;
+		else if (T_cond < 35)
+			U_fan = U_fan_min;
+
+		if (!compressor_call && manual_mode)
 		{
 			mc_interface_release_motor();
 			cmp_timer = chVTGetSystemTime();
+			U_fan = U_fan_min;
 			compressor_state = cmp_equalize;
 		}
 		break;
 
 	case cmp_equalize:
 		if (chVTTimeElapsedSinceX(cmp_timer) >= S2ST(30))
+		{
+			U_fan = U_fan_min;
 			compressor_state = cmp_wait_for_start;
+		}
 		break;
 	}
 }
@@ -276,112 +388,14 @@ static THD_FUNCTION(my_thread, arg)
 		else
 			mc_interface_release_motor();
 
-		if (T_cond > -20)
-		{
-			float fan_volt = U_fan_min;
-			if (T_cond > T_fan_ramp_end)
-				fan_volt = U_fan_max;
-			else
-				fan_volt = (T_cond - T_fan_ramp_start)/(T_fan_ramp_end - T_fan_ramp_start)*U_fan_max;
-
 #ifdef BRIDGED_12V
-			fan_pwm = fan_volt/GET_INPUT_VOLTAGE()*255;
+			fan_pwm = U_fan/GET_INPUT_VOLTAGE()*255;
 			pump_pwm = U_pump_std/GET_INPUT_VOLTAGE()*255;
 #else
-			fan_pwm = fan_volt/12*255;
+			fan_pwm = U_fan/12*255;
 			pump_pwm = U_pump_std/12*255;
 #endif
-		}
-		else
-			fan_pwm = 255;
 
 		chThdSleepMilliseconds(100);
-	}
-}
-
-// Callback function for the terminal command with arguments.
-static void temp_print_all(int argc, const char **argv)
-{
-	(void) argc;
-	(void) argv;
-
-	commands_printf("T_tank: %.1f°C", (double) T_tank);
-	commands_printf("T_liqu: %.1f°C", (double) T_cond);
-	commands_printf("TMOS: %.1f°C", (double) NTC_TEMP(ADC_IND_TEMP_MOS));
-	commands_printf("TMOT: %.1f°C", (double) NTC_TEMP_MOTOR(mc_cfg->m_ntc_motor_beta));
-	commands_printf("---------------------");
-	commands_printf("Pump_PWM: %d", pump_pwm);
-	commands_printf("Fan_PWM: %d\n", fan_pwm);
-}
-
-static void temp_config(int argc, const char **argv)
-{
-	if (argc == 1)
-	{
-		commands_printf("T_target: %.1f°C", (double) T_target);
-		commands_printf("T_fan_ramp_start: %.1f°C", (double) T_fan_ramp_start);
-		commands_printf("T_fan_ramp_end: %.1f°C", (double) T_fan_ramp_end);
-		commands_printf("T_fan_min: %.1fV", (double) U_fan_min);
-		commands_printf("T_fan_max: %.1fV", (double) U_fan_max);
-		commands_printf("pump_volt_std: %.1fV", (double) U_pump_std);
-	}
-	else if (argc == 3)
-	{
-		float val;
-		if (!sscanf(argv[3], "%f", &val))
-		{
-			commands_printf("Invalid value");
-			return;
-		}
-
-		bool success = true;
-		if (strcmp(argv[2], "T_target"))
-			T_target = val;
-		else if (strcmp(argv[2], "T_fan_ramp_start"))
-			T_fan_ramp_start = val;
-		else if (strcmp(argv[2], "T_fan_ramp_end"))
-			T_fan_ramp_end = val;
-		else if (strcmp(argv[2], "U_fan_min"))
-			U_fan_min = val;
-		else if (strcmp(argv[2], "U_fan_max"))
-			U_fan_max = val;
-		else if (strcmp(argv[2], "U_pump_std"))
-			U_pump_std = val;
-		else
-			success = false;
-
-		if (success)
-		{
-			commands_printf("OK\n");
-			write_conf();
-		}
-		else
-			commands_printf("Unknown parameter\n");
-	}
-	else
-		commands_printf("Wrong argument count");
-
-	commands_printf(" ");
-}
-
-static void pwm_callback(void)
-{
-	static uint8_t cc = 0;
-	if (cc >= 255)
-	{
-		cc = 0;
-		PUMP_ON();
-		FAN1_ON();
-		FAN2_ON();
-	}
-	else
-		cc++;
-
-	if (cc == pump_pwm)
-		PUMP_OFF();
-	if (cc == fan_pwm)
-	{
-		FAN1_OFF();
-		FAN2_OFF();
 	}
 }
