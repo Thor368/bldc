@@ -10,8 +10,9 @@
 #include "comm_can.h"
 #include "mc_interface.h"
 #include "LTC6804_handler.h"
-#include "Battery_config.h"
+#include "commands.h"
 
+#include "Battery_config.h"
 #include "maraneo_vars.h"
 #include "mar_CAN.h"
 #include "mar_charge_statemachine.h"
@@ -55,6 +56,7 @@ void CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 		switch (id >> 16)
 		{
 		case 0x07:
+			commands_printf("frame from HBT2");
 			CAN_HBT2_timeout = chVTGetSystemTimeX();
 			break;
 
@@ -69,6 +71,7 @@ void CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 		switch (id >> 8)  // VESC frames
 		{
 		case CAN_PACKET_SET_CURRENT_REL:
+			commands_printf("frame from HBT1");
 			CAN_HBT1_timeout = chVTGetSystemTimeX();
 			break;
 
@@ -84,7 +87,7 @@ void CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 
 void CAN_Init(void)
 {
-	comm_can_set_eid_rx_callback(&CAN_callback);
+	comm_can_set_eid_rx_callback2(&CAN_callback);
 
 	CAN_timer = chVTGetSystemTimeX();
 	CAN_BATI_timeout = chVTGetSystemTimeX();

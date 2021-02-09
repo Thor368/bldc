@@ -158,8 +158,11 @@ void Safty_checks(void)
 			CAN_sample_timer = chVTGetSystemTimeX();
 		}
 	}
-	else
+	else if (!HBT1_safe)
+	{
+		commands_printf("found HBT1");
 		HBT1_safe = true;  // remember HBT was present
+	}
 
 	if (chVTTimeElapsedSinceX(CAN_HBT2_timeout) > S2ST(1))  // HBT2 timeout triped?
 	{
@@ -171,8 +174,11 @@ void Safty_checks(void)
 			CAN_sample_timer = chVTGetSystemTimeX();
 		}
 	}
-	else
+	else if (!HBT2_safe)
+	{
+		commands_printf("found HBT2");
 		HBT2_safe = true;  // remember HBT was present
+	}
 
 	static float UL, UH;
 	if (CAN_sample_counter == 200) {}  // chatch deactivated state
