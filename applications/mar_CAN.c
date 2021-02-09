@@ -10,8 +10,9 @@
 #include "comm_can.h"
 #include "mc_interface.h"
 #include "LTC6804_handler.h"
-#include "Battery_config.h"
+#include "commands.h"
 
+#include "Battery_config.h"
 #include "maraneo_vars.h"
 #include "mar_CAN.h"
 #include "mar_charge_statemachine.h"
@@ -84,6 +85,7 @@ void CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 
 void CAN_Init(void)
 {
+	comm_can_set_sid_rx_callback(&CAN_callback);
 	comm_can_set_eid_rx_callback(&CAN_callback);
 
 	CAN_timer = chVTGetSystemTimeX();

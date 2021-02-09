@@ -144,12 +144,12 @@ void Safty_checks(void)
 		SHDN_ON;
 
 	// HBT checks
-	static bool HBT1_present = false, HBT2_present = false;
+	static bool HBT1_safe = false, HBT2_safe = false;
 	static uint8_t CAN_sample_counter = 200;
 	static uint32_t CAN_sample_timer = 0;
 	if (chVTTimeElapsedSinceX(CAN_HBT1_timeout) > S2ST(1))  // HBT1 timeout triped?
 	{
-		if (HBT1_present && (CAN_sample_counter == 200))  // HBT was present before?
+		if (HBT1_safe && (CAN_sample_counter == 200))  // HBT was present before?
 		{
 			commands_printf("lost HBT1, start sampling");
 			CAN_OFF;  // deactivate CAN
@@ -158,12 +158,15 @@ void Safty_checks(void)
 			CAN_sample_timer = chVTGetSystemTimeX();
 		}
 	}
-	else
-		HBT1_present = true;  // remember HBT was present
+	else if (!HBT1_safe)
+	{
+		commands_printf("found HBT1");
+		HBT1_safe = true;  // remember HBT was present
+	}
 
 	if (chVTTimeElapsedSinceX(CAN_HBT2_timeout) > S2ST(1))  // HBT2 timeout triped?
 	{
-		if (HBT2_present && (CAN_sample_counter == 200))  // HBT was present before?
+		if (HBT2_safe && (CAN_sample_counter == 200))  // HBT was present before?
 		{
 			commands_printf("lost HBT2, start sampling");
 			CAN_OFF;  // deactivate CAN
@@ -171,11 +174,14 @@ void Safty_checks(void)
 			CAN_sample_timer = chVTGetSystemTimeX();
 		}
 	}
-	else
-		HBT2_present = true;  // remember HBT was present
+	else if (!HBT2_safe)
+	{
+		commands_printf("found HBT2");
+		HBT2_safe = true;  // remember HBT was present
+	}
 
 	static float UL, UH;
-	if (CAN_sample_counter == 200) {}  // catch deactivated state
+	if (CAN_sample_counter == 200) {}  // chatch deactivated state
 	else if ((CAN_sample_counter == 101) && (chVTTimeElapsedSinceX(CAN_sample_timer) >= S2ST(1)))  // last sample was negativ and 1s passed?
 	{
 		commands_printf("restart sampling");
@@ -189,8 +195,8 @@ void Safty_checks(void)
 		{
 			commands_printf("HBT found, endable CAN");
 			CAN_sample_counter = 200;  // deactivate sampling
-			HBT1_present = false;
-			HBT2_present = false;  // reset timeout memory
+			HBT1_safe = false;
+			HBT2_safe = false;  // reset timeout memory
 
 			CAN_ON;
 		}

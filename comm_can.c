@@ -103,8 +103,7 @@ static void send_status5(uint8_t id, bool replace);
 // Function pointers
 static void(*sid_callback)(uint32_t id, uint8_t *data, uint8_t len) = 0;
 static void(*eid_callback)(uint32_t id, uint8_t *data, uint8_t len) = 0;
-static void(*sid_callback2)(uint32_t id, uint8_t *data, uint8_t len) = 0;
-static void(*eid_callback2)(uint32_t id, uint8_t *data, uint8_t len) = 0;
+static void(*callback2)(uint32_t id, uint8_t *data, uint8_t len) = 0;
 
 void comm_can_init(void) {
 	for (int i = 0;i < CAN_STATUS_MSGS_TO_STORE;i++) {
@@ -357,24 +356,13 @@ void comm_can_set_eid_rx_callback(void (*p_func)(uint32_t id, uint8_t *data, uin
 }
 
 /**
- * Set function to be called when standard CAN frames are received. CAN2
+ * Set function to be called when CAN frames are received. CAN2
  *
  * @param p_func
  * Pointer to the function.
  */
-void comm_can_set_sid_rx_callback2(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len)) {
-	sid_callback2 = p_func;
-}
-
-/**
- * Set function to be called when extended CAN frames are received. Will only be called when
- * the CAN mode is CAN_MODE_COMM_BRIDGE. CAN2
- *
- * @param p_func
- * Pointer to the function.
- */
-void comm_can_set_eid_rx_callback2(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len)) {
-	eid_callback2 = p_func;
+void comm_can_set_rx_callback2(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len)) {
+	callback2 = p_func;
 }
 
 /**
@@ -942,6 +930,27 @@ CANRxFrame *comm_can_get_rx_frame(void) {
 #endif
 }
 
+CANRxFrame *comm_can_get_rx_frame2(void) {
+#if CAN_ENABLE
+	chMtxLock(&can_rx_mtx);
+	if (rx_frame_read2 != rx_frame_write2) {
+		CANRxFrame *res = &rx_frames2[rx_frame_read++];
+
+		if (rx_frame_read2 == RX_FRAMES_SIZE) {
+			rx_frame_read2 = 0;
+		}
+
+		chMtxUnlock(&can_rx_mtx);
+		return res;
+	} else {
+		chMtxUnlock(&can_rx_mtx);
+		return 0;
+	}
+#else
+	return 0;
+#endif
+}
+
 #if CAN_ENABLE
 static THD_FUNCTION(cancom_read_thread, arg) {
 	(void)arg;
@@ -1034,12 +1043,18 @@ static THD_FUNCTION(cancom_process_thread, arg) {
 
 			if (rxmsg.IDE == CAN_IDE_EXT) {
 				decode_msg(rxmsg.EID, rxmsg.data8, rxmsg.DLC, false);
+				if (eid_callback) {
+					eid_callback(rxmsg.EID, rxmsg.data8, rxmsg.DLC);
+				}
 			} else {
 				if (sid_callback) {
 					sid_callback(rxmsg.SID, rxmsg.data8, rxmsg.DLC);
 				}
 			}
 		}
+
+		while ((rxmsg_tmp = comm_can_get_rx_frame2()) != 0)
+			callback2(rxmsg_tmp->EID, rxmsg_tmp->data8, rxmsg_tmp->DLC);
 	}
 }
 
@@ -1641,6 +1656,8 @@ static void set_timing(int brp, int ts1, int ts2) {
 	cancfg.btr = CAN_BTR_SJW(3) | CAN_BTR_TS2(ts2) |
 		CAN_BTR_TS1(ts1) | CAN_BTR_BRP(brp);
 
+	canStop(&CAND2);
 	canStop(&HW_CAN_DEV);
 	canStart(&HW_CAN_DEV, &cancfg);
+	canStart(&CAND2, &cancfg);
 }
