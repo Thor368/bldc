@@ -1641,6 +1641,8 @@ static void set_timing(int brp, int ts1, int ts2) {
 	cancfg.btr = CAN_BTR_SJW(3) | CAN_BTR_TS2(ts2) |
 		CAN_BTR_TS1(ts1) | CAN_BTR_BRP(brp);
 
+	canStop(&CAND2);
 	canStop(&HW_CAN_DEV);
 	canStart(&HW_CAN_DEV, &cancfg);
+	canStart(&CAND2, &cancfg);
 }

@@ -12,6 +12,7 @@
 
 #include "maraneo_vars.h"
 #include "LTC6804_handler.h"
+#include "comm_can.h"
 
 #include "commands.h"  // debug
 
@@ -39,6 +40,8 @@ void chg_increment_counter(void)
 
 void charge_statemachine()
 {
+	comm_can_transmit_eid2(0x200, &chg_state, 1);
+
 	if (!charge_en)
 		chg_state = chgst_wait_for_enable;
 
@@ -49,6 +52,7 @@ void charge_statemachine()
 
 		chg_timer = chVTGetSystemTimeX();
 		chg_state = chgst_wait_for_init;
+
 		break;
 
 	case chgst_wait_for_init:

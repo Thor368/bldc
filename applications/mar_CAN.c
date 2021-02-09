@@ -87,7 +87,7 @@ void CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 
 void CAN_Init(void)
 {
-	comm_can_set_eid_rx_callback2(&CAN_callback);
+	comm_can_set_eid_rx_callback(&CAN_callback);
 
 	CAN_timer = chVTGetSystemTimeX();
 	CAN_BATI_timeout = chVTGetSystemTimeX();
