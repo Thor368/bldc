@@ -73,14 +73,14 @@ void app_custom_stop(void)
 		chThdSleepMilliseconds(1);
 }
 
-void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
+bool rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 {
 	(void) len;
 	float temp_v, temp_I;
 
 	if ((id < CAN_DRIVE_CONTROLS_BASE) ||
 		(id > (CAN_DRIVE_CONTROLS_BASE + 0x20)))
-	return;
+		return false;
 
 	id -= CAN_DRIVE_CONTROLS_BASE;
 	switch (id)
@@ -102,6 +102,8 @@ void rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 		timeout_reset();
 	break;
 	}
+
+	return true;
 }
 
 void app_custom_configure(app_configuration *conf)

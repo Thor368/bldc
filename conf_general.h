@@ -22,7 +22,7 @@
 
 // Firmware version
 #define FW_VERSION_MAJOR			5
-#define FW_VERSION_MINOR			01
+#define FW_VERSION_MINOR			02
 // Set to 0 for building a release and iterate during beta test builds
 #define FW_TEST_VERSION_NUMBER		0
 
@@ -48,6 +48,12 @@
  * as an argument.
  */
 #if !defined(HW_SOURCE) && !defined(HW_HEADER)
+//#define HW_SOURCE "hw_AMALGA.c"
+//#define HW_HEADER "hw_AMALGA.h"
+
+#define HW_SOURCE "hw_HSWR4.c"
+#define HW_HEADER "hw_HSWR4.h"
+
 //#define HW_SOURCE "hw_40.c"
 //#define HW_HEADER "hw_40.h"
 
@@ -99,6 +105,7 @@
 
 // Second revision with separate UART for NRF51
 //#define HW75_300_REV_2
+//#define HW75_300_REV_3
 //#define HW75_300_REV_3
 
 //#define HW_SOURCE "hw_75_300.c"
@@ -191,6 +198,13 @@
 #define APP_CUSTOM_TO_USE			"app_WS22.c"
 #define APPCONF_APP_TO_USE			APP_CUSTOM
 
+//#include "vccu/app_vccu_conf.h"
+
+// CAN-plotter
+//#define APP_CUSTOM_TO_USE			"app_plot_can.c"
+//#define APPCONF_APP_TO_USE			APP_CUSTOM
+//#define APPCONF_CAN_BAUD_RATE		CAN_BAUD_75K
+
 #include "hw.h"
 #include "mcconf_default.h"
 #include "appconf_default.h"
@@ -262,6 +276,9 @@
 #endif
 #ifndef AD2S1205_USE_HW_SPI_PINS
 #define AD2S1205_USE_HW_SPI_PINS	0
+#endif
+#ifndef MT6816_USE_HW_SPI_PINS
+#define MT6816_USE_HW_SPI_PINS		0
 #endif
 
 /*
