@@ -16,7 +16,7 @@ typedef enum
 	chgst_wait_for_init,
 	chgst_wait_for_enable,
 	chgst_wait_for_charger,
-	chgst_wait_settle,
+	chgst_wait_equalize,
 	chgst_charging,
 	chgst_charge_finished,
 	chgst_error,
