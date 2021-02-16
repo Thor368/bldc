@@ -22,6 +22,7 @@
 #include "hal.h"
 #include "hw.h"
 #include "comm_can.h"
+#include "crc.h"
 
 // Private variables
 static app_configuration appconf;
@@ -103,4 +104,24 @@ bool app_is_output_disabled(void) {
 static void output_vt_cb(void *arg) {
 	(void)arg;
 	output_disabled_now = false;
+}
+
+/**
+ * Get app_configuration CRC
+ *
+ * @param conf
+ * Pointer to app_configuration or NULL for current appconf
+ *
+ * @return
+ * CRC16 (with crc field in struct temporarily set to zero).
+ */
+unsigned app_calc_crc(app_configuration* conf) {
+	if(NULL == conf)
+		conf = &appconf;
+
+	unsigned crc_old = conf->crc;
+	conf->crc = 0;
+	unsigned crc_new = crc16((uint8_t*)conf, sizeof(app_configuration));
+	conf->crc = crc_old;
+	return crc_new;
 }

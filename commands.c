@@ -45,6 +45,7 @@
 #endif
 #include "minilzo.h"
 #include "mempools.h"
+#include "bms.h"
 
 #include <math.h>
 #include <string.h>
@@ -65,11 +66,13 @@ static volatile int blocking_thread_motor = 1;
 static void(* volatile send_func)(unsigned char *data, unsigned int len) = 0;
 static void(* volatile send_func_blocking)(unsigned char *data, unsigned int len) = 0;
 static void(* volatile send_func_nrf)(unsigned char *data, unsigned int len) = 0;
+static void(* volatile send_func_can_fwd)(unsigned char *data, unsigned int len) = 0;
 static void(* volatile appdata_func)(unsigned char *data, unsigned int len) = 0;
 static disp_pos_mode display_position_mode;
 static mutex_t print_mutex;
 static mutex_t send_buffer_mutex;
 static mutex_t terminal_mutex;
+static volatile int fw_version_sent_cnt = 0;
 
 void commands_init(void) {
 	chMtxObjectInit(&print_mutex);
@@ -94,12 +97,7 @@ void commands_send_packet(unsigned char *data, unsigned int len) {
 }
 
 /**
- * Send a packet using the set NRF51 send function. The NRF51 send function
- * is set when the COMM_EXT_NRF_PRESENT and COMM_EXT_NRF_ESB_RX_DATA commands
- * are received, at which point the previous send function is restored. The
- * intention behind that is to make the NRF51-related communication only with
- * the interface that has an NRF51, and prevent the NRF51 communication from
- * interfering with other communication.
+ * Send a packet using the last can fwd function.
  *
  * @param data
  * The packet data.
@@ -107,9 +105,9 @@ void commands_send_packet(unsigned char *data, unsigned int len) {
  * @param len
  * The data length.
  */
-void commands_send_packet_nrf(unsigned char *data, unsigned int len) {
-	if (send_func_nrf) {
-		send_func_nrf(data, len);
+void commands_send_packet_can_last(unsigned char *data, unsigned int len) {
+	if (send_func_can_fwd) {
+		send_func_can_fwd(data, len);
 	}
 }
 
@@ -187,6 +185,12 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 
 		send_buffer[ind++] = app_get_configuration()->pairing_done;
 		send_buffer[ind++] = FW_TEST_VERSION_NUMBER;
+
+		send_buffer[ind++] = HW_TYPE_VESC;
+
+		send_buffer[ind++] = 0; // No custom config
+
+		fw_version_sent_cnt++;
 
 		reply_func(send_buffer, ind);
 	} break;
@@ -329,7 +333,13 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 			buffer_append_float32(send_buffer, mc_interface_get_pid_pos_now(), 1e6, &ind);
 		}
 		if (mask & ((uint32_t)1 << 17)) {
-			send_buffer[ind++] = app_get_configuration()->controller_id;
+			uint8_t current_controller_id = app_get_configuration()->controller_id;
+#ifdef HW_HAS_DUAL_MOTORS
+			if (mc_interface_get_motor_thread() == 2) {
+				current_controller_id = utils_second_motor_id();
+		}
+#endif
+			send_buffer[ind++] = current_controller_id;
 		}
 		if (mask & ((uint32_t)1 << 18)) {
 			buffer_append_float16(send_buffer, NTC_TEMP_MOS1(), 1e1, &ind);
@@ -527,6 +537,8 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		break;
 
 	case COMM_FORWARD_CAN: {
+		send_func_can_fwd = reply_func;
+
 #ifdef HW_HAS_DUAL_MOTORS
 		if (data[0] == utils_second_motor_id()) {
 			mc_interface_select_motor_thread(2);
@@ -672,7 +684,13 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 			send_buffer[ind++] = mc_interface_get_fault();
 		}
 		if (mask & ((uint32_t)1 << 17)) {
-			send_buffer[ind++] = app_get_configuration()->controller_id;
+			uint8_t current_controller_id = app_get_configuration()->controller_id;
+#ifdef HW_HAS_DUAL_MOTORS
+			if (mc_interface_get_motor_thread() == 2) {
+				current_controller_id = utils_second_motor_id();
+		}
+#endif
+			send_buffer[ind++] = current_controller_id;
 		}
 		if (mask & ((uint32_t)1 << 18)) {
 			send_buffer[ind++] = val.num_vescs;
@@ -680,9 +698,18 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		if (mask & ((uint32_t)1 << 19)) {
 			buffer_append_float32(send_buffer, wh_batt_left, 1e3, &ind);
 		}
+		if (mask & ((uint32_t)1 << 20)) {
+			buffer_append_uint32(send_buffer, mc_interface_get_odometer(), &ind);
+		}
 
 		reply_func(send_buffer, ind);
 		chMtxUnlock(&send_buffer_mutex);
+	} break;
+
+	case COMM_SET_ODOMETER: {
+		int32_t ind = 0;
+		mc_interface_set_odometer(buffer_get_uint32(data, &ind));
+		timeout_reset();
 	} break;
 
 	case COMM_SET_MCCONF_TEMP:
@@ -736,7 +763,6 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 
 		// Write divided data back to the buffer, as the other controllers have no way to tell
 		// how many controllers are on the bus and thus need pre-divided data.
-		// We set divide by controllers to false before forwarding.
 		ind -= 8;
 		buffer_append_float32_auto(data, mcconf->l_watt_min, &ind);
 		buffer_append_float32_auto(data, mcconf->l_watt_max, &ind);
@@ -903,8 +929,18 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		}
 	} break;
 
+	case COMM_BMS_GET_VALUES:
+	case COMM_BMS_SET_CHARGE_ALLOWED:
+	case COMM_BMS_SET_BALANCE_OVERRIDE:
+	case COMM_BMS_RESET_COUNTERS:
+	case COMM_BMS_FORCE_BALANCE:
+	case COMM_BMS_ZERO_CURRENT_OFFSET: {
+		bms_process_cmd(data - 1, len + 1, reply_func);
+		break;
+	}
 	// Blocking commands. Only one of them runs at any given time, in their
 	// own thread. If other blocking commands come before the previous one has
+	// finished, they are discarded.
 	// finished, they are discarded.
 	case COMM_TERMINAL_CMD:
 	case COMM_DETECT_MOTOR_PARAM:
@@ -1041,24 +1077,39 @@ void commands_send_appconf(COMM_PACKET_ID packet_id, app_configuration *appconf)
 	chMtxUnlock(&send_buffer_mutex);
 }
 
+inline static float hw_lim_upper(float l, float h) {(void)l; return h;}
+
 void commands_apply_mcconf_hw_limits(mc_configuration *mcconf) {
 	utils_truncate_number(&mcconf->l_current_max_scale, 0.0, 1.0);
 	utils_truncate_number(&mcconf->l_current_min_scale, 0.0, 1.0);
 
+	float ctrl_loop_freq = 0.0;
 	// This limit should always be active, as starving the threads never
+	// makes sense.
 	// makes sense.
 #ifdef HW_LIM_FOC_CTRL_LOOP_FREQ
     if (mcconf->foc_sample_v0_v7 == true) {
     	//control loop executes twice per pwm cycle when sampling in v0 and v7
 		utils_truncate_number(&mcconf->foc_f_sw, HW_LIM_FOC_CTRL_LOOP_FREQ);
+		ctrl_loop_freq = mcconf->foc_f_sw;
     } else {
 #ifdef HW_HAS_DUAL_MOTORS
     	utils_truncate_number(&mcconf->foc_f_sw, HW_LIM_FOC_CTRL_LOOP_FREQ);
+    	ctrl_loop_freq = mcconf->foc_f_sw;
 #else
 		utils_truncate_number(&mcconf->foc_f_sw, HW_LIM_FOC_CTRL_LOOP_FREQ * 2.0);
+		ctrl_loop_freq = mcconf->foc_f_sw / 2.0;
 #endif
     }
 #endif
+
+    if (ctrl_loop_freq >= (hw_lim_upper(HW_LIM_FOC_CTRL_LOOP_FREQ) * 0.9)) {
+    	utils_truncate_number_int(&mcconf->m_hall_extra_samples, 0, 2);
+    } else if (ctrl_loop_freq >= (hw_lim_upper(HW_LIM_FOC_CTRL_LOOP_FREQ) * 0.7)) {
+    	utils_truncate_number_int(&mcconf->m_hall_extra_samples, 0, 4);
+    } else {
+    	utils_truncate_number_int(&mcconf->m_hall_extra_samples, 0, 10);
+    }
 
 #ifndef DISABLE_HW_LIMITS
 #ifdef HW_LIM_CURRENT
@@ -1138,8 +1189,12 @@ void commands_send_plot_points(float x, float y) {
 	commands_send_packet(buffer, ind);
 }
 
+int commands_get_fw_version_sent_cnt(void) {
+	return fw_version_sent_cnt;
+}
 // TODO: The commands_set_ble_name and commands_set_ble_pin are not
 // tested. Test them, and remove this comment when done!
+
 
 void commands_set_ble_name(char* name) {
 	int ind = 0;
@@ -1446,7 +1501,8 @@ static THD_FUNCTION(blocking_thread, arg) {
 			send_buffer[ind++] = COMM_PING_CAN;
 
 			for (uint8_t i = 0;i < 255;i++) {
-				if (comm_can_ping(i)) {
+				HW_TYPE hw_type;
+				if (comm_can_ping(i, &hw_type)) {
 					send_buffer[ind++] = i;
 				}
 			}

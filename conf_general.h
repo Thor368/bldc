@@ -22,7 +22,7 @@
 
 // Firmware version
 #define FW_VERSION_MAJOR			5
-#define FW_VERSION_MINOR			01
+#define FW_VERSION_MINOR			02
 // Set to 0 for building a release and iterate during beta test builds
 #define FW_TEST_VERSION_NUMBER		0
 
@@ -99,9 +99,6 @@
 
 // Benjamins first HW75_300 PCB with different LED pins and motor temp error
 //#define HW75_300_VEDDER_FIRST_PCB
-
-// Second revision with separate UART for NRF51
-//#define HW75_300_REV_2
 //#define HW75_300_REV_3
 
 //#define HW_SOURCE "hw_75_300.c"
@@ -122,8 +119,11 @@
 //#define HW_SOURCE "hw_binar_v1.c"
 //#define HW_HEADER "hw_binar_v1.h"
 
-//#define HW_SOURCE "hw_hd.c"
-//#define HW_HEADER "hw_hd.h"
+//#define HW_SOURCE "hw_hd60.c"
+//#define HW_HEADER "hw_hd60.h"
+
+//#define HW_SOURCE "hw_hd75.c"
+//#define HW_HEADER "hw_hd75.h"
 
 //#define HW_SOURCE "hw_a200s_v2.c"
 //#define HW_HEADER "hw_a200s_v2.h"
@@ -137,13 +137,14 @@
 //#define HW_SOURCE "hw_unity.c"
 //#define HW_HEADER "hw_unity.h"
 
+//#define HW_SOURCE "hw_uxv_sr.c"
+//#define HW_HEADER "hw_uxv_sr.h"
+
 //#define HW_DUAL_CONFIG_PARALLEL
 //#define HW_SOURCE "hw_stormcore_100d.c"
 //#define HW_HEADER "hw_stormcore_100d.h"
 
-//#define HW_SOURCE "hw_stormcore_60d.c"
-//#define HW_HEADER "hw_stormcore_60d.h"
-//
+
 //#define HW_SOURCE "hw_stormcore_100s.c"
 //#define HW_HEADER "hw_stormcore_100s.h"
 
@@ -189,6 +190,13 @@
 //#define APP_CUSTOM_TO_USE			"app_custom_template.c"
 //#define APP_CUSTOM_TO_USE			"app_motor_heater.c"
 //#include "app_erockit_conf.h"
+
+//#include "vccu/app_vccu_conf.h"
+
+// CAN-plotter
+//#define APP_CUSTOM_TO_USE			"app_plot_can.c"
+//#define APPCONF_APP_TO_USE			APP_CUSTOM
+//#define APPCONF_CAN_BAUD_RATE		CAN_BAUD_75K
 
 #include "hw.h"
 #include "mcconf_default.h"
@@ -261,6 +269,9 @@
 #endif
 #ifndef AD2S1205_USE_HW_SPI_PINS
 #define AD2S1205_USE_HW_SPI_PINS	0
+#endif
+#ifndef MT6816_USE_HW_SPI_PINS
+#define MT6816_USE_HW_SPI_PINS		0
 #endif
 
 /*

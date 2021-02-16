@@ -47,7 +47,7 @@ void mar_calc_SoC(void)
 
 }
 
-void CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
+bool CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 {
 	(void) len;
 
@@ -81,6 +81,8 @@ void CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 			break;
 		}
 	}
+
+	return true;
 }
 
 void CAN_Init(void)
