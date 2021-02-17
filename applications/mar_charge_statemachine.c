@@ -30,6 +30,8 @@
 bool charger_present;
 uint32_t charger_present_timeout;
 float remote_chg_U, remote_chg_I;
+bool tx_NMT, tx_RPDO1;
+uint32_t NMT_timer, RPDO1_timer;
 
 union
 {
@@ -43,27 +45,34 @@ union
 		uint16_t U_max;
 		uint16_t I_max;
 		uint8_t battery_status;
-	};
+	} __attribute__ ((aligned (8), packed));
 } charger_RPDO1;
 
 uint32_t chg_timer, chg_counter;
-volatile bool charge_en;
+volatile bool charge_en = false;
 CHG_state_t chg_state;
 
-void CAN_CHG_callback(uint32_t id, uint8_t *data, uint8_t len)
+void CAN_CHG_callback(CANRxFrame *frame)
 {
-	(void) len;
+	if (frame->IDE)
+		return;
 
-	switch (id)
+	switch (frame->SID)
 	{
 	case ID_CHG_NMT:
+//		commands_printf("NMT msg rx");
 		charger_present_timeout = chVTGetSystemTimeX();
 		charger_present = true;
 		break;
 
 	case ID_CHG_TPDO1:
-		remote_chg_I = ((uint16_t) data[0] | (uint16_t) data[1] << 8)/256.;
-		remote_chg_U = ((uint16_t) data[2] | (uint16_t) data[3] << 8)/256.;
+//		commands_printf("TPDO1 msg rx");
+		remote_chg_I = frame->data16[0]/256.;
+		remote_chg_U = frame->data16[1]/256.;
+		break;
+
+	default:
+//		commands_printf("other msg rx 0x%03X", frame->SID);
 		break;
 	}
 }
@@ -73,7 +82,6 @@ void chg_init()
 	CHRG_OFF;
 
 	chg_state = chgst_init;
-	charge_en = true;
 	remote_chg_U = 0;
 	remote_chg_I = 0;
 
@@ -82,6 +90,10 @@ void chg_init()
 
 	charger_present = false;
 	charger_present_timeout = chVTGetSystemTimeX();
+	tx_NMT = false;
+	tx_RPDO1 = false;
+	NMT_timer = chVTGetSystemTimeX();
+	RPDO1_timer = chVTGetSystemTimeX();
 
 	comm_can_set_rx_callback2(&CAN_CHG_callback);
 }
@@ -102,6 +114,19 @@ void charge_statemachine()
 
 	if (chVTTimeElapsedSinceX(charger_present_timeout) > S2ST(2))
 		charger_present = false;
+
+	if ((chVTTimeElapsedSinceX(NMT_timer) > S2ST(1)) && tx_NMT)
+	{
+		NMT_timer = chVTGetSystemTimeX();
+		uint8_t cmd = 0x05;
+		comm_can_transmit_sid2(ID_MC_NMT, (uint8_t *) &cmd, sizeof(cmd));  // tx hearthbeat of MC
+	}
+
+	if ((chVTTimeElapsedSinceX(RPDO1_timer) > MS2ST(250)) && tx_RPDO1)
+	{
+		RPDO1_timer = chVTGetSystemTimeX();
+		comm_can_transmit_sid2(ID_CHG_RPDO1, (uint8_t *) &charger_RPDO1, sizeof(charger_RPDO1));  // tx RPDO1
+	}
 
 	switch (chg_state)
 	{
@@ -132,25 +157,25 @@ void charge_statemachine()
 	case chgst_wait_for_charger:
 		if (charger_present)
 		{
+			commands_printf("charger found");
 			I_CHG_offset = I_CHG_filt;
 
 			Motor_lock = true;
 			Motor_lock_timer = chVTGetSystemTimeX();
 
-			uint16_t cmd = 0x0A01;
-			comm_can_transmit_eid(ID_NMT_BOADCAST, (uint8_t *) &cmd, sizeof(cmd));  // NMT reset of charger
+			uint16_t cmd = 0x0A81;
+			comm_can_transmit_sid2(ID_NMT_BOADCAST, (uint8_t *) &cmd, sizeof(cmd));  // NMT reset of charger
 
-			cmd = 0x0A81;
-			comm_can_transmit_eid(ID_NMT_BOADCAST, (uint8_t *) &cmd, sizeof(cmd));  // NMT start of charger
+			cmd = 0x0A01;
+			comm_can_transmit_sid2(ID_NMT_BOADCAST, (uint8_t *) &cmd, sizeof(cmd));  // NMT start of charger
 
-			cmd = 0x05;
-			comm_can_transmit_eid(ID_MC_NMT, (uint8_t *) &cmd, 1);  // first hearthbeat of MC
+			tx_NMT = true;
 
 			charger_RPDO1.I_max = I2chg(1);
 			charger_RPDO1.U_max = U2chg(U_DC);
-			comm_can_transmit_eid(ID_CHG_RPDO1, (uint8_t *) &charger_RPDO1, sizeof(charger_RPDO1));
+			charger_RPDO1.battery_status = 1;
+			tx_RPDO1 = true;
 
-			chg_counter = 0;
 			chg_timer = chVTGetSystemTimeX();
 			chg_state = chgst_wait_equalize;
 		}
@@ -159,27 +184,37 @@ void charge_statemachine()
 	case chgst_wait_equalize:
 		if ((float) fabs(U_DC - U_CHG) < 2.)
 		{
+			commands_printf("Charging started!");
+
 			CHRG_ON;
+			charger_RPDO1.U_max = U2chg(42);
 
 			chg_timer = chVTGetSystemTimeX();
-			chg_state = chgst_charging;
+			chg_state = chgst_wait_settle;
 			break;
 		}
 
-		if (chg_counter >= 4)
-		{
-			CHRG_OFF;
+		if (chVTTimeElapsedSinceX(chg_timer) >=	 S2ST(20))
 			chg_state = chgst_error;
-			break;
-		}
 
-		if (chVTTimeElapsedSinceX(chg_timer) > MS2ST(250))
-		{
-			chg_counter++;
-			comm_can_transmit_eid(ID_CHG_RPDO1, (uint8_t *) &charger_RPDO1, sizeof(charger_RPDO1));
-		}
 		break;
 
+	case chgst_wait_settle:
+		if (I_CHG >= 0.75)
+		{
+			charger_RPDO1.I_max = I2chg(3);
+			chg_state = chgst_charging;
+		}
+
+		if (chVTTimeElapsedSinceX(chg_timer) >=	 S2ST(20))
+		{
+			commands_printf("U_DC %.1fV U_CHG %.1fV", (double) U_DC, (double)U_CHG);
+			commands_printf("I_CHG %.3fA", (double) I_CHG);
+
+			chg_state = chgst_error;
+		}
+
+		break;
 
 	case chgst_charging:
 		if (U_DC >= 43.0)
@@ -191,23 +226,27 @@ void charge_statemachine()
 		}
 
 		if ((I_CHG < 0.5) || (!BMS_Charge_permitted && !Stand_Alone))
-		{
-			CHRG_OFF;
-
 			chg_state = chgst_charge_finished;
-		}
 		break;
 
 	case chgst_charge_finished:
-		chg_increment_counter();
 		commands_printf("Charging finished!");
+
+		CHRG_OFF;
+		tx_NMT = false;
+		tx_RPDO1 = false;
+
+		chg_increment_counter();
 
 		chg_state = chgst_wait_for_reset;
 		break;
 
 	case chgst_error:
 		commands_printf("Charging error!");
+
 		CHRG_OFF;
+		tx_NMT = false;
+		tx_RPDO1 = false;
 
 		chg_state = chgst_wait_for_reset;
 		break;

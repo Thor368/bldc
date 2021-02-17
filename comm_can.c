@@ -109,7 +109,7 @@ static void send_status5(uint8_t id, bool replace);
 // Function pointers
 static bool(*sid_callback)(uint32_t id, uint8_t *data, uint8_t len) = 0;
 static bool(*eid_callback)(uint32_t id, uint8_t *data, uint8_t len) = 0;
-static void(*callback2)(uint32_t id, uint8_t *data, uint8_t len) = 0;
+static void(*callback2)(CANRxFrame *frame) = 0;
 
 void comm_can_init(void) {
 	for (int i = 0;i < CAN_STATUS_MSGS_TO_STORE;i++) {
@@ -378,7 +378,7 @@ void comm_can_set_eid_rx_callback(bool (*p_func)(uint32_t id, uint8_t *data, uin
  * @param p_func
  * Pointer to the function.
  */
-void comm_can_set_rx_callback2(void (*p_func)(uint32_t id, uint8_t *data, uint8_t len)) {
+void comm_can_set_rx_callback2(void (*p_func)(CANRxFrame *frame)) {
 	callback2 = p_func;
 }
 
@@ -1040,7 +1040,7 @@ CANRxFrame *comm_can_get_rx_frame2(void) {
 #if CAN_ENABLE
 	chMtxLock(&can_rx_mtx);
 	if (rx_frame_read2 != rx_frame_write2) {
-		CANRxFrame *res = &rx_frames2[rx_frame_read++];
+		CANRxFrame *res = &rx_frames2[rx_frame_read2++];
 
 		if (rx_frame_read2 == RX_FRAMES_SIZE) {
 			rx_frame_read2 = 0;
@@ -1166,13 +1166,14 @@ static THD_FUNCTION(cancom_process_thread, arg) {
 
 				if (!sid_cb_used) {
 					bms_process_can_frame(rxmsg.SID, rxmsg.data8, rxmsg.DLC, false);
+				}
 			}
-		}
 
-		while ((rxmsg_tmp = comm_can_get_rx_frame2()) != 0)
-			callback2(rxmsg_tmp->EID, rxmsg_tmp->data8, rxmsg_tmp->DLC);
+			while ((rxmsg_tmp = comm_can_get_rx_frame2()) != 0)
+				if(callback2)
+					callback2(rxmsg_tmp);
+		}
 	}
-}
 }
 
 #ifdef HW_HAS_DUAL_MOTORS

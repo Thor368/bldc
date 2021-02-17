@@ -69,6 +69,7 @@ void app_custom_start(void)
 	SHDN_OFF;
 	CAN_OFF;
 	BAT_ON;
+	CHRG_OFF;
 
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
@@ -91,9 +92,9 @@ void app_custom_start(void)
 // and release callbacks.
 void app_custom_stop(void)
 {
-	charge_en = false;
+	charge_en = true;
 	CHRG_OFF;
-	CAN_OFF;
+	CAN_ON;
 	BAT_OFF;
 
 	mc_interface_set_pwm_callback(0);
@@ -143,7 +144,7 @@ void Safty_checks(void)
 	if (chVTTimeElapsedSinceX(sleep_timer) > S2ST(Sleep_Time))
 		SHDN_ON;
 
-	// HBT checks
+/*	// HBT checks
 	static bool HBT1_safe = false, HBT2_safe = false;
 	static uint8_t CAN_sample_counter = 200;
 	static uint32_t CAN_sample_timer = 0;
@@ -221,7 +222,7 @@ void Safty_checks(void)
 		UH_filt -= UH_filt/10;
 		UH_filt += GET_VOLTAGE_RAW(10);
 		UH = UH_filt/10;
-	}
+	}*/
 }
 
 static THD_FUNCTION(my_thread, arg)
