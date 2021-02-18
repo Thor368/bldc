@@ -13,7 +13,7 @@
 #include "terminal.h"
 #include "LTC6804_handler.h"
 
-#include "maraneo_vars.h"
+#include "mar_vars.h"
 #include "Battery_config.h"
 #include "mar_charge_statemachine.h"
 

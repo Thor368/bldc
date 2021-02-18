@@ -13,13 +13,13 @@
 #include "commands.h"
 
 #include "Battery_config.h"
-#include "maraneo_vars.h"
+#include "mar_vars.h"
 #include "mar_CAN.h"
 #include "mar_charge_statemachine.h"
 
 volatile uint32_t CAN_timer;
 volatile uint32_t CAN_BATI_timeout;
-volatile uint32_t CAN_HBT1_timeout, CAN_HBT2_timeout;
+volatile uint32_t CAN_HBT_timeout;
 volatile float I_BAT;
 volatile float SoC;
 
@@ -55,10 +55,6 @@ bool CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 	{
 		switch (id >> 16)
 		{
-		case 0x07:
-			CAN_HBT2_timeout = chVTGetSystemTimeX();
-			break;
-
 		case 0x21:
 			discharge_SoC = *((float *) data);
 			discharge_enable = true;
@@ -70,7 +66,7 @@ bool CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 		switch (id >> 8)  // VESC frames
 		{
 		case CAN_PACKET_SET_CURRENT_REL:
-			CAN_HBT1_timeout = chVTGetSystemTimeX();
+			CAN_HBT_timeout = chVTGetSystemTimeX();
 			break;
 
 		case CAN_PACKET_STATUS_4:
@@ -92,8 +88,7 @@ void CAN_Init(void)
 
 	CAN_timer = chVTGetSystemTimeX();
 	CAN_BATI_timeout = chVTGetSystemTimeX();
-	CAN_HBT1_timeout = chVTGetSystemTimeX();
-	CAN_HBT2_timeout = chVTGetSystemTimeX();
+	CAN_HBT_timeout = chVTGetSystemTimeX();
 
 	I_BAT = 0;
 	SoC = 0;

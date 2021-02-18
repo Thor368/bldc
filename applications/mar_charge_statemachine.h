@@ -14,14 +14,15 @@ typedef enum
 {
 	chgst_init = 0,				// 0
 	chgst_wait_for_init,		// 1
-	chgst_wait_for_enable,		// 2
-	chgst_wait_for_charger,		// 3
-	chgst_wait_equalize,		// 4
-	chgst_wait_settle,			// 5
-	chgst_charging,				// 6
-	chgst_charge_finished,		// 7
-	chgst_error,				// 8
-	chgst_wait_for_reset		// 9
+	chgst_wait_charge_allowed,	// 2
+	chgst_wait_for_enable,		// 3
+	chgst_wait_for_charger,		// 4
+	chgst_wait_equalize,		// 5
+	chgst_wait_settle,			// 6
+	chgst_charging,				// 7
+	chgst_charge_finished,		// 8
+	chgst_error,				// 9
+	chgst_wait_for_reset		// A
 } CHG_state_t;
 
 extern CHG_state_t chg_state;

@@ -13,8 +13,9 @@
 #include "hal.h"
 #include "comm_can.h"
 
-#include "maraneo_vars.h"
+#include "mar_vars.h"
 #include "LTC6804_handler.h"
+#include "mar_safety.h"
 
 //#include "commands.h"  // debug
 
@@ -51,7 +52,7 @@ union
 } charger_RPDO1;
 
 uint32_t chg_timer, chg_counter;
-volatile bool charge_en = false;
+volatile bool charge_en = true;
 CHG_state_t chg_state;
 
 void CAN_CHG_callback(CANRxFrame *frame)
@@ -154,10 +155,15 @@ void charge_statemachine()
 		if (chVTTimeElapsedSinceX(chg_timer) > S2ST(10))
 		{
 			if (charge_en)
-				chg_state = chgst_wait_for_charger;
+				chg_state = chgst_wait_charge_allowed;
 			else
 				chg_state = chgst_wait_for_enable;
 		}
+		break;
+
+	case chgst_wait_charge_allowed:
+		if (SoC < 0.95)
+			chg_state = chgst_wait_for_charger;
 		break;
 
 	case chgst_wait_for_enable:
@@ -171,8 +177,7 @@ void charge_statemachine()
 //			commands_printf("charger found");
 			I_CHG_offset = I_CHG_filt;
 
-			Motor_lock = true;
-			Motor_lock_timer = chVTGetSystemTimeX();
+			safety_lock_motor();
 
 			uint16_t cmd = 0x0A81;
 			comm_can_transmit_sid2(ID_NMT_BOADCAST, (uint8_t *) &cmd, sizeof(cmd));  // NMT reset of charger
