@@ -132,6 +132,9 @@ void mar_write_conf(void)
 
 	mar_conf.as_u32 = Stand_Alone;
 	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
+
+	mar_conf.as_float = I_CHG_max;
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 }
 
 void mar_read_config(void)
@@ -211,6 +214,9 @@ void mar_read_config(void)
 
 	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	Stand_Alone = mar_conf.as_u32;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
+	I_CHG_max = mar_conf.as_float;
 }
 
 void BMS_config(int argc, const char **argv)
@@ -238,7 +244,8 @@ void BMS_config(int argc, const char **argv)
 		commands_printf("%-20s: %.1f°C", "BMS_hard_UT", (double) BMS_hard_UT);
 		commands_printf("%-20s: %d", "BMS_Temp_beta", BMS_Temp_beta);
 		commands_printf("%-20s: %d", "Sleep_Time", Sleep_Time);
-		commands_printf("%-20s: %d\n", "Stand_Alone", Stand_Alone);
+		commands_printf("%-20s: %d", "Stand_Alone", Stand_Alone);
+		commands_printf("%-20s: %.1f\n", "I_CHG_max", (double) I_CHG_max);
 	}
 	else if (argc == 3)
 	{
@@ -288,6 +295,8 @@ void BMS_config(int argc, const char **argv)
 			ret = sscanf(argv[2], "%d", (int *) &Sleep_Time);
 		else if (!strcmp(argv[1], "Stand_Alone"))
 			ret = sscanf(argv[2], "%d", (int *) &Stand_Alone);
+		else if (!strcmp(argv[1], "I_CHG_max"))
+			ret = sscanf(argv[2], "%f", &I_CHG_max);
 		else if (!strcmp(argv[1], "BMS_set_cycles"))
 		{
 			eeprom_var chg_cy;

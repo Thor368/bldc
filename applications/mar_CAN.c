@@ -23,7 +23,7 @@ volatile uint32_t CAN_HBT1_timeout, CAN_HBT2_timeout;
 volatile float I_BAT;
 volatile float SoC;
 
-volatile bool Stand_Alone;
+volatile bool Stand_Alone = false;
 
 void mar_calc_SoC(void)
 {
@@ -97,7 +97,6 @@ void CAN_Init(void)
 
 	I_BAT = 0;
 	SoC = 0;
-	Stand_Alone = false;
 }
 
 void CAN_Status(void)

@@ -16,7 +16,7 @@
 #include "maraneo_vars.h"
 #include "LTC6804_handler.h"
 
-#include "commands.h"  // debug
+//#include "commands.h"  // debug
 
 #define ID_CHG_NMT			0x70A
 #define ID_MC_NMT			0x701
@@ -26,6 +26,8 @@
 
 #define I2chg(x)			((uint16_t) (x*16))
 #define U2chg(x)			((uint16_t) (x*256))
+
+volatile float I_CHG_max = 3;
 
 bool charger_present;
 uint32_t charger_present_timeout;
@@ -128,6 +130,15 @@ void charge_statemachine()
 		comm_can_transmit_sid2(ID_CHG_RPDO1, (uint8_t *) &charger_RPDO1, sizeof(charger_RPDO1));  // tx RPDO1
 	}
 
+//	static CHG_state_t chg_state_back;
+//	uint32_t state_timer;
+//	if ((chVTTimeElapsedSinceX(state_timer) > MS2ST(500)) || (chg_state != chg_state_back))
+//	{
+//		chg_state_back = chg_state;
+//		state_timer = chVTGetSystemTimeX();
+//		comm_can_transmit_sid2(0x42, (uint8_t *) &chg_state, sizeof(chg_state));
+//	}
+
 	switch (chg_state)
 	{
 	case chgst_init:
@@ -157,7 +168,7 @@ void charge_statemachine()
 	case chgst_wait_for_charger:
 		if (charger_present)
 		{
-			commands_printf("charger found");
+//			commands_printf("charger found");
 			I_CHG_offset = I_CHG_filt;
 
 			Motor_lock = true;
@@ -184,7 +195,7 @@ void charge_statemachine()
 	case chgst_wait_equalize:
 		if ((float) fabs(U_DC - U_CHG) < 2.)
 		{
-			commands_printf("Charging started!");
+//			commands_printf("Charging started!");
 
 			CHRG_ON;
 			charger_RPDO1.U_max = U2chg(42);
@@ -202,17 +213,12 @@ void charge_statemachine()
 	case chgst_wait_settle:
 		if (I_CHG >= 0.75)
 		{
-			charger_RPDO1.I_max = I2chg(3);
+			charger_RPDO1.I_max = I2chg(I_CHG_max);
 			chg_state = chgst_charging;
 		}
 
 		if (chVTTimeElapsedSinceX(chg_timer) >=	 S2ST(20))
-		{
-			commands_printf("U_DC %.1fV U_CHG %.1fV", (double) U_DC, (double)U_CHG);
-			commands_printf("I_CHG %.3fA", (double) I_CHG);
-
 			chg_state = chgst_error;
-		}
 
 		break;
 
@@ -230,7 +236,7 @@ void charge_statemachine()
 		break;
 
 	case chgst_charge_finished:
-		commands_printf("Charging finished!");
+//		commands_printf("Charging finished!");
 
 		CHRG_OFF;
 		tx_NMT = false;
@@ -242,7 +248,9 @@ void charge_statemachine()
 		break;
 
 	case chgst_error:
-		commands_printf("Charging error!");
+//		commands_printf("Charging error!");
+//		commands_printf("U_DC %.1fV U_CHG %.1fV", (double) U_DC, (double)U_CHG);
+//		commands_printf("I_CHG %.3fA", (double) I_CHG);
 
 		CHRG_OFF;
 		tx_NMT = false;

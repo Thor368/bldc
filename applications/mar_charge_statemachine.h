@@ -12,16 +12,16 @@
 
 typedef enum
 {
-	chgst_init = 0,
-	chgst_wait_for_init,
-	chgst_wait_for_enable,
-	chgst_wait_for_charger,
-	chgst_wait_equalize,
-	chgst_wait_settle,
-	chgst_charging,
-	chgst_charge_finished,
-	chgst_error,
-	chgst_wait_for_reset
+	chgst_init = 0,				// 0
+	chgst_wait_for_init,		// 1
+	chgst_wait_for_enable,		// 2
+	chgst_wait_for_charger,		// 3
+	chgst_wait_equalize,		// 4
+	chgst_wait_settle,			// 5
+	chgst_charging,				// 6
+	chgst_charge_finished,		// 7
+	chgst_error,				// 8
+	chgst_wait_for_reset		// 9
 } CHG_state_t;
 
 extern CHG_state_t chg_state;
