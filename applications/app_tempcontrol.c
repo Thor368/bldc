@@ -137,7 +137,7 @@ static void temp_print_all(int argc, const char **argv)
 	(void) argv;
 
 	commands_printf("T_tank: %.1f°C", (double) T_tank);
-	commands_printf("T_liqu: %.1f°C", (double) T_cond);
+	commands_printf("T_cond: %.1f°C", (double) T_cond);
 	commands_printf("TMOS: %.1f°C", (double) NTC_TEMP(ADC_IND_TEMP_MOS));
 	commands_printf("TMOT: %.1f°C", (double) NTC_TEMP_MOTOR(mc_cfg->m_ntc_motor_beta));
 	commands_printf("---------------------");
@@ -238,6 +238,7 @@ void app_custom_start(void)
 
 	U_fan = 0;
 	manual_mode = false;
+	compressor_state = cmp_init;
 
 	read_conf();
 
@@ -298,10 +299,14 @@ void sm_compressor(void)
 {
 	static systime_t cmp_timer = 0;
 
+	if (manual_mode)
+		compressor_state = cmp_wait_for_start;
+
 	switch(compressor_state)
 	{
 	case cmp_init:
 		cmp_timer = chVTGetSystemTime();
+		mc_interface_release_motor();
 		compressor_state = cmp_wait_for_start;
 		break;
 
@@ -310,27 +315,36 @@ void sm_compressor(void)
 		{
 			cmp_timer = chVTGetSystemTime();
 			U_fan = U_fan_min;
+			mc_interface_set_current(5.);
 			compressor_state = cmp_ramp_up;
 		}
 		break;
 
 	case cmp_ramp_up:
-		mcpwm_foc_set_openloop(mc_cfg->l_current_max, ST2MS(chVTTimeElapsedSinceX(cmp_timer))*10000/t_RAMP_TIME);
+//		mcpwm_foc_set_openloop(mc_cfg->l_current_max, ST2MS(chVTTimeElapsedSinceX(cmp_timer))*10000/t_RAMP_TIME);
 
-		if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(t_RAMP_TIME))
+//		if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(t_RAMP_TIME))
+		if (mc_interface_get_rpm() >= 3000)
 		{
-			mc_interface_set_pid_speed(10000);
+			mc_interface_set_pid_speed(7500);
 			compressor_state = cmp_running;
+		}
+		else if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500))
+		{
+			mc_interface_release_motor();
+			cmp_timer = chVTGetSystemTime();
+			U_fan = U_fan_min;
+			compressor_state = cmp_equalize;
 		}
 		break;
 
 	case cmp_running:
-		if ((T_cond < -20) || (T_cond > 40))
+		if ((T_cond < -20) || (T_cond > 50))
 			U_fan = U_fan_max;
 		else if (T_cond < 35)
 			U_fan = U_fan_min;
 
-		if (!compressor_call && manual_mode)
+		if (!compressor_call)
 		{
 			mc_interface_release_motor();
 			cmp_timer = chVTGetSystemTime();
@@ -340,11 +354,15 @@ void sm_compressor(void)
 		break;
 
 	case cmp_equalize:
-		if (chVTTimeElapsedSinceX(cmp_timer) >= S2ST(30))
+		if (chVTTimeElapsedSinceX(cmp_timer) >= S2ST(60))
 		{
-			U_fan = U_fan_min;
+			U_fan = 0;
 			compressor_state = cmp_wait_for_start;
 		}
+		break;
+
+	default:
+		compressor_state = cmp_init;
 		break;
 	}
 }
@@ -386,7 +404,12 @@ static THD_FUNCTION(my_thread, arg)
 				compressor_call = false;
 		}
 		else
+		{
+			compressor_call = false;
 			mc_interface_release_motor();
+		}
+
+		sm_compressor();
 
 #ifdef BRIDGED_12V
 			fan_pwm = U_fan/GET_INPUT_VOLTAGE()*255;

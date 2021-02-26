@@ -61,7 +61,7 @@
 // The default app is UART in case the UART port is used for
 // firmware updates.
 #ifndef APPCONF_APP_TO_USE
-#define APPCONF_APP_TO_USE					APP_CUSTOM
+#define APPCONF_APP_TO_USE					APP_NONE
 #endif
 
 // PPM app configureation
