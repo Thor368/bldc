@@ -58,6 +58,7 @@ enum
 	cmp_init,
 	cmp_wait_for_start,
 	cmp_ramp_up,
+	cmp_failed_start,
 	cmp_running,
 	cmp_equalize
 } compressor_state;
@@ -74,6 +75,9 @@ float T_fan_ramp_end = T_FAN_RAMP_END;
 float U_fan_min = U_FAN_MIN;
 float U_fan_max = U_FAN_MAX;
 float U_pump_std = U_PUMP_STD;
+float T_hyst_pos = T_HYST_POS;
+float T_hyst_neg = T_HYST_NEG;
+
 
 void write_conf(void)
 {
@@ -99,6 +103,12 @@ void write_conf(void)
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 
 	eep_conf.as_float = U_pump_std;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = T_hyst_pos;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = T_hyst_neg;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 }
 
@@ -128,6 +138,12 @@ void read_conf(void)
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
 	U_pump_std = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	T_hyst_pos = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	T_hyst_neg = eep_conf.as_float;
 }
 
 // Callback function for the terminal command with arguments.
@@ -155,6 +171,8 @@ static void temp_config(int argc, const char **argv)
 		commands_printf("T_fan_min: %.1fV", (double) U_fan_min);
 		commands_printf("T_fan_max: %.1fV", (double) U_fan_max);
 		commands_printf("U_pump_std: %.1fV", (double) U_pump_std);
+		commands_printf("T_hyst_pos: %.1f°C", (double) T_hyst_pos);
+		commands_printf("T_hyst_neg: %.1f°C", (double) T_hyst_neg);
 	}
 	else if (argc == 3)
 	{
@@ -178,6 +196,10 @@ static void temp_config(int argc, const char **argv)
 			U_fan_max = val;
 		else if (!strcmp(argv[1], "U_pump_std"))
 			U_pump_std = val;
+		else if (!strcmp(argv[1], "T_hyst_pos"))
+			T_hyst_pos = val;
+		else if (!strcmp(argv[1], "T_hyst_neg"))
+			T_hyst_neg = val;
 		else
 			success = false;
 
@@ -297,7 +319,7 @@ void app_custom_configure(app_configuration *conf) {
 
 void sm_compressor(void)
 {
-	static systime_t cmp_timer = 0;
+	static systime_t cmp_timer = 0, cmp_counter = 0;
 
 	if (manual_mode)
 		compressor_state = cmp_wait_for_start;
@@ -317,6 +339,7 @@ void sm_compressor(void)
 			U_fan = U_fan_min;
 			mc_interface_set_current(5.);
 			compressor_state = cmp_ramp_up;
+			cmp_counter = 0;
 		}
 		break;
 
@@ -324,17 +347,35 @@ void sm_compressor(void)
 //		mcpwm_foc_set_openloop(mc_cfg->l_current_max, ST2MS(chVTTimeElapsedSinceX(cmp_timer))*10000/t_RAMP_TIME);
 
 //		if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(t_RAMP_TIME))
-		if (mc_interface_get_rpm() >= 3000)
+		if (mc_interface_get_rpm() >= 7500)
 		{
 			mc_interface_set_pid_speed(7500);
 			compressor_state = cmp_running;
 		}
-		else if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500))
+		else if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500) || (mc_interface_get_fault() != FAULT_CODE_NONE))
 		{
 			mc_interface_release_motor();
 			cmp_timer = chVTGetSystemTime();
+			cmp_counter++;
 			U_fan = U_fan_min;
-			compressor_state = cmp_equalize;
+			compressor_state = cmp_failed_start;
+		}
+		break;
+
+	case cmp_failed_start:
+		if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(5000))
+		{
+			if (cmp_counter >= 3)
+			{
+				compressor_state = cmp_equalize;
+				cmp_timer = chVTGetSystemTime();
+			}
+			else
+			{
+				cmp_timer = chVTGetSystemTime();
+				mc_interface_set_current(5.);
+				compressor_state = cmp_ramp_up;
+			}
 		}
 		break;
 
@@ -354,7 +395,7 @@ void sm_compressor(void)
 		break;
 
 	case cmp_equalize:
-		if (chVTTimeElapsedSinceX(cmp_timer) >= S2ST(60))
+		if (chVTTimeElapsedSinceX(cmp_timer) >= S2ST(120))
 		{
 			U_fan = 0;
 			compressor_state = cmp_wait_for_start;
@@ -396,11 +437,18 @@ static THD_FUNCTION(my_thread, arg)
 		T_cond_filt += EXT_TEMP(ADC_IND_T2);
 		T_cond = T_cond_filt/20;
 
+		static systime_t log_t;
+		if (chVTTimeElapsedSinceX(log_t) >= S2ST(1))
+		{
+			log_t = chVTGetSystemTime();
+			commands_printf("T_tank: %.1f°C", (double) T_tank);
+		}
+
 		if (T_tank > -20)  // Tank sensor present
 		{
-			if (T_tank > (T_target + 0.5))
+			if (T_tank > (T_target + T_hyst_pos))
 				compressor_call = true;
-			else if (T_tank < (T_target - 0.5))
+			else if (T_tank < (T_target - T_hyst_neg))
 				compressor_call = false;
 		}
 		else
