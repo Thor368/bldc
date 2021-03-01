@@ -29,9 +29,9 @@ void mar_calc_SoC(void)
 {
 	float corrected_U;
 	if (BMS.Health == BMS_Health_OK)
-		corrected_U = Global_Min_U + I_BAT*0.01;
+		corrected_U = Global_Min_U + (I_BAT - I_CHG)*0.01;
 	else
-		corrected_U = U_DC/BMS_cell_count + I_BAT*0.01;
+		corrected_U = U_DC/BMS_cell_count + (I_BAT - I_CHG)*0.01;
 
 	static float SoC_filt;
 	SoC_filt -= SoC_filt/100;

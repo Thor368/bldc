@@ -90,15 +90,15 @@ void safety_checks(void)
 	if (CAN_sample_counter == 200) {}  // chatch deactivated state
 	else if ((CAN_sample_counter == 101) && (chVTTimeElapsedSinceX(CAN_sample_timer) >= S2ST(1)))  // last sample was negativ and 1s passed?
 	{
-		commands_printf("restart sampling");
+//		commands_printf("restart sampling");
 		CAN_sample_counter = 0;  // start new sample
 		CAN_sample_timer = chVTGetSystemTimeX();
 	}
 	else if (CAN_sample_counter == 100)  // CAN sampling finished
 	{
-		commands_printf("UL %.3f\nUH %.3f", (double) UL, (double) UH);
 		if ((UL > 0.8) && (UH < 3.))  // sample inside allowed window?
 		{
+			commands_printf("UL %.3f\nUH %.3f", (double) UL, (double) UH);
 			commands_printf("HBT found, endable CAN");
 			CAN_sample_counter = 200;  // deactivate sampling
 			HBT_safe = true;
@@ -108,7 +108,7 @@ void safety_checks(void)
 		}
 		else
 		{
-			commands_printf("no HBT found, waiting 1s");
+//			commands_printf("no HBT found, waiting 1s");
 			CAN_sample_counter = 101;  // deactivate sampling
 			CAN_sample_timer = chVTGetSystemTimeX();
 		}

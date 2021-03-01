@@ -172,7 +172,7 @@ void charge_statemachine()
 		break;
 
 	case chgst_wait_for_charger:
-		if (charger_present)
+		if (charger_present || Stand_Alone)
 		{
 //			commands_printf("charger found");
 			I_CHG_offset = I_CHG_filt;
