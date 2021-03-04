@@ -58,6 +58,7 @@ bool CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 		case 0x21:
 			discharge_SoC = *((float *) data);
 			discharge_enable = true;
+			return true;
 			break;
 		}
 	}
@@ -78,7 +79,7 @@ bool CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 		}
 	}
 
-	return true;
+	return false;
 }
 
 void CAN_Init(void)
@@ -106,8 +107,8 @@ void CAN_Status(void)
 		comm_can_transmit_eid(0x02FFFF, (uint8_t *) &U_CHG, sizeof(U_CHG));
 		comm_can_transmit_eid(0x03FFFF, (uint8_t *) &I_CHG, sizeof(I_CHG));
 
-		uint8_t tmp = chg_state;
-		comm_can_transmit_eid(0x04FFFF, (uint8_t *) &tmp, sizeof(tmp));
+		uint8_t tmp = chg_state == chgst_charging;
+		comm_can_transmit_eid(0x04FFFF, &tmp, sizeof(tmp));
 		comm_can_transmit_eid(0x06FFFF, (uint8_t *) &SoC, sizeof(SoC));
 
 		if (Stand_Alone)

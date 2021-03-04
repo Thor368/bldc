@@ -63,7 +63,9 @@
 #define LTC_calc_Voltage(raw)			(raw*0.0001)					// Calculate Voltage in V
 #define LTC_calc_SOC_Voltage(raw)		(raw*0.002)						// Calculate Sum Of Cell Voltage in V
 #define LTC_calc_int_Temp(raw)			(raw*0.013333 - 273)	 		// Calculate internal Temperature in Celsius
-#define LTC_TEMP(adc)					((1.0 / ((logf((adc*10000/(33000 - adc))) / 10000.0) / BMS_Temp_beta) + (1.0 / 298.15)) - 273.15)
+#define LTC_TEMP_R(adc)					(10000.0 / ((30000 / (float)adc) - 1.0))
+#define LTC_TEMP(adc)					(1.0 / ((logf(LTC_TEMP_R(adc) / 10000.0) / BMS_Temp_beta) + (1.0 / 298.15)) - 273.15)
+//#define LTC_TEMP(adc)					((1.0 / ((logf((adc*10000/(30000 - adc))) / 10000.0) / BMS_Temp_beta) + (1.0 / 298.15)) - 273.15)
 
 
 // INIT AND CONFIG

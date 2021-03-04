@@ -209,38 +209,38 @@ void BMS_Calc_Voltages(BMS_t *chip)
 
 void BMS_Calc_Temp(BMS_t *chip)
 {
-	if (chip->chip.AVAR.G1V > 30000)
+	if (chip->chip.AVAR.G1V > 26165)
 		chip->Temp_sensors[0] = -20;
-	else if (chip->chip.AVAR.G1V < 2158)
-		chip->Temp_sensors[0] = 100;
+	else if (chip->chip.AVAR.G1V < 1687)
+		chip->Temp_sensors[0] = 120;
 	else
 		chip->Temp_sensors[0] = LTC_TEMP(chip->chip.AVAR.G1V);
 
-	if (chip->chip.AVAR.G2V > 30000)
+	if (chip->chip.AVAR.G2V > 26165)
 		chip->Temp_sensors[1] = -20;
-	else if (chip->chip.AVAR.G2V < 2158)
-		chip->Temp_sensors[1] = 100;
+	else if (chip->chip.AVAR.G2V < 1687)
+		chip->Temp_sensors[1] = 120;
 	else
 		chip->Temp_sensors[1] = LTC_TEMP(chip->chip.AVAR.G2V);
 
-	if (chip->chip.AVAR.G3V > 30000)
+	if (chip->chip.AVAR.G3V > 26165)
 		chip->Temp_sensors[2] = -20;
-	else if (chip->chip.AVAR.G3V < 2158)
-		chip->Temp_sensors[2] = 100;
+	else if (chip->chip.AVAR.G3V < 1687)
+		chip->Temp_sensors[2] = 120;
 	else
 		chip->Temp_sensors[2] = LTC_TEMP(chip->chip.AVAR.G3V);
 
-	if (chip->chip.AVBR.G4V > 30000)
+	if (chip->chip.AVBR.G4V > 26165)
 		chip->Temp_sensors[3] = -20;
-	else if (chip->chip.AVBR.G4V < 2158)
-		chip->Temp_sensors[3] = 100;
+	else if (chip->chip.AVBR.G4V < 1687)
+		chip->Temp_sensors[3] = 120;
 	else
 		chip->Temp_sensors[3] = LTC_TEMP(chip->chip.AVBR.G4V);
 
-	if (chip->chip.AVBR.G5V > 30000)
+	if (chip->chip.AVBR.G5V > 26165)
 		chip->Temp_sensors[4] = -20;
-	else if (chip->chip.AVBR.G5V < 2158)
-		chip->Temp_sensors[4] = 100;
+	else if (chip->chip.AVBR.G5V < 1687)
+		chip->Temp_sensors[4] = 120;
 	else
 		chip->Temp_sensors[4] = LTC_TEMP(chip->chip.AVBR.G5V);
 }
