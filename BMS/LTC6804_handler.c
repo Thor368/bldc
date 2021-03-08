@@ -377,8 +377,8 @@ void BMS_Limits(void)
 	else
 		UV_limit = (Global_Min_U - BMS_hard_UV)/(BMS_soft_UV - BMS_hard_UV);
 
-	float temp = BMS.Temp_sensors[0];
-	for (uint8_t i = 1; i < 5; i++)
+	float temp;
+	for (uint8_t i = 0; i < 5; i++)
 		if (BMS.Temp_sensors[i] > temp)
 			temp = BMS.Temp_sensors[i];
 	if (temp < BMS_soft_DOT)
@@ -388,8 +388,7 @@ void BMS_Limits(void)
 	else
 		OT_limit = (BMS_hard_DOT - temp)/(BMS_hard_DOT - BMS_soft_DOT);
 
-	temp = BMS.Temp_sensors[0];
-	for (uint8_t i = 1; i < 5; i++)
+	for (uint8_t i = 0; i < 5; i++)
 		if (BMS.Temp_sensors[i] < temp)
 			temp = BMS.Temp_sensors[i];
 	if (temp > BMS_soft_UT)

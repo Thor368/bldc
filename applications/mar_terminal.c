@@ -334,7 +334,7 @@ void BMS_cb_status(int argc, const char **argv)
 	commands_printf("Port current: %.2fA", (double) I_CHG);
 	commands_printf("Port current offset: %.2fA", (double) I_CHG_offset/100);
 
-	if (!charge_en)
+	if (!charge_enable)
 		commands_printf("Chargeport: Disabled");
 	else if (chg_state == chgst_charging)
 		commands_printf("Chargeport: Enabled, Charging");
@@ -349,6 +349,8 @@ void BMS_cb_status(int argc, const char **argv)
 	commands_printf("Balance permission: %d", BMS.Balance_Permission);
 	commands_printf("Balance scheduled: %d", BMS_Balance_Scheduled);
 	commands_printf("Balance derating: %d", BMS.Balance_derating);
+	commands_printf("Discharge enable: %d", BMS_Discharge_permitted);
+	commands_printf("Charge enable: %d", BMS_Charge_permitted);
 
 	eeprom_var chg_cy;
 	conf_general_read_eeprom_var_custom(&chg_cy, 63);
@@ -407,17 +409,17 @@ void BMS_cb_status(int argc, const char **argv)
 void BMS_charg_en(int argc, const char **argv)
 {
 	if (argc == 1)
-		commands_printf("charge enable = %d", charge_en);
+		commands_printf("charge enable = %d", charge_enable);
 	else if (argc == 2)
 	{
 		int ret;
 		if (!sscanf(argv[1], "%d", &ret))
 			commands_printf("Illegal argument!");
 		if (ret)
-			charge_en = true;
+			charge_enable = true;
 		else
-			charge_en = false;
-		commands_printf("charge enable = %d", charge_en);
+			charge_enable = false;
+		commands_printf("charge enable = %d", charge_enable);
 	}
 	else
 		commands_printf("Wrong argument count!");
@@ -437,7 +439,7 @@ void BMS_cb_discharge(int argc, const char **argv)
 		if (!sscanf(argv[1], "%f", &discharge_SoC))
 			commands_printf("Illegal argument!");
 
-		commands_printf("charge enable = %d", charge_en);
+		commands_printf("discharge enable = %d", discharge_enable);
 	}
 	else
 		commands_printf("Wrong argument count!");

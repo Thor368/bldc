@@ -52,7 +52,7 @@ union
 } charger_RPDO1;
 
 uint32_t chg_timer, chg_counter;
-volatile bool charge_en = true;
+volatile bool charge_enable = true;
 CHG_state_t chg_state;
 
 void CAN_CHG_callback(CANRxFrame *frame)
@@ -112,7 +112,7 @@ void chg_increment_counter(void)
 
 void charge_statemachine()
 {
-	if (!charge_en)
+	if (!charge_enable)
 		chg_state = chgst_wait_for_enable;
 
 	if (chVTTimeElapsedSinceX(charger_present_timeout) > S2ST(2))
@@ -154,7 +154,7 @@ void charge_statemachine()
 
 		if (chVTTimeElapsedSinceX(chg_timer) > S2ST(10))
 		{
-			if (charge_en)
+			if (charge_enable)
 				chg_state = chgst_wait_charge_allowed;
 			else
 				chg_state = chgst_wait_for_enable;
@@ -167,7 +167,7 @@ void charge_statemachine()
 		break;
 
 	case chgst_wait_for_enable:
-		if (charge_en)
+		if (charge_enable)
 			chg_state = chgst_init;
 		break;
 

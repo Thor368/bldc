@@ -20,7 +20,7 @@ extern volatile float I_CHG_max;
 extern volatile uint32_t Sleep_Time;
 extern volatile uint32_t CAN_HBT_timeout;
 
-extern volatile bool charge_en;
+extern volatile bool charge_enable;
 extern volatile float discharge_SoC;
 extern volatile bool discharge_enable;
 
