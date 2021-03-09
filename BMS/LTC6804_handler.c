@@ -62,8 +62,6 @@ void BMS_RES_sets(BMS_t *chip)
 	
 	for (uint8_t j = 0; j < 12; j++)
 	{
-		chip->Open_Cell_Connection[j] = 0;
-		
 		chip->Cell_U[j] = 0;
 		
 		chip->Cell_OV[j] = false;
@@ -200,6 +198,9 @@ void BMS_Calc_Voltages(BMS_t *chip)
 	chip->Cell_All_U = chip->Cell_Avr_U;
 	chip->Cell_Avr_U /= chip->Cell_Count;
 	
+	Global_Max_U = BMS.Cell_Max_U;
+	Global_Min_U = BMS.Cell_Min_U;
+
 	
 	if (chip->Cell_Count != BMS_cell_count)
 		chip->Wrong_Cell_Count = true;
@@ -263,9 +264,6 @@ void LTC_Balancing_handler(void)
 	if (chVTTimeElapsedSinceX(BMS.Balance_timer) < S2ST(30))
 		return;
 	BMS.Balance_timer = chVTGetSystemTimeX();
-
-	Global_Max_U = BMS.Cell_Max_U;
-	Global_Min_U = BMS.Cell_Min_U;
 
 	if (BMS.Health == BMS_Health_OK)
 		BMS.Balance_Permission = true;
@@ -377,7 +375,7 @@ void BMS_Limits(void)
 	else
 		UV_limit = (Global_Min_U - BMS_hard_UV)/(BMS_soft_UV - BMS_hard_UV);
 
-	float temp;
+	float temp = BMS.Temp_sensors[0];
 	for (uint8_t i = 0; i < 5; i++)
 		if (BMS.Temp_sensors[i] > temp)
 			temp = BMS.Temp_sensors[i];
@@ -388,6 +386,7 @@ void BMS_Limits(void)
 	else
 		OT_limit = (BMS_hard_DOT - temp)/(BMS_hard_DOT - BMS_soft_DOT);
 
+	temp = BMS.Temp_sensors[0];
 	for (uint8_t i = 0; i < 5; i++)
 		if (BMS.Temp_sensors[i] < temp)
 			temp = BMS.Temp_sensors[i];
@@ -611,6 +610,8 @@ void LTC_handler()
 
 				BMS.VD_OK = (BMS.chip.STBR.VD > 27000) & (BMS.chip.STBR.VD < 36000);
 
+				BMS_Calc_Voltages(&BMS);
+				BMS_Check_Voltage(&BMS);
 				BMS_Selfcheck(&BMS);
 
 				BMS.Status = SAMPLE_ITMP;
@@ -641,7 +642,10 @@ void LTC_handler()
 					break;
 				}
 
-				BMS.Int_Temp = LTC_calc_int_Temp(BMS.chip.STAR.ITMP);
+				static float itmp_filt = 0;
+				itmp_filt -= itmp_filt/10;
+				itmp_filt += LTC_calc_int_Temp(BMS.chip.STAR.ITMP);
+				BMS.Int_Temp = itmp_filt/10;
 				BMS.Int_Temp_OK = BMS.chip.STAR.ITMP < 27975;
 
 				BMS.Status = SAMPLE_AUX;

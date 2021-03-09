@@ -44,7 +44,6 @@ void mar_calc_SoC(void)
 		SoC_filt += (corrected_U - BMS_soft_UV)/(BMS_soft_OV - BMS_soft_UV);
 
 	SoC = SoC_filt/100;
-
 }
 
 bool CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
