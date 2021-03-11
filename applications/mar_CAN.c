@@ -23,7 +23,7 @@ volatile uint32_t CAN_HBT_timeout;
 volatile float I_BAT;
 volatile float SoC;
 
-volatile bool Stand_Alone = false;
+volatile bool stand_alone = false;
 
 void mar_calc_SoC(void)
 {
@@ -105,12 +105,10 @@ void CAN_Status(void)
 		comm_can_transmit_eid(0x01FFFF, (uint8_t *) &Global_Min_U, sizeof(Global_Min_U));
 		comm_can_transmit_eid(0x02FFFF, (uint8_t *) &U_CHG, sizeof(U_CHG));
 		comm_can_transmit_eid(0x03FFFF, (uint8_t *) &I_CHG, sizeof(I_CHG));
-
-		uint8_t tmp = chg_state == chgst_charging;
-		comm_can_transmit_eid(0x04FFFF, &tmp, sizeof(tmp));
+		comm_can_transmit_eid(0x04FFFF, (uint8_t *) &charger_detected, sizeof(charger_detected));
 		comm_can_transmit_eid(0x06FFFF, (uint8_t *) &SoC, sizeof(SoC));
 
-		if (Stand_Alone)
+		if (stand_alone)
 			BMS_Discharge_Limit = 1;
 
 		comm_can_transmit_eid(0x05FFFF, (uint8_t *) &BMS_Discharge_Limit, sizeof(BMS_Discharge_Limit));

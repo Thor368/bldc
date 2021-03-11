@@ -12,7 +12,7 @@ bool BMS_Balance_Scheduled;
 float Global_Max_U;
 float Global_Min_U;
 float BMS_Discharge_Limit;
-
+float BMS_Charge_Limit;
 bool BMS_Charge_permitted;
 bool BMS_Discharge_permitted;
 bool BMS_fault_latch;
@@ -105,6 +105,7 @@ void LTC_handler_Init()
 	Global_Max_U = 0;
 	Global_Min_U = 0;
 	BMS_Discharge_Limit = 0;
+	BMS_Charge_Limit = 0;
 
 	BMS_Charge_permitted = true;
 	BMS_Discharge_permitted = true;
@@ -359,6 +360,7 @@ void BMS_IO_handler(void)
 void BMS_Limits(void)
 {
 	static float UV_limit = 0;
+	static float OV_limit = 0;
 	static float OT_limit = 0;
 	static float UT_limit = 0;
 
@@ -374,6 +376,13 @@ void BMS_Limits(void)
 		UV_limit = 0;
 	else
 		UV_limit = (Global_Min_U - BMS_hard_UV)/(BMS_soft_UV - BMS_hard_UV);
+
+	if (Global_Max_U < BMS_soft_OV)
+		OV_limit = 1;
+	else if (Global_Max_U > BMS_hard_OV)
+		OV_limit = 0;
+	else
+		OV_limit = (Global_Max_U - BMS_soft_OV)/(BMS_hard_OV - BMS_soft_OV);
 
 	float temp = BMS.Temp_sensors[0];
 	for (uint8_t i = 0; i < 5; i++)
@@ -402,6 +411,10 @@ void BMS_Limits(void)
 		BMS_Discharge_Limit = OT_limit;
 	if (UV_limit < BMS_Discharge_Limit)
 		BMS_Discharge_Limit = UV_limit;
+
+	BMS_Charge_Limit = UT_limit;
+	if (OV_limit < BMS_Charge_Limit)
+		BMS_Charge_Limit = OV_limit;
 }
 
 void LTC_handler()

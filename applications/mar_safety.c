@@ -65,7 +65,7 @@ void safety_checks(void)
 		SHDN_ON;
 
 	// HBT checks
-	if (!Stand_Alone)
+	if (!stand_alone)
 	{
 		static bool HBT_safe = true;
 		static uint8_t CAN_sample_counter = 200;

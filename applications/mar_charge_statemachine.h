@@ -9,6 +9,7 @@
 #define APPLICATIONS_MAR_CHARGE_STATEMACHINE_H_
 
 #include <stdbool.h>
+#include <stdint.h>
 
 typedef enum
 {
@@ -26,6 +27,8 @@ typedef enum
 } CHG_state_t;
 
 extern CHG_state_t chg_state;
+extern bool charger_detected;
+extern uint32_t charge_cycles;
 
 
 void chg_init(void);

@@ -99,6 +99,7 @@ extern bool BMS_Balance_Scheduled;
 extern bool BMS_fault_latch;
 
 extern float BMS_Discharge_Limit;
+extern float BMS_Charge_Limit;
 
 void LTC_handler_Init(void);
 

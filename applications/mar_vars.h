@@ -24,7 +24,7 @@ extern volatile bool charge_enable;
 extern volatile float discharge_SoC;
 extern volatile bool discharge_enable;
 
-extern volatile bool Stand_Alone;
+extern volatile bool stand_alone;
 
 
 
