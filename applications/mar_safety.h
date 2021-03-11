@@ -14,4 +14,6 @@ void safety_checks(void);
 
 void safety_lock_motor(void);
 
+void safety_reset_sleep_counter(void);
+
 #endif /* APPLICATIONS_MAR_SAFETY_H_ */

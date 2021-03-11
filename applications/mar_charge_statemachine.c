@@ -18,7 +18,7 @@
 #include "mar_safety.h"
 #include "mar_terminal.h"
 
-//#include "commands.h"  // debug
+#include "commands.h"  // debug
 
 #define ID_CHG_NMT			0x70A
 #define ID_MC_NMT			0x701
@@ -129,6 +129,8 @@ void charge_statemachine()
 	}
 
 	charger_detected = charger_present || (U_CHG > 20);
+	if (charger_present)
+		safety_reset_sleep_counter();
 
 //	static CHG_state_t chg_state_back;
 //	uint32_t state_timer;
@@ -142,6 +144,7 @@ void charge_statemachine()
 	switch (chg_state)
 	{
 	case chgst_init:
+		commands_printf("Charge statemachine init!");
 		chg_init();
 
 		chg_timer = chVTGetSystemTimeX();
@@ -154,26 +157,43 @@ void charge_statemachine()
 		if (chVTTimeElapsedSinceX(chg_timer) > S2ST(10))
 		{
 			if (charge_enable)
+			{
+				commands_printf("Waiting for charge permission from BMS!");
+
 				chg_state = chgst_wait_charge_allowed;
+			}
 			else
+			{
+				commands_printf("Waiting for charge enable!");
+
 				chg_state = chgst_wait_for_enable;
+			}
 		}
 		break;
 
 	case chgst_wait_charge_allowed:
-		if (SoC < 0.95)
+		if (BMS_Charge_permitted)
+		{
+			commands_printf("Waiting for charger!");
+
 			chg_state = chgst_wait_for_charger;
+		}
 		break;
 
 	case chgst_wait_for_enable:
 		if (charge_enable)
+		{
+			commands_printf("Charging enabled! Reinitializing!");
+
 			chg_state = chgst_init;
+		}
 		break;
 
 	case chgst_wait_for_charger:
 		if (charger_present || stand_alone)
 		{
-//			commands_printf("charger found");
+			commands_printf("Charger Found!");
+			commands_printf("Waiting for voltages to equalize!");
 			I_CHG_offset = I_CHG_filt;
 
 			safety_lock_motor();
@@ -199,7 +219,7 @@ void charge_statemachine()
 	case chgst_wait_equalize:
 		if ((float) fabs(U_DC - U_CHG) < 2.)
 		{
-//			commands_printf("Charging started!");
+			commands_printf("Waiting for current to rise!");
 
 			CHRG_ON;
 			charger_RPDO1.U_max = U2chg(45);
@@ -209,7 +229,7 @@ void charge_statemachine()
 			break;
 		}
 
-		if (chVTTimeElapsedSinceX(chg_timer) >=	 S2ST(20))
+		if ((chVTTimeElapsedSinceX(chg_timer) >=	 S2ST(30)) || (!charger_present))
 			chg_state = chgst_error;
 
 		break;
@@ -217,20 +237,22 @@ void charge_statemachine()
 	case chgst_wait_settle:
 		if (I_CHG >= 0.75)
 		{
-			charger_RPDO1.I_max = I2chg(I_CHG_max);
+			commands_printf("Charging started!");
+
+			chg_timer = chVTGetSystemTimeX();
 			chg_state = chgst_charging;
 		}
 
 		if (!BMS_Charge_permitted && !stand_alone)
 			chg_state = chgst_charge_finished;
 
-		if (chVTTimeElapsedSinceX(chg_timer) >=	 S2ST(20))
+		if ((chVTTimeElapsedSinceX(chg_timer) >=	 S2ST(30)) || (!charger_present))
 			chg_state = chgst_error;
 
 		break;
 
 	case chgst_charging:
-		if ((I_CHG > 30) || (I_CHG < -1))
+		if ((I_CHG > 30) || (I_CHG < -1) || (!charger_present))
 		{
 			CHRG_OFF;
 
@@ -238,14 +260,26 @@ void charge_statemachine()
 			break;
 		}
 
-		charger_RPDO1.I_max = I2chg(I_CHG_max*BMS_Charge_Limit);
+		if (chVTTimeElapsedSinceX(chg_timer) >=	 MS2ST(100))
+		{
+			chg_timer = chVTGetSystemTimeX();
+
+			static float chg_I_filt = 1;
+			chg_I_filt -= chg_I_filt/10;
+			chg_I_filt += I_CHG_max*BMS_Charge_Limit;
+
+			charger_RPDO1.I_max = I2chg(chg_I_filt/10);
+		}
 
 		if ((I_CHG < 0.5) || (!BMS_Charge_permitted && !stand_alone))
+		{
+			commands_printf("Charge_Limit %.0f%% Max_U %.3fV", (double) BMS_Charge_Limit*100, (double) Global_Max_U);
 			chg_state = chgst_charge_finished;
+		}
 		break;
 
 	case chgst_charge_finished:
-//		commands_printf("Charging finished!");
+		commands_printf("Charging finished!");
 
 		CHRG_OFF;
 		tx_NMT = false;
@@ -258,9 +292,9 @@ void charge_statemachine()
 		break;
 
 	case chgst_error:
-//		commands_printf("Charging error!");
-//		commands_printf("U_DC %.1fV U_CHG %.1fV", (double) U_DC, (double) U_CHG);
-//		commands_printf("I_CHG %.3fA", (double) I_CHG);
+		commands_printf("Charging error!");
+		commands_printf("U_DC %.1fV U_CHG %.1fV", (double) U_DC, (double) U_CHG);
+		commands_printf("I_CHG %.3fA", (double) I_CHG);
 
 		CHRG_OFF;
 		tx_NMT = false;
@@ -271,7 +305,7 @@ void charge_statemachine()
 
 	case chgst_wait_for_reset:
 		if (!charger_present)
-			chg_state = chgst_wait_for_charger;
+			chg_state = chgst_wait_charge_allowed;
 		break;
 
 	default:

@@ -15,7 +15,7 @@ uint32_t BMS_temp_count = 3;
 #ifdef BMS_soft_OV_set								// [V] Soft cell overvoltage threshold
 float BMS_soft_OV = BMS_soft_OV_set;
 #else
-float BMS_soft_OV = 4.15;
+float BMS_soft_OV = 4.2;
 #endif
 
 #ifdef BMS_OV_delay_set							// [s] Soft cell overvoltage trip time
@@ -27,13 +27,13 @@ float BMS_OV_delay = 1;
 #ifdef BMS_hard_OV_set						// [V] Hard cell overvoltage threshold
 float BMS_hard_OV = BMS_hard_OV_set;
 #else
-float BMS_hard_OV = 4.2;
+float BMS_hard_OV = 4.3;
 #endif
 
 #ifdef BMS_OV_recovery_set					// [V] Voltage where charging is reenabled
 float BMS_OV_recovery = BMS_OV_recovery_set;
 #else
-float BMS_OV_recovery = 4.0;
+float BMS_OV_recovery = 4.15;
 #endif
 
 #ifdef BMS_Balance_U_set					// [V] Voltage at which balancing is enabled
@@ -45,7 +45,7 @@ float BMS_Balance_U = 3.9;
 #ifdef BMS_soft_UV_set						// [V] Soft cell undervoltage threshold
 float BMS_soft_UV = BMS_soft_UV_set;
 #else
-float BMS_soft_UV = 3.0;
+float BMS_soft_UV = 2.8;
 #endif
 
 #ifdef BMS_UV_Delay_set						// [s] Soft cell undervoltage delay
@@ -57,7 +57,7 @@ float BMS_UV_Delay = 1;
 #ifdef BMS_hard_UV_set						// [V] Hard Cell undervoltage Threshold
 float BMS_hard_UV = BMS_hard_UV_set;
 #else
-float BMS_hard_UV = 2.8;
+float BMS_hard_UV = 2.5;
 #endif
 
 #ifdef BMS_UV_recovery_set					// [V] Voltage at which discharging is reenabled

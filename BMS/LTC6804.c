@@ -337,7 +337,7 @@ uint8_t LTC_Start(LTC_DATASET_t* set, uint8_t action)
 	switch (action)
 	{
 		case LTC_START_ADCV:
-			cmd = LTC_CMD_ADCV;// | set->CH | (set->DCP << 4) | (set->MD << 7);
+			cmd = LTC_CMD_ADCV | set->CH | (set->DCP << 4) | (set->MD << 7);
 			return LTC_start_CMD(cmd, set->address);
 		
 		case LTC_START_ADOW:

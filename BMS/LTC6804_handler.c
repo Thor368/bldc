@@ -3,6 +3,8 @@
 #include "hw.h"
 #include "Battery_config.h"
 
+//#include "commands.h"  // debug!
+
 #include <math.h>
 
 BMS_t BMS;
@@ -167,7 +169,6 @@ void BMS_Calc_Voltages(BMS_t *chip)
 {
 	for (uint8_t i = 0; i < BMS_cell_count; i++)
 		chip->Cell_U[i] = LTC_calc_Voltage(LTC_get_Voltage_raw(&(chip->chip), i));
-	chip->Cell_U[0] += 0.043;
 	
 	chip->Cell_Max_U = 0;
 	chip->Cell_Max_index = 0;
@@ -350,10 +351,10 @@ void BMS_IO_handler(void)
 			BMS_Discharge_permitted = false;
 	}
 
-	if (!BMS_Charge_permitted && (Global_Max_U <= BMS_OV_recovery))
+	if (Global_Max_U <= BMS_OV_recovery)
 		BMS_Charge_permitted = true;
 
-	if (!BMS_Discharge_permitted && (Global_Min_U >= BMS_UV_recovery))
+	if (Global_Min_U >= BMS_UV_recovery)
 		BMS_Discharge_permitted = true;
 }
 
@@ -370,19 +371,19 @@ void BMS_Limits(void)
 		return;
 	}
 
-	if (Global_Min_U > BMS_soft_UV)
+	if (Global_Min_U > BMS_UV_recovery)
 		UV_limit = 1;
-	else if (Global_Min_U < BMS_hard_UV)
+	else if (Global_Min_U < BMS_soft_UV)
 		UV_limit = 0;
 	else
-		UV_limit = (Global_Min_U - BMS_hard_UV)/(BMS_soft_UV - BMS_hard_UV);
+		UV_limit = (Global_Min_U - BMS_soft_UV)/(BMS_UV_recovery - BMS_soft_UV);
 
-	if (Global_Max_U < BMS_soft_OV)
+	if (Global_Max_U < BMS_OV_recovery)
 		OV_limit = 1;
-	else if (Global_Max_U > BMS_hard_OV)
+	else if (Global_Max_U > BMS_soft_OV)
 		OV_limit = 0;
 	else
-		OV_limit = (Global_Max_U - BMS_soft_OV)/(BMS_hard_OV - BMS_soft_OV);
+		OV_limit = (BMS_soft_OV - Global_Max_U)/(BMS_soft_OV - BMS_OV_recovery);
 
 	float temp = BMS.Temp_sensors[0];
 	for (uint8_t i = 0; i < 5; i++)
@@ -585,6 +586,7 @@ void LTC_handler()
 				BMS.chip.MD = 1;
 				BMS.chip.CHG = 6;
 				LTC_Start(&(BMS.chip), LTC_START_ADAX);
+
 				BMS.Status = TEST_STATUS;
 			}
 		break;
@@ -724,7 +726,7 @@ void LTC_handler()
 
 				BMS.Status = TEST_MUX;
 			}
-			else if (chVTTimeElapsedSinceX(BMS.last_CV) > S2ST(1))
+			if (chVTTimeElapsedSinceX(BMS.last_CV) > S2ST(1))
 			{
 				BMS.last_CV = chVTGetSystemTimeX();
 

@@ -355,8 +355,8 @@ void BMS_cb_status(int argc, const char **argv)
 	commands_printf("Balance permission: %d", BMS.Balance_Permission);
 	commands_printf("Balance scheduled: %d", BMS_Balance_Scheduled);
 	commands_printf("Balance derating: %d", BMS.Balance_derating);
-	commands_printf("Discharge enable: %d", BMS_Discharge_permitted);
-	commands_printf("Charge enable: %d", BMS_Charge_permitted);
+	commands_printf("Discharge permission: %d", BMS_Discharge_permitted);
+	commands_printf("Charge permission: %d", BMS_Charge_permitted);
 
 	eeprom_var chg_cy;
 	conf_general_read_eeprom_var_custom(&chg_cy, 63);
