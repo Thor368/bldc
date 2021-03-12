@@ -276,9 +276,9 @@ void LTC_Balancing_handler(void)
 	}
 	
 	float delta = fabs(Global_Max_U - Global_Min_U);
-	if ((delta > 0.02) && (Global_Max_U > BMS_Balance_U))
+	if ((delta > 0.02) && (Global_Max_U >= BMS_Balance_U))
 		BMS_Balance_Scheduled = true;
-	else
+	else if ((delta < 0.01) || (Global_Max_U < BMS_Balance_U))
 		BMS_Balance_Scheduled = false;
 	
 	for (uint8_t j = 0; j < 12; j++)
@@ -365,27 +365,28 @@ void BMS_Limits(void)
 	static float OT_limit = 0;
 	static float UT_limit = 0;
 
-	if (BMS.Health != BMS_Health_OK)
+	if (BMS.Health != BMS_Health_OK)  // Health Check (Charge&Discharge)
 	{
 		BMS_Discharge_Limit = 0;
+		BMS_Charge_Limit = 0;
 		return;
 	}
 
-	if (Global_Min_U > BMS_UV_recovery)
+	if (Global_Min_U > BMS_UV_recovery)  // Under Voltage limit (Discharge)
 		UV_limit = 1;
 	else if (Global_Min_U < BMS_soft_UV)
 		UV_limit = 0;
 	else
 		UV_limit = (Global_Min_U - BMS_soft_UV)/(BMS_UV_recovery - BMS_soft_UV);
 
-	if (Global_Max_U < BMS_OV_recovery)
+	if (Global_Max_U < BMS_OV_recovery)  // Over Voltage limit (Charge)
 		OV_limit = 1;
 	else if (Global_Max_U > BMS_soft_OV)
 		OV_limit = 0;
 	else
 		OV_limit = (BMS_soft_OV - Global_Max_U)/(BMS_soft_OV - BMS_OV_recovery);
 
-	float temp = BMS.Temp_sensors[0];
+	float temp = BMS.Temp_sensors[0];  // Over Temperature limit (Charge&Discharge)
 	for (uint8_t i = 0; i < 5; i++)
 		if (BMS.Temp_sensors[i] > temp)
 			temp = BMS.Temp_sensors[i];
@@ -396,7 +397,7 @@ void BMS_Limits(void)
 	else
 		OT_limit = (BMS_hard_DOT - temp)/(BMS_hard_DOT - BMS_soft_DOT);
 
-	temp = BMS.Temp_sensors[0];
+	temp = BMS.Temp_sensors[0];  // Under Temperature limit (Charge&Discharge)
 	for (uint8_t i = 0; i < 5; i++)
 		if (BMS.Temp_sensors[i] < temp)
 			temp = BMS.Temp_sensors[i];
