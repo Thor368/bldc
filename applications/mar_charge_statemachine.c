@@ -252,7 +252,7 @@ void charge_statemachine()
 		break;
 
 	case chgst_charging:
-		if ((I_CHG > 30) || (I_CHG < -1) || (!charger_present))
+		if ((I_CHG > 30) || (I_CHG < -1) || (!charger_present) || (BMS.Temp_sensors[2] > AUX_temp_cutoff))
 		{
 			CHRG_OFF;
 

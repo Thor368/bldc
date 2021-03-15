@@ -9,7 +9,7 @@ uint32_t BMS_cell_count = 12;
 #ifdef BMS_temp_count_set						// Number of connected NTCs
 uint32_t BMS_temp_count = BMS_temp_count_set;
 #else
-uint32_t BMS_temp_count = 3;
+uint32_t BMS_temp_count = 2;
 #endif
 
 #ifdef BMS_soft_OV_set								// [V] Soft cell overvoltage threshold
@@ -69,7 +69,7 @@ float BMS_UV_recovery = 3.0;
 #ifdef BMS_soft_COT_set						// [°C] Soft cell overtemperature while charging threshold
 float BMS_soft_COT = BMS_soft_COT_set;
 #else
-float BMS_soft_COT = 40.0;
+float BMS_soft_COT = 35.0;
 #endif
 
 #ifdef BMS_COT_Delay_set					// [s] Soft cell overtemperature while charging delay
@@ -81,13 +81,13 @@ float BMS_COT_Delay = 3.0;
 #ifdef BMS_hard_COT_set						// [°C] Hard cell overtemperature while charging threshold
 float BMS_hard_COT = BMS_hard_COT_set;
 #else
-float BMS_hard_COT = 42.0;
+float BMS_hard_COT = 40.0;
 #endif
 
 #ifdef BMS_soft_DOT_set						// [°C] Soft cell overtemperature while discharging threshold
 float BMS_soft_DOT = BMS_soft_DOT_set;
 #else
-float BMS_soft_DOT = 55;
+float BMS_soft_DOT = 50;
 #endif
 
 #ifdef BMS_DOT_Delay_set					// [s] Soft cell overtemperature while discharging delay

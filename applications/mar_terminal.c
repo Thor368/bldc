@@ -16,6 +16,7 @@
 #include "mar_vars.h"
 #include "Battery_config.h"
 #include "mar_charge_statemachine.h"
+#include "mar_safety.h"
 
 static void BMS_charg_en(int argc, const char **argv);
 static void BMS_cb_status(int argc, const char **argv);
@@ -138,6 +139,9 @@ void mar_write_conf(void)
 
 	mar_conf.as_u32 = charge_cycles;
 	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
+
+	mar_conf.as_float = AUX_temp_cutoff;
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 }
 
 void mar_read_config(void)
@@ -223,6 +227,9 @@ void mar_read_config(void)
 
 	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	charge_cycles = mar_conf.as_u32;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
+	AUX_temp_cutoff = mar_conf.as_float;
 }
 
 void BMS_config(int argc, const char **argv)
@@ -252,6 +259,7 @@ void BMS_config(int argc, const char **argv)
 		commands_printf("%-20s: %d", "Sleep_Time", Sleep_Time);
 		commands_printf("%-20s: %d", "Stand_Alone", stand_alone);
 		commands_printf("%-20s: %.1f\n", "I_CHG_max", (double) I_CHG_max);
+		commands_printf("%-20s: %.1f\n", "AUX_temp_cutoff", (double) AUX_temp_cutoff);
 	}
 	else if (argc == 3)
 	{
@@ -303,6 +311,8 @@ void BMS_config(int argc, const char **argv)
 			ret = sscanf(argv[2], "%d", (int *) &stand_alone);
 		else if (!strcmp(argv[1], "I_CHG_max"))
 			ret = sscanf(argv[2], "%f", &I_CHG_max);
+		else if (!strcmp(argv[1], "AUX_temp_cutoff"))
+			ret = sscanf(argv[2], "%f", &AUX_temp_cutoff);
 		else if (!strcmp(argv[1], "BMS_set_cycles"))
 		{
 			eeprom_var chg_cy;
@@ -407,8 +417,11 @@ void BMS_cb_status(int argc, const char **argv)
 
 	commands_printf("\nTEMPERATURES");
 	commands_printf("Internal temperature:  %.1f°C", (double) BMS.Int_Temp);
-	for (uint8_t i = 0; i < 5; i++)
-		commands_printf("External temperature %d: %.1f°C", i+1, (double) BMS.Temp_sensors[i]);
+	commands_printf("Battery temperature #1: %.1f°C", (double) BMS.Temp_sensors[0]);
+	commands_printf("Battery temperature #2: %.1f°C", (double) BMS.Temp_sensors[1]);
+	commands_printf("Motor conector 1 temperature: %.1f°C", (double) BMS.Temp_sensors[2]);
+	commands_printf("Motor conector 2 temperature: %.1f°C", (double) BMS.Temp_sensors[3]);
+	commands_printf("Charpeport temperature: %.1f°C", (double) BMS.Temp_sensors[4]);
 	commands_printf("\n");
 }
 

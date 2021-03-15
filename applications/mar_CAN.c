@@ -16,6 +16,7 @@
 #include "mar_vars.h"
 #include "mar_CAN.h"
 #include "mar_charge_statemachine.h"
+#include "mar_safety.h"
 
 volatile uint32_t CAN_timer;
 volatile uint32_t CAN_BATI_timeout;
@@ -107,6 +108,12 @@ void CAN_Status(void)
 		comm_can_transmit_eid(0x03FFFF, (uint8_t *) &I_CHG, sizeof(I_CHG));
 		comm_can_transmit_eid(0x04FFFF, (uint8_t *) &charger_detected, sizeof(charger_detected));
 		comm_can_transmit_eid(0x06FFFF, (uint8_t *) &SoC, sizeof(SoC));
+
+		static bool con_overtemp = false;
+		if ((BMS.Temp_sensors[3] > AUX_temp_cutoff) || (BMS.Temp_sensors[4] > AUX_temp_cutoff))
+			con_overtemp = true;
+		if (con_overtemp)
+			BMS_Discharge_Limit = 0;
 
 		if (stand_alone)
 			BMS_Discharge_Limit = 1;

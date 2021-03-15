@@ -362,7 +362,8 @@ void BMS_Limits(void)
 {
 	static float UV_limit = 0;
 	static float OV_limit = 0;
-	static float OT_limit = 0;
+	static float DOT_limit = 0;
+	static float COT_limit = 0;
 	static float UT_limit = 0;
 
 	if (BMS.Health != BMS_Health_OK)  // Health Check (Charge&Discharge)
@@ -386,22 +387,28 @@ void BMS_Limits(void)
 	else
 		OV_limit = (BMS_soft_OV - Global_Max_U)/(BMS_soft_OV - BMS_OV_recovery);
 
-	float temp = BMS.Temp_sensors[0];  // Over Temperature limit (Charge&Discharge)
+	float temp = BMS.Temp_sensors[0];  // Find highest cell temperature
 	for (uint8_t i = 0; i < 5; i++)
 		if (BMS.Temp_sensors[i] > temp)
 			temp = BMS.Temp_sensors[i];
-	if (temp < BMS_soft_DOT)
-		OT_limit = 1;
+	if (temp < BMS_soft_DOT)  // Discharge over temp limit
+		DOT_limit = 1;
 	else if (temp > BMS_hard_DOT)
-		OT_limit = 0;
+		DOT_limit = 0;
 	else
-		OT_limit = (BMS_hard_DOT - temp)/(BMS_hard_DOT - BMS_soft_DOT);
+		DOT_limit = (BMS_hard_DOT - temp)/(BMS_hard_DOT - BMS_soft_DOT);
+	if (temp < BMS_soft_COT)  // Charge over temp limit
+		COT_limit = 1;
+	else if (temp > BMS_hard_COT)
+		COT_limit = 0;
+	else
+		COT_limit = (BMS_hard_COT - temp)/(BMS_hard_COT - BMS_soft_COT);
 
-	temp = BMS.Temp_sensors[0];  // Under Temperature limit (Charge&Discharge)
+	temp = BMS.Temp_sensors[0];  // Find lowest cell temperature
 	for (uint8_t i = 0; i < 5; i++)
 		if (BMS.Temp_sensors[i] < temp)
 			temp = BMS.Temp_sensors[i];
-	if (temp > BMS_soft_UT)
+	if (temp > BMS_soft_UT)  // Charge&Discharge under temp limit
 		UT_limit = 1;
 	else if (temp < BMS_hard_UT)
 		UT_limit = 0;
@@ -409,14 +416,16 @@ void BMS_Limits(void)
 		UT_limit = (temp - BMS_hard_UT)/(BMS_soft_UT - BMS_hard_UT);
 
 	BMS_Discharge_Limit = UT_limit;
-	if (OT_limit < BMS_Discharge_Limit)
-		BMS_Discharge_Limit = OT_limit;
+	if (DOT_limit < BMS_Discharge_Limit)
+		BMS_Discharge_Limit = DOT_limit;
 	if (UV_limit < BMS_Discharge_Limit)
 		BMS_Discharge_Limit = UV_limit;
 
 	BMS_Charge_Limit = UT_limit;
 	if (OV_limit < BMS_Charge_Limit)
 		BMS_Charge_Limit = OV_limit;
+	if (COT_limit < BMS_Charge_Limit)
+		BMS_Charge_Limit = COT_limit;
 }
 
 void LTC_handler()

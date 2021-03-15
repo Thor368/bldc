@@ -16,4 +16,6 @@ void safety_lock_motor(void);
 
 void safety_reset_sleep_counter(void);
 
+extern float AUX_temp_cutoff;
+
 #endif /* APPLICATIONS_MAR_SAFETY_H_ */

@@ -21,6 +21,8 @@ volatile uint32_t Motor_lock_timer;
 volatile uint32_t Sleep_Time = Sleep_Time_default;
 volatile uint32_t sleep_timer;
 
+float AUX_temp_cutoff;
+
 void safety_reset_sleep_counter(void)
 {
 	sleep_timer = chVTGetSystemTimeX();
