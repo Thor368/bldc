@@ -49,6 +49,7 @@ const volatile mc_configuration *mc_cfg;
 
 volatile bool stop_now = true;
 volatile bool is_running = false;
+volatile bool debug_on = false;
 
 volatile uint8_t fan_pwm = 0;
 volatile uint8_t pump_pwm = 0;
@@ -173,6 +174,7 @@ static void temp_config(int argc, const char **argv)
 		commands_printf("U_pump_std: %.1fV", (double) U_pump_std);
 		commands_printf("T_hyst_pos: %.1f°C", (double) T_hyst_pos);
 		commands_printf("T_hyst_neg: %.1f°C", (double) T_hyst_neg);
+		commands_printf("Debugging print: %d", debug_on);
 	}
 	else if (argc == 3)
 	{
@@ -200,6 +202,10 @@ static void temp_config(int argc, const char **argv)
 			T_hyst_pos = val;
 		else if (!strcmp(argv[1], "T_hyst_neg"))
 			T_hyst_neg = val;
+		else if (!strcmp(argv[1], "debug_on"))
+			debug_on = true;
+		else if (!strcmp(argv[1], "U_fan"))
+			U_fan = val;
 		else
 			success = false;
 
@@ -260,6 +266,7 @@ void app_custom_start(void)
 
 	U_fan = 0;
 	manual_mode = false;
+	debug_on = false;
 	compressor_state = cmp_init;
 
 	read_conf();
@@ -438,7 +445,7 @@ static THD_FUNCTION(my_thread, arg)
 		T_cond = T_cond_filt/20;
 
 		static systime_t log_t;
-		if (chVTTimeElapsedSinceX(log_t) >= S2ST(1))
+		if (chVTTimeElapsedSinceX(log_t) >= S2ST(1) && debug_on)
 		{
 			log_t = chVTGetSystemTime();
 			commands_printf("T_tank: %.1f°C", (double) T_tank);

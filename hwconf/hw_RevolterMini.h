@@ -37,7 +37,7 @@
 #define T_HYST_POS				2.			// positive temperature hysteresis
 #define T_HYST_NEG				2.			// negative temperature hysteresis
 
-//#define BRIDGED_12V
+#define BRIDGED_12V
 
 
 // HW properties
