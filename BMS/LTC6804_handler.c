@@ -301,7 +301,8 @@ void LTC_Balancing_handler(void)
 		for (uint8_t j = 0; j < BMS.Balance_derating; j++)
 		{
 			uint8_t highest = 0;
-			while (BMS.Cell_Bleed[highest] && (highest++ < BMS_cell_count));  // find first cell that is not bleeding
+			while (BMS.Cell_Bleed[highest] && (highest < BMS_cell_count))  // find first cell that is not bleeding
+				highest++;
 			if (highest >= BMS_cell_count)
 				break;  // all cells are bleeding
 

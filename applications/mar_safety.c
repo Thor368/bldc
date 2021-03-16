@@ -32,7 +32,7 @@ void safety_Init(void)
 {
 	sleep_timer = chVTGetSystemTimeX();
 	Motor_lock_timer = chVTGetSystemTimeX();
-
+	AUX_temp_cutoff = 100;
 }
 
 void safety_lock_motor(void)

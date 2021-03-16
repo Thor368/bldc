@@ -256,10 +256,10 @@ void BMS_config(int argc, const char **argv)
 		commands_printf("%-20s: %.1fs", "BMS_UT_Delay", (double) BMS_UT_Delay);
 		commands_printf("%-20s: %.1f°C", "BMS_hard_UT", (double) BMS_hard_UT);
 		commands_printf("%-20s: %d", "BMS_Temp_beta", BMS_Temp_beta);
-		commands_printf("%-20s: %d", "Sleep_Time", Sleep_Time);
+		commands_printf("%-20s: %ds", "Sleep_Time", Sleep_Time);
 		commands_printf("%-20s: %d", "Stand_Alone", stand_alone);
-		commands_printf("%-20s: %.1f\n", "I_CHG_max", (double) I_CHG_max);
-		commands_printf("%-20s: %.1f\n", "AUX_temp_cutoff", (double) AUX_temp_cutoff);
+		commands_printf("%-20s: %.1fA", "I_CHG_max", (double) I_CHG_max);
+		commands_printf("%-20s: %.1f°C\n", "AUX_temp_cutoff", (double) AUX_temp_cutoff);
 	}
 	else if (argc == 3)
 	{
@@ -367,6 +367,8 @@ void BMS_cb_status(int argc, const char **argv)
 	commands_printf("Balance derating: %d", BMS.Balance_derating);
 	commands_printf("Discharge permission: %d", BMS_Discharge_permitted);
 	commands_printf("Charge permission: %d", BMS_Charge_permitted);
+	commands_printf("Charge_Limit:    %3.0f%%", (double) BMS_Charge_Limit*100);
+	commands_printf("Discharge_Limit: %3.0f%%", (double) BMS_Discharge_Limit*100);
 
 	eeprom_var chg_cy;
 	conf_general_read_eeprom_var_custom(&chg_cy, 63);
@@ -416,12 +418,12 @@ void BMS_cb_status(int argc, const char **argv)
 	}
 
 	commands_printf("\nTEMPERATURES");
-	commands_printf("Internal temperature:  %.1f°C", (double) BMS.Int_Temp);
-	commands_printf("Battery temperature #1: %.1f°C", (double) BMS.Temp_sensors[0]);
-	commands_printf("Battery temperature #2: %.1f°C", (double) BMS.Temp_sensors[1]);
-	commands_printf("Motor conector 1 temperature: %.1f°C", (double) BMS.Temp_sensors[2]);
-	commands_printf("Motor conector 2 temperature: %.1f°C", (double) BMS.Temp_sensors[3]);
-	commands_printf("Charpeport temperature: %.1f°C", (double) BMS.Temp_sensors[4]);
+	commands_printf("Internal temperature:         %3.1f°C", (double) BMS.Int_Temp);
+	commands_printf("Battery temperature #1:       %3.1f°C", (double) BMS.Temp_sensors[0]);
+	commands_printf("Battery temperature #2:       %3.1f°C", (double) BMS.Temp_sensors[1]);
+	commands_printf("Motor conector 1 temperature: %3.1f°C", (double) BMS.Temp_sensors[2]);
+	commands_printf("Motor conector 2 temperature: %3.1f°C", (double) BMS.Temp_sensors[3]);
+	commands_printf("Chargeport temperature:       %3.1f°C", (double) BMS.Temp_sensors[4]);
 	commands_printf("\n");
 }
 

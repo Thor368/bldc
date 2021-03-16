@@ -280,6 +280,7 @@ void charge_statemachine()
 
 	case chgst_charge_finished:
 		commands_printf("Charging finished!");
+		commands_printf("Waiting for restart!");
 
 		CHRG_OFF;
 		tx_NMT = false;
@@ -288,19 +289,26 @@ void charge_statemachine()
 		charge_cycles++;
 		mar_write_conf();
 
-		chg_state = chgst_wait_for_reset;
+		chg_state = chgst_wait_for_restart;
 		break;
 
 	case chgst_error:
 		commands_printf("Charging error!");
 		commands_printf("U_DC %.1fV U_CHG %.1fV", (double) U_DC, (double) U_CHG);
 		commands_printf("I_CHG %.3fA", (double) I_CHG);
+		commands_printf("charger present %d", charger_present);
+		commands_printf("I_CHG %.1f°C", (double) BMS.Temp_sensors[2]);
 
 		CHRG_OFF;
 		tx_NMT = false;
 		tx_RPDO1 = false;
 
 		chg_state = chgst_wait_for_reset;
+		break;
+
+	case chgst_wait_for_restart:
+		if (!charger_present || (BMS_Charge_Limit >= 0.9))
+			chg_state = chgst_wait_charge_allowed;
 		break;
 
 	case chgst_wait_for_reset:
