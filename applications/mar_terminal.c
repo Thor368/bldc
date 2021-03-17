@@ -26,25 +26,25 @@ static void BMS_cb_discharge(int argc, const char **argv);
 void mar_Init(void)
 {
 	terminal_register_command_callback(
-			"bms_status",
+			"mar_status",
 			"Show BMS status",
 			"",
 			BMS_cb_status);
 
 	terminal_register_command_callback(
-			"bms_charge_enable",
+			"mar_charge_enable",
 			"Enable/disable charging (\"\" = report, 0 = off, 1 = on)",
 			"[d]",
 			BMS_charg_en);
 
 	terminal_register_command_callback(
-			"bms_config",
+			"mar_config",
 			"set BMS parameter",
 			"[s] [f]",
 			BMS_config);
 
 	terminal_register_command_callback(
-			"bms_discharge",
+			"mar_discharge",
 			"set SoC to which to discharge internal battery",
 			"[f]",
 			BMS_cb_discharge);
@@ -342,89 +342,116 @@ void BMS_config(int argc, const char **argv)
 
 void BMS_cb_status(int argc, const char **argv)
 {
-	(void) argc;
-	(void) argv;
-
-	commands_printf("---CHARGEPORT---");
-	commands_printf("Port voltage: %.1fV", (double) U_CHG);
-	commands_printf("Port current: %.2fA", (double) I_CHG);
-	commands_printf("Port current offset: %.2fA", (double) I_CHG_offset/100);
-
-	if (!charge_enable)
-		commands_printf("Chargeport: Disabled");
-	else if (chg_state == chgst_charging)
-		commands_printf("Chargeport: Enabled, Charging");
-	else
-		commands_printf("Chargeport: Enabled, Idle");
-	commands_printf("Chargestate: %d", chg_state);
-
-	commands_printf("\n---BMS---");
-	commands_printf("SoC: %.1f%%", (double) SoC*100);
-	commands_printf("State: %d", BMS.Status);
-	commands_printf("Present: %d", BMS.BMS_present);
-	commands_printf("Balance permission: %d", BMS.Balance_Permission);
-	commands_printf("Balance scheduled: %d", BMS_Balance_Scheduled);
-	commands_printf("Balance derating: %d", BMS.Balance_derating);
-	commands_printf("Discharge permission: %d", BMS_Discharge_permitted);
-	commands_printf("Charge permission: %d", BMS_Charge_permitted);
-	commands_printf("Charge_Limit:    %3.0f%%", (double) BMS_Charge_Limit*100);
-	commands_printf("Discharge_Limit: %3.0f%%", (double) BMS_Discharge_Limit*100);
-
-	eeprom_var chg_cy;
-	conf_general_read_eeprom_var_custom(&chg_cy, 63);
-	commands_printf("Charge cycles: %d", chg_cy.as_u32);
-
-	commands_printf("\nSELFCHECK");
-	commands_printf("Cell test passed: %d", BMS.Cell_Test_Passed);
-	commands_printf("GPIO test passed: %d", BMS.GPIO_Test_Passed);
-	commands_printf("Status test passed: %d", BMS.Status_Test_Passed);
-	commands_printf("MUX test passed: %d", BMS.MUX_Test_Passed);
-	commands_printf("Secondary reference OK: %d", BMS.Secondary_Reference_OK);
-	commands_printf("Internal temperature OK: %d", BMS.Int_Temp_OK);
-	commands_printf("VA OK: %d", BMS.VA_OK);
-	commands_printf("VD OK: %d", BMS.VD_OK);
-	commands_printf("Wrong cell count: %d", BMS.Wrong_Cell_Count);
-	commands_printf("Health: %d", BMS.Health);
-	for (uint8_t i = 0; i < 12; i++)
-		commands_printf("Open test %2d: %.3fV %.3fV", i+1, (double) BMS.Cell_Source_U[i], (double) BMS.Cell_Sink_U[i]);
-
-	commands_printf("\nCELLS");
-	commands_printf("Pack voltage: %.2fV", (double) BMS.Cell_All_U);
-	commands_printf("Cell average voltage: %.3fV", (double) BMS.Cell_Avr_U);
-	commands_printf("Cell count: %d", BMS.Cell_Count);
-	for (uint8_t i = 0; i < 12; i++)
+	if (argc == 2)
 	{
-		char flags[23] = "";
+		if (!strcmp(argv[1], "bms"))
+		{
+			commands_printf("\n---BMS---");
+			commands_printf("SoC: %.1f%%", (double) SoC*100);
+			commands_printf("State: %d", BMS.Status);
+			commands_printf("Present: %d", BMS.BMS_present);
+			commands_printf("Balance permission: %d", BMS.Balance_Permission);
+			commands_printf("Balance scheduled: %d", BMS_Balance_Scheduled);
+			commands_printf("Balance derating: %d", BMS.Balance_derating);
+			commands_printf("Discharge permission: %d", BMS_Discharge_permitted);
+			commands_printf("Charge permission: %d", BMS_Charge_permitted);
+			commands_printf("Charge_Limit:    %3.0f%%", (double) BMS_Charge_Limit*100);
+			commands_printf("Discharge_Limit: %3.0f%%", (double) BMS_Discharge_Limit*100);
+			commands_printf("Charge cycles: %d", charge_cycles);
 
-		if (i == BMS.Cell_Min_index)
-			strcat(flags, "MIN ");
+			commands_printf("\nSELFCHECK");
+			commands_printf("Cell test passed: %d", BMS.Cell_Test_Passed);
+			commands_printf("GPIO test passed: %d", BMS.GPIO_Test_Passed);
+			commands_printf("Status test passed: %d", BMS.Status_Test_Passed);
+			commands_printf("MUX test passed: %d", BMS.MUX_Test_Passed);
+			commands_printf("Secondary reference OK: %d", BMS.Secondary_Reference_OK);
+			commands_printf("Internal temperature OK: %d", BMS.Int_Temp_OK);
+			commands_printf("VA OK: %d", BMS.VA_OK);
+			commands_printf("VD OK: %d", BMS.VD_OK);
+			commands_printf("Wrong cell count: %d", BMS.Wrong_Cell_Count);
+			commands_printf("Health: %d", BMS.Health);
+			for (uint8_t i = 0; i < 12; i++)
+				commands_printf("Open test %2d: %.3fV %.3fV", i+1, (double) BMS.Cell_Source_U[i], (double) BMS.Cell_Sink_U[i]);
+			commands_printf("\n");
+		}
+		else if (!strcmp(argv[1], "cp"))
+		{
+			commands_printf("---CHARGEPORT---");
+			commands_printf("Port voltage: %.1fV", (double) U_CHG);
+			commands_printf("Port current: %.2fA", (double) I_CHG);
+			commands_printf("Port current offset: %.2fA", (double) I_CHG_offset/100);
 
-		if (i == BMS.Cell_Max_index)
-			strcat(flags, "MAX ");
+			if (!charge_enable)
+				commands_printf("Chargeport: Disabled");
+			else if (chg_state == chgst_charging)
+				commands_printf("Chargeport: Enabled, Charging");
+			else
+				commands_printf("Chargeport: Enabled, Idle");
+			commands_printf("Chargestate: %d", chg_state);
+			commands_printf("\n");
+		}
+		else if (!strcmp(argv[1], "cell"))
+		{
+			commands_printf("\nCELLS");
+			commands_printf("Pack voltage: %.2fV", (double) BMS.Cell_All_U);
+			commands_printf("Cell average voltage: %.3fV", (double) BMS.Cell_Avr_U);
+			commands_printf("Cell count: %d", BMS.Cell_Count);
+			for (uint8_t i = 0; i < 12; i++)
+			{
+				char flags[23] = "";
 
-		if (BMS.Cell_OV[i])
-			strcat(flags, "OV ");
+				if (i == BMS.Cell_Min_index)
+					strcat(flags, "MIN ");
 
-		if (BMS.Cell_UV[i])
-			strcat(flags, "UV ");
+				if (i == BMS.Cell_Max_index)
+					strcat(flags, "MAX ");
 
-		if (BMS.Cell_Bleed[i])
-			strcat(flags, "DIS ");
+				if (BMS.Cell_OV[i])
+					strcat(flags, "OV ");
 
-		if (BMS.Open_Cell_Connection[i])
-			strcat(flags, "OPEN");
+				if (BMS.Cell_UV[i])
+					strcat(flags, "UV ");
 
-		commands_printf("Cell %2d: %.3fV %s", i+1, (double) BMS.Cell_U[i], flags);
+				if (BMS.Cell_Bleed[i])
+					strcat(flags, "DIS ");
+
+				if (BMS.Open_Cell_Connection[i])
+					strcat(flags, "OPEN");
+
+				commands_printf("Cell %2d: %.3fV %s", i+1, (double) BMS.Cell_U[i], flags);
+			}
+			commands_printf("\n");
+		}
+		else if (!strcmp(argv[1], "temp"))
+		{
+			commands_printf("\nTEMPERATURES");
+			commands_printf("Internal temperature:         %-3.1f°C", (double) BMS.Int_Temp);
+			commands_printf("Battery temperature #1:       %-3.1f°C", (double) BMS.Temp_sensors[0]);
+			commands_printf("Battery temperature #2:       %-3.1f°C", (double) BMS.Temp_sensors[1]);
+			commands_printf("Motor conector 1 temperature: %-3.1f°C", (double) BMS.Temp_sensors[2]);
+			commands_printf("Motor conector 2 temperature: %-3.1f°C", (double) BMS.Temp_sensors[3]);
+			commands_printf("Chargeport temperature:       %-3.1f°C", (double) BMS.Temp_sensors[4]);
+			commands_printf("\n");
+		}
+		else
+		{
+			commands_printf("Unknown argument given!");
+			commands_printf("Possible arguments:");
+			commands_printf("bms:  BMS info");
+			commands_printf("cp:   Charge port info");
+			commands_printf("cell: Cell statistics");
+			commands_printf("temp: Temperature sensor readout");
+		}
 	}
-
-	commands_printf("\nTEMPERATURES");
-	commands_printf("Internal temperature:         %3.1f°C", (double) BMS.Int_Temp);
-	commands_printf("Battery temperature #1:       %3.1f°C", (double) BMS.Temp_sensors[0]);
-	commands_printf("Battery temperature #2:       %3.1f°C", (double) BMS.Temp_sensors[1]);
-	commands_printf("Motor conector 1 temperature: %3.1f°C", (double) BMS.Temp_sensors[2]);
-	commands_printf("Motor conector 2 temperature: %3.1f°C", (double) BMS.Temp_sensors[3]);
-	commands_printf("Chargeport temperature:       %3.1f°C", (double) BMS.Temp_sensors[4]);
-	commands_printf("\n");
+	else
+	{
+		commands_printf("Wrong number of arguments given!");
+		commands_printf("Possible arguments:");
+		commands_printf("bms:  BMS info");
+		commands_printf("cp:   Charge port info");
+		commands_printf("cell: Cell statistics");
+		commands_printf("temp: Temperature sensor readout");
+	}
 }
 
 void BMS_charg_en(int argc, const char **argv)

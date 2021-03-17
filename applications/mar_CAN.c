@@ -42,7 +42,7 @@ void mar_calc_SoC(void)
 	else if (corrected_U < BMS_soft_UV)
 		SoC_filt = 0;
 	else
-		SoC_filt += (corrected_U - BMS_UV_recovery)/(BMS_soft_OV - BMS_UV_recovery);
+		SoC_filt += (corrected_U - BMS_soft_UV)/(BMS_soft_OV - BMS_soft_UV);
 
 	SoC = SoC_filt/100;
 }

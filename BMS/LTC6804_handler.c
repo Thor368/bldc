@@ -276,9 +276,9 @@ void LTC_Balancing_handler(void)
 	}
 	
 	float delta = fabs(Global_Max_U - Global_Min_U);
-	if ((delta > 0.02) && (Global_Max_U >= BMS_Balance_U))
+	if ((delta > 0.01) && (Global_Max_U >= BMS_Balance_U))
 		BMS_Balance_Scheduled = true;
-	else if ((delta < 0.01) || (Global_Max_U < BMS_Balance_U))
+	else if ((delta < 0.005) || (Global_Max_U < BMS_Balance_U))
 		BMS_Balance_Scheduled = false;
 	
 	for (uint8_t j = 0; j < 12; j++)
@@ -286,7 +286,7 @@ void LTC_Balancing_handler(void)
 
 	if (BMS_Balance_Scheduled && BMS.Balance_Permission)
 	{
-		float Balance_Threashold = Global_Min_U + 0.01;
+		float Balance_Threashold = Global_Min_U + 0.005;
 
 		if (BMS.Int_Temp > (BMS_ITMP_LIM + BMS_ITMP_HYST*2))
 			BMS.Balance_derating = 0;

@@ -258,13 +258,13 @@
 #define MCCONF_L_IN_CURRENT_MIN			-0.0	// Input current limit in Amperes (Lower)
 #endif
 #ifndef MCCONF_L_BATTERY_CUT_START
-#define MCCONF_L_BATTERY_CUT_START		30.0	// Start limiting the positive current at this voltage
+#define MCCONF_L_BATTERY_CUT_START		28.0	// Start limiting the positive current at this voltage
 #endif
 #ifndef MCCONF_L_BATTERY_CUT_END
-#define MCCONF_L_BATTERY_CUT_END		28.0		// Limit the positive current completely at this voltage
+#define MCCONF_L_BATTERY_CUT_END		25.0	// Limit the positive current completely at this voltage
 #endif
 #ifndef MCCONF_L_MIN_VOLTAGE
-#define MCCONF_L_MIN_VOLTAGE			28.0		// Minimum input voltage
+#define MCCONF_L_MIN_VOLTAGE			20.0	// Minimum input voltage
 #endif
 #ifndef MCCONF_L_MAX_VOLTAGE
 #define MCCONF_L_MAX_VOLTAGE			43.0	// Maximum input voltage
@@ -275,6 +275,13 @@
 #ifndef MCCONF_FOC_DT_US
 #define MCCONF_FOC_DT_US				0.1 // Microseconds for dead time compensation
 #endif
+#ifndef MCCONF_L_RPM_MAX
+#define MCCONF_L_RPM_MAX				50000.0	// The motor speed limit (Upper)
+#endif
+#ifndef MCCONF_L_RPM_MIN
+#define MCCONF_L_RPM_MIN				-50000.0	// The motor speed limit (Lower)
+#endif
+
 
 // Default app setting override
 #ifndef APPCONF_APP_TO_USE
