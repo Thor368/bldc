@@ -15,12 +15,12 @@
 #include "LTC6804_handler.h"
 
 
-volatile bool Motor_lock = true;
+volatile bool motor_lock;
 volatile uint32_t Motor_lock_timer;
 
 volatile uint32_t Sleep_Time = Sleep_Time_default;
-volatile uint32_t sleep_timer;
-
+volatile systime_t sleep_timer;
+volatile systime_t er_shutdown_timer;
 float AUX_temp_cutoff;
 
 void safety_reset_sleep_counter(void)
@@ -32,42 +32,43 @@ void safety_Init(void)
 {
 	sleep_timer = chVTGetSystemTimeX();
 	Motor_lock_timer = chVTGetSystemTimeX();
+	er_shutdown_timer = chVTGetSystemTimeX();
+	motor_lock = false;
 	AUX_temp_cutoff = 100;
 }
 
 void safety_lock_motor(void)
 {
-	Motor_lock = true;
+	motor_lock = true;
 	Motor_lock_timer = chVTGetSystemTimeX();
 }
 
 void safety_checks(void)
 {
-	if (!BMS_Discharge_permitted)
-		safety_lock_motor();
-
 	// I-n check
 	static uint32_t RPM_check_timer;
 	float I = mc_interface_get_tot_current_filtered();
 	float RPM = mc_interface_get_rpm();
 	float RPM_check = 0.0859*I*I*I - 13.47*I*I + 883*I + 2691.4;
-	if ((RPM < RPM_check*1.1) && (RPM > RPM_check*0.9))
+
+	if (((RPM < RPM_check*1.5) && (RPM > RPM_check*0.75) && (RPM < 30000)) || (I < 5))
 		RPM_check_timer = chVTGetSystemTimeX();
 
-	if ((chVTTimeElapsedSinceX(RPM_check_timer) > S2ST(2)) || (RPM > 30000))
+	if ((chVTTimeElapsedSinceX(RPM_check_timer) > S2ST(5)) ||
+		(BMS.Temp_sensors[3] > AUX_temp_cutoff) || (BMS.Temp_sensors[4] > AUX_temp_cutoff))
 		safety_lock_motor();
 
-	if (Motor_lock && (chVTTimeElapsedSinceX(Motor_lock_timer) > S2ST(30)))
-		Motor_lock = false;
+	if (motor_lock && (chVTTimeElapsedSinceX(Motor_lock_timer) > S2ST(30)))
+		motor_lock = false;
 
-	if (!Motor_lock)
-		timeout_reset(); // Reset timeout if everything is OK.
-
-	// Sleeptimer logic
+	// Shutdown logic
 	if (mc_interface_get_rpm() > 100)
 		sleep_timer = chVTGetSystemTimeX();
 
-	if (chVTTimeElapsedSinceX(sleep_timer) > S2ST(Sleep_Time))
+	if (BMS_Discharge_permitted)
+		er_shutdown_timer = chVTGetSystemTimeX();
+
+	if ((chVTTimeElapsedSinceX(sleep_timer) > S2ST(Sleep_Time)) || (chVTTimeElapsedSinceX(er_shutdown_timer) > S2ST(5)))
 		SHDN_ON;
 
 	// HBT checks

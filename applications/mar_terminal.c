@@ -257,7 +257,7 @@ void BMS_config(int argc, const char **argv)
 		commands_printf("%-20s: %.1f°C", "BMS_hard_UT", (double) BMS_hard_UT);
 		commands_printf("%-20s: %d", "BMS_Temp_beta", BMS_Temp_beta);
 		commands_printf("%-20s: %ds", "Sleep_Time", Sleep_Time);
-		commands_printf("%-20s: %d", "Stand_Alone", stand_alone);
+		commands_printf("%-20s: %d", "stand_alone", stand_alone);
 		commands_printf("%-20s: %.1fA", "I_CHG_max", (double) I_CHG_max);
 		commands_printf("%-20s: %.1f°C\n", "AUX_temp_cutoff", (double) AUX_temp_cutoff);
 	}

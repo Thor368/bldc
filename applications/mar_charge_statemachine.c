@@ -29,7 +29,7 @@
 #define I2chg(x)			((uint16_t) (x*16))
 #define U2chg(x)			((uint16_t) (x*256))
 
-volatile float I_CHG_max = 10;
+volatile float I_CHG_max = 25;
 
 bool charger_present, charger_detected;
 uint32_t charger_present_timeout;

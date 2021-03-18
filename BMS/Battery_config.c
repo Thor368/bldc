@@ -51,7 +51,7 @@ float BMS_soft_UV = 2.8;
 #ifdef BMS_UV_Delay_set						// [s] Soft cell undervoltage delay
 float BMS_UV_Delay = BMS_UV_Delay_set;
 #else
-float BMS_UV_Delay = 1;
+float BMS_UV_Delay = 5;
 #endif
 
 #ifdef BMS_hard_UV_set						// [V] Hard Cell undervoltage Threshold
