@@ -15,13 +15,19 @@
 #include "LTC6804_handler.h"
 
 
-volatile bool motor_lock;
-volatile uint32_t Motor_lock_timer;
+bool motor_lock;
+uint32_t Motor_lock_timer;
 
 volatile uint32_t Sleep_Time = Sleep_Time_default;
-volatile systime_t sleep_timer;
-volatile systime_t er_shutdown_timer;
+systime_t sleep_timer;
+systime_t er_shutdown_timer;
 float AUX_temp_cutoff;
+
+float rpm_upper_limit;
+float rpm_lower_limit;
+float rpm_trip_max;
+float rpm_min_I;
+uint32_t rpm_trip_delay;
 
 void safety_reset_sleep_counter(void)
 {
@@ -35,6 +41,11 @@ void safety_Init(void)
 	er_shutdown_timer = chVTGetSystemTimeX();
 	motor_lock = false;
 	AUX_temp_cutoff = 100;
+	rpm_upper_limit = 1.5;
+	rpm_lower_limit = 0.75;
+	rpm_trip_max = 30000;
+	rpm_min_I = 5;
+	rpm_trip_delay = 5;
 }
 
 void safety_lock_motor(void)
@@ -51,10 +62,10 @@ void safety_checks(void)
 	float RPM = mc_interface_get_rpm();
 	float RPM_check = 0.0859*I*I*I - 13.47*I*I + 883*I + 2691.4;
 
-	if (((RPM < RPM_check*1.5) && (RPM > RPM_check*0.75) && (RPM < 30000)) || (I < 5))
+	if (((RPM < RPM_check*rpm_upper_limit) && (RPM > RPM_check*rpm_lower_limit) && (RPM < rpm_trip_max)) || (I < rpm_min_I))
 		RPM_check_timer = chVTGetSystemTimeX();
 
-	if ((chVTTimeElapsedSinceX(RPM_check_timer) > S2ST(5)) ||
+	if ((chVTTimeElapsedSinceX(RPM_check_timer) > S2ST(rpm_trip_delay)) ||
 		(BMS.Temp_sensors[3] > AUX_temp_cutoff) || (BMS.Temp_sensors[4] > AUX_temp_cutoff))
 		safety_lock_motor();
 

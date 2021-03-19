@@ -136,10 +136,9 @@ static THD_FUNCTION(my_thread, arg)
 				discharge_SoC = 2;
 				mc_interface_release_motor();
 				discharge_enable = false;
-				return;
 			}
-
-			mcpwm_foc_set_openloop(20, 10);
+			else
+				mcpwm_foc_set_openloop(20, 10);
 		}
 
 		LTC_handler();

@@ -57,7 +57,7 @@ bool CAN_callback(uint32_t id, uint8_t *data, uint8_t len)
 		{
 		case 0x21:
 			discharge_SoC = *((float *) data);
-			discharge_enable = true;
+			discharge_enable = (discharge_SoC <= 0.99);
 			return true;
 			break;
 		}

@@ -142,6 +142,21 @@ void mar_write_conf(void)
 
 	mar_conf.as_float = AUX_temp_cutoff;
 	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
+
+	mar_conf.as_float = rpm_upper_limit;
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
+
+	mar_conf.as_float = rpm_lower_limit;
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
+
+	mar_conf.as_float = rpm_trip_max;
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
+
+	mar_conf.as_float = rpm_min_I;
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
+
+	mar_conf.as_u32 = rpm_trip_delay;
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 }
 
 void mar_read_config(void)
@@ -230,6 +245,21 @@ void mar_read_config(void)
 
 	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	AUX_temp_cutoff = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
+	rpm_upper_limit = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
+	rpm_lower_limit = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
+	rpm_trip_max = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
+	rpm_min_I = mar_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
+	rpm_trip_delay = mar_conf.as_u32;
 }
 
 void BMS_config(int argc, const char **argv)
@@ -259,7 +289,12 @@ void BMS_config(int argc, const char **argv)
 		commands_printf("%-20s: %ds", "Sleep_Time", Sleep_Time);
 		commands_printf("%-20s: %d", "stand_alone", stand_alone);
 		commands_printf("%-20s: %.1fA", "I_CHG_max", (double) I_CHG_max);
-		commands_printf("%-20s: %.1f°C\n", "AUX_temp_cutoff", (double) AUX_temp_cutoff);
+		commands_printf("%-20s: %.1f°C", "AUX_temp_cutoff", (double) AUX_temp_cutoff);
+		commands_printf("%-20s: %.0f%%", "rpm_upper_limit", (double) rpm_upper_limit*100);
+		commands_printf("%-20s: %.0f%%", "rpm_lower_limit", (double) rpm_lower_limit*100);
+		commands_printf("%-20s: %.0fRPM", "rpm_trip_max", (double) rpm_trip_max);
+		commands_printf("%-20s: %.1fA", "rpm_min_I", (double) rpm_min_I);
+		commands_printf("%-20s: %ds\n", "rpm_trip_delay", rpm_trip_delay);
 	}
 	else if (argc == 3)
 	{
@@ -313,6 +348,16 @@ void BMS_config(int argc, const char **argv)
 			ret = sscanf(argv[2], "%f", &I_CHG_max);
 		else if (!strcmp(argv[1], "AUX_temp_cutoff"))
 			ret = sscanf(argv[2], "%f", &AUX_temp_cutoff);
+		else if (!strcmp(argv[1], "rpm_upper_limit"))
+			ret = sscanf(argv[2], "%f", &rpm_upper_limit);
+		else if (!strcmp(argv[1], "rpm_lower_limit"))
+			ret = sscanf(argv[2], "%f", &rpm_lower_limit);
+		else if (!strcmp(argv[1], "rpm_trip_max"))
+			ret = sscanf(argv[2], "%f", &rpm_trip_max);
+		else if (!strcmp(argv[1], "rpm_min_I"))
+			ret = sscanf(argv[2], "%f", &rpm_min_I);
+		else if (!strcmp(argv[1], "rpm_trip_delay"))
+			ret = sscanf(argv[2], "%d", (int *) &rpm_trip_delay);
 		else if (!strcmp(argv[1], "BMS_set_cycles"))
 		{
 			eeprom_var chg_cy;
@@ -478,16 +523,19 @@ void BMS_cb_discharge(int argc, const char **argv)
 	if (argc == 1)
 	{
 		if (discharge_enable)
-			commands_printf("discharge_SoC = %f", discharge_enable);
+			commands_printf("discharge_SoC = %.0f%%", (double) discharge_SoC*100);
 		else
-			commands_printf("discharge_enable = false", discharge_enable);
+			commands_printf("discharge_enable = false");
 	}
 	else if (argc == 2)
 	{
 		if (!sscanf(argv[1], "%f", &discharge_SoC))
 			commands_printf("Illegal argument!");
-
-		commands_printf("discharge enable = %d", discharge_enable);
+		else
+		{
+			discharge_enable = true;
+			commands_printf("discharge enable = %d", discharge_enable);
+		}
 	}
 	else
 		commands_printf("Wrong argument count!");
