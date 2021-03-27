@@ -33,7 +33,7 @@ static volatile bool is_running = false;
 
 
 uint32_t CAN_base_adr;
-#define DRV_CMD_OFFSET				-0x100
+#define DRV_CMD_OFFSET				0x100
 #define CAN_DRIVE_CONTROLS_BASE		(CAN_base_adr + DRV_CMD_OFFSET)
 #define CAN_DATA_BASE				CAN_base_adr
 
@@ -177,9 +177,9 @@ bool rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 		if ((temp_I > 1) || (temp_I < 0))
 			temp_I = 0;
 
-		if (temp_v > 10.)
+		if (temp_v > 1.)
 			mc_interface_set_current(temp_I*mc_conf->l_current_max);
-		else if (temp_v < -10.)
+		else if (temp_v < -1.)
 			mc_interface_set_current(-temp_I*mc_conf->l_current_max);
 		else
 			mc_interface_set_brake_current(temp_I*mc_conf->l_current_max);
