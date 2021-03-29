@@ -33,7 +33,8 @@ static volatile bool is_running = false;
 
 
 uint32_t CAN_base_adr;
-#define DRV_CMD_OFFSET				0x100
+#define DRV_CMD_OFFSET				0x100  // GT
+//#define DRV_CMD_OFFSET				-0x100  // else
 #define CAN_DRIVE_CONTROLS_BASE		(CAN_base_adr + DRV_CMD_OFFSET)
 #define CAN_DATA_BASE				CAN_base_adr
 

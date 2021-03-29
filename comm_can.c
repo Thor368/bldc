@@ -32,7 +32,6 @@
 #include "crc.h"
 #include "packet.h"
 #include "hw.h"
-#include "canard_driver.h"
 #include "encoder.h"
 #include "utils.h"
 #include "mempools.h"
@@ -139,8 +138,6 @@ void comm_can_init(void) {
 			PAL_STM32_OSPEED_MID1);
 
 	canStart(&HW_CAN_DEV, &cancfg);
-
-	canard_driver_init();
 
 	chThdCreateStatic(cancom_read_thread_wa, sizeof(cancom_read_thread_wa), NORMALPRIO + 1,
 			cancom_read_thread, NULL);
