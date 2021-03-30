@@ -252,7 +252,7 @@ void charge_statemachine()
 		break;
 
 	case chgst_charging:
-		if ((I_CHG > 30) || (I_CHG < -1) || (!charger_present) || (BMS.Temp_sensors[2] > AUX_temp_cutoff))
+		if ((I_CHG > 30) || (I_CHG < -1) || (!charger_present) || (BMS.Temp_sensors[4] > AUX_temp_cutoff))
 		{
 			CHRG_OFF;
 
@@ -296,8 +296,8 @@ void charge_statemachine()
 		commands_printf("Charging error!");
 		commands_printf("U_DC %.1fV U_CHG %.1fV", (double) U_DC, (double) U_CHG);
 		commands_printf("I_CHG %.3fA", (double) I_CHG);
+		commands_printf("Chargeport temperature %.1f°C", (double) BMS.Temp_sensors[4]);
 		commands_printf("charger present %d", charger_present);
-		commands_printf("I_CHG %.1f°C", (double) BMS.Temp_sensors[2]);
 
 		CHRG_OFF;
 		tx_NMT = false;

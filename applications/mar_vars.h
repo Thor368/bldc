@@ -17,7 +17,7 @@ extern volatile float I_BAT;
 extern volatile float SoC;
 extern volatile float I_CHG_max;
 
-extern volatile uint32_t Sleep_Time;
+extern volatile uint32_t sleep_time;
 extern volatile uint32_t CAN_HBT_timeout;
 
 extern volatile bool charge_enable;

@@ -389,7 +389,7 @@ void BMS_Limits(void)
 		OV_limit = (BMS_soft_OV - Global_Max_U)/(BMS_soft_OV - BMS_OV_recovery);
 
 	float temp = BMS.Temp_sensors[0];  // Find highest cell temperature
-	for (uint8_t i = 0; i < 5; i++)
+	for (uint8_t i = 0; i < (BMS_temp_count-1); i++)
 		if (BMS.Temp_sensors[i] > temp)
 			temp = BMS.Temp_sensors[i];
 	if (temp < BMS_soft_DOT)  // Discharge over temp limit
@@ -406,7 +406,7 @@ void BMS_Limits(void)
 		COT_limit = (BMS_hard_COT - temp)/(BMS_hard_COT - BMS_soft_COT);
 
 	temp = BMS.Temp_sensors[0];  // Find lowest cell temperature
-	for (uint8_t i = 0; i < 5; i++)
+	for (uint8_t i = 0; i < (BMS_temp_count-1); i++)
 		if (BMS.Temp_sensors[i] < temp)
 			temp = BMS.Temp_sensors[i];
 	if (temp > BMS_soft_UT)  // Charge&Discharge under temp limit

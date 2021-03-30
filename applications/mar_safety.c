@@ -18,7 +18,7 @@
 bool motor_lock;
 uint32_t Motor_lock_timer;
 
-volatile uint32_t Sleep_Time = Sleep_Time_default;
+volatile uint32_t sleep_time = Sleep_Time_default;
 systime_t sleep_timer;
 systime_t er_shutdown_timer;
 float AUX_temp_cutoff;
@@ -79,7 +79,7 @@ void safety_checks(void)
 	if (BMS_Discharge_permitted)
 		er_shutdown_timer = chVTGetSystemTimeX();
 
-	if ((chVTTimeElapsedSinceX(sleep_timer) > S2ST(Sleep_Time)) || (chVTTimeElapsedSinceX(er_shutdown_timer) > S2ST(5)))
+	if ((chVTTimeElapsedSinceX(sleep_timer) > S2ST(sleep_time)) || (chVTTimeElapsedSinceX(er_shutdown_timer) > S2ST(5)))
 		SHDN_ON;
 
 	// HBT checks
