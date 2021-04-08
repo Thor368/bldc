@@ -428,11 +428,11 @@ void BMS_cb_status(int argc, const char **argv)
 
 			if (!charge_enable)
 				commands_printf("Chargeport: Disabled");
-			else if (chg_state == chgst_charging)
+			else if (cp_state == chgst_charging)
 				commands_printf("Chargeport: Enabled, Charging");
 			else
 				commands_printf("Chargeport: Enabled, Idle");
-			commands_printf("Chargestate: %d", chg_state);
+			commands_printf("Chargestate: %d", cp_state);
 			commands_printf("\n");
 		}
 		else if (!strcmp(argv[1], "cell"))

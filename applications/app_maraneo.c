@@ -58,7 +58,6 @@ volatile float I_CHG = 0, I_CHG_filt = 0, I_CHG_offset = 0;
 // threads here and set up callbacks.
 void app_custom_start(void)
 {
-	chg_init();
 	SHDN_OFF;
 	CAN_OFF;
 	BAT_ON;
@@ -155,6 +154,6 @@ static void pwm_callback(void)
 	if ((ADC_Value[7] > 3686) || (ADC_Value[7] < 1993))  // fast CP disconnect if curent >150A or <-5A
 	{
 		CHRG_OFF;
-		chg_state = chgst_error;
+		cp_state = cpst_error;
 	}
 }

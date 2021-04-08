@@ -18,6 +18,8 @@
 #include "mar_safety.h"
 #include "mar_terminal.h"
 
+#include <string.h>
+
 #include "commands.h"  // debug
 
 #define ID_CHG_NMT			0x70A
@@ -25,6 +27,26 @@
 #define ID_NMT_BOADCAST		0x000
 #define ID_CHG_TPDO1		0x18A
 #define ID_CHG_RPDO1		0x20A
+
+#define CMD_BAT_DISCOVER	0x40
+#define CMD_BAT_U			0x41
+#define CMD_BAT_I			0x42
+#define CMD_BAT_SoC			0x43
+#define CMD_BAT_dis_lim		0x44
+#define CMD_BAT_chg_lim		0x45
+#define CMD_BAT_cell_min	0x46
+#define CMD_BAT_cell_max	0x47
+#define CMD_BAT_int_temp	0x48
+#define CMD_BAT_temp_1		0x49
+#define CMD_BAT_temp_2		0x4A
+#define CMD_BAT_temp_3		0x4B
+#define CMD_BAT_temp_x		0c4C
+#define CMD_BAT_temp_y		0x4D
+#define CMD_BAT_cell_1_4	0x60
+#define CMD_BAT_cell_5_8	0x61
+#define CMD_BAT_cell_9_12	0x62
+#define CMD_BAT_balance		0x63
+#define CMD_BAT_set_state	0x70
 
 #define I2chg(x)			((uint16_t) (x*16))
 #define U2chg(x)			((uint16_t) (x*256))
@@ -34,6 +56,26 @@ volatile float I_CHG_max = 25;
 bool charger_present, charger_detected;
 uint32_t charger_present_timeout;
 uint32_t charge_cycles;
+
+
+bool battery_present, standby_present;
+uint32_t battery_present_timeout, standby_present_timeout;
+bool tx_BAT_SET_STATE;
+uint32_t tx_BAT_SET_STATE_timer;
+
+enum
+{
+	btmd_sleep,
+	btmd_discover,
+	btmd_standby,
+	btmd_precharge,
+	btmd_run,
+	btmd_error,
+	btmd_reset
+} bat_mode_rx, bat_mode_tx;
+float U_bat_ext, dis_limit_ext_bat;
+float external_battery_discharge_limit;
+
 
 float remote_chg_U, remote_chg_I;
 bool tx_NMT, tx_RPDO1;
@@ -56,13 +98,41 @@ union
 
 uint32_t chg_timer, chg_counter;
 volatile bool charge_enable = true;
-CHG_state_t chg_state;
+CHG_state_t cp_state;
 
 void CAN_CHG_callback(CANRxFrame *frame)
 {
 	if (frame->IDE)
-		return;
+	{
+		if (((frame->EID & 0xFF) >= 10) && ((frame->EID >> 8) >= 0x40))
+		{
+			switch (frame->EID >> 8)
+			{
+			case CMD_BAT_DISCOVER:
+				battery_present_timeout = chVTGetSystemTimeX();
+				battery_present = true;
 
+				bat_mode_rx = frame->data8[0];
+				break;
+
+			case CMD_BAT_U:
+				standby_present = true;
+				standby_present_timeout = chVTGetSystemTimeX();
+
+				memcpy(&U_bat_ext, frame->data32, 4);
+				break;
+
+			case CMD_BAT_dis_lim:
+				standby_present = true;
+				standby_present_timeout = chVTGetSystemTimeX();
+
+				memcpy(&dis_limit_ext_bat, frame->data32, 4);
+				break;
+			}
+		}
+	}
+	else
+	{
 	switch (frame->SID)
 	{
 	case ID_CHG_NMT:
@@ -82,12 +152,13 @@ void CAN_CHG_callback(CANRxFrame *frame)
 		break;
 	}
 }
+}
 
-void chg_init()
+void chg_init(void)
 {
 	CHRG_OFF;
 
-	chg_state = chgst_init;
+	cp_state = cpst_init;
 	remote_chg_U = 0;
 	remote_chg_I = 0;
 
@@ -97,8 +168,21 @@ void chg_init()
 	charger_present = false;
 	charger_detected = false;
 	charge_cycles = 0;
-
 	charger_present_timeout = chVTGetSystemTimeX();
+
+	battery_present = false;
+	battery_present_timeout = chVTGetSystemTimeX();
+	standby_present = false;
+	standby_present_timeout = chVTGetSystemTimeX();
+
+	bat_mode_rx = btmd_sleep;
+	bat_mode_tx = btmd_sleep;
+	tx_BAT_SET_STATE = false;
+	tx_BAT_SET_STATE_timer = chVTGetSystemTimeX();
+	U_bat_ext = 0;
+	dis_limit_ext_bat = 0;
+	external_battery_discharge_limit = 1;
+
 	tx_NMT = false;
 	tx_RPDO1 = false;
 	NMT_timer = chVTGetSystemTimeX();
@@ -110,10 +194,16 @@ void chg_init()
 void charge_statemachine()
 {
 	if (!charge_enable)
-		chg_state = chgst_wait_for_enable;
+		cp_state = cpst_wait_for_enable;
 
 	if (chVTTimeElapsedSinceX(charger_present_timeout) > S2ST(2))
 		charger_present = false;
+
+	if (chVTTimeElapsedSinceX(standby_present_timeout) > S2ST(2))
+		standby_present = false;
+
+	if (chVTTimeElapsedSinceX(battery_present_timeout) > S2ST(2))
+		battery_present = false;
 
 	if ((chVTTimeElapsedSinceX(NMT_timer) > S2ST(1)) && tx_NMT)
 	{
@@ -128,30 +218,27 @@ void charge_statemachine()
 		comm_can_transmit_sid2(ID_CHG_RPDO1, (uint8_t *) &charger_RPDO1, sizeof(charger_RPDO1));  // tx RPDO1
 	}
 
+	if ((chVTTimeElapsedSinceX(tx_BAT_SET_STATE_timer) > MS2ST(100)) && tx_BAT_SET_STATE)
+	{
+		tx_BAT_SET_STATE_timer = chVTGetSystemTimeX();
+		comm_can_transmit_eid2(0xFF01 | (CMD_BAT_set_state << 16), (uint8_t *) &bat_mode_tx, 1);  // set state of external battery
+	}
+
 	charger_detected = charger_present || (U_CHG > 20);
 	if (charger_present)
 		safety_reset_sleep_counter();
 
-//	static CHG_state_t chg_state_back;
-//	uint32_t state_timer;
-//	if ((chVTTimeElapsedSinceX(state_timer) > MS2ST(500)) || (chg_state != chg_state_back))
-//	{
-//		chg_state_back = chg_state;
-//		state_timer = chVTGetSystemTimeX();
-//		comm_can_transmit_sid2(0x42, (uint8_t *) &chg_state, sizeof(chg_state));
-//	}
-
-	switch (chg_state)
+	switch (cp_state)
 	{
-	case chgst_init:
+	case cpst_init:
 		commands_printf("Charge statemachine init!");
 		chg_init();
 
 		chg_timer = chVTGetSystemTimeX();
-		chg_state = chgst_wait_for_init;
+		cp_state = cpst_wait_for_init;
 		break;
 
-	case chgst_wait_for_init:
+	case cpst_wait_for_init:
 		I_CHG_offset = I_CHG_filt;
 
 		if (chVTTimeElapsedSinceX(chg_timer) > S2ST(10))
@@ -160,39 +247,39 @@ void charge_statemachine()
 			{
 				commands_printf("Waiting for charge permission from BMS!");
 
-				chg_state = chgst_wait_charge_allowed;
+				cp_state = cpst_wait_charge_allowed;
 			}
 			else
 			{
 				commands_printf("Waiting for charge enable!");
 
-				chg_state = chgst_wait_for_enable;
+				cp_state = cpst_wait_for_enable;
 			}
 		}
 		break;
 
-	case chgst_wait_charge_allowed:
+	case cpst_wait_charge_allowed:
 		if (BMS_Charge_permitted)
 		{
 			commands_printf("Waiting for charger!");
 
-			chg_state = chgst_wait_for_charger;
+			cp_state = cpst_discover;
 		}
 		break;
 
-	case chgst_wait_for_enable:
+	case cpst_wait_for_enable:
 		if (charge_enable)
 		{
 			commands_printf("Charging enabled! Reinitializing!");
 
-			chg_state = chgst_init;
+			cp_state = cpst_init;
 		}
 		break;
 
-	case chgst_wait_for_charger:
-		if (charger_present || stand_alone)
+	case cpst_discover:
+		if (charger_present)
 		{
-			commands_printf("Charger Found!");
+			commands_printf("Charger found!");
 			commands_printf("Waiting for voltages to equalize!");
 			I_CHG_offset = I_CHG_filt;
 
@@ -212,8 +299,91 @@ void charge_statemachine()
 			tx_RPDO1 = true;
 
 			chg_timer = chVTGetSystemTimeX();
-			chg_state = chgst_wait_equalize;
+			cp_state = chgst_wait_equalize;
 		}
+		if (battery_present)
+		{
+			commands_printf("External battery found!");
+			I_CHG_offset = I_CHG_filt;
+
+			commands_printf("Activating battery!");
+			tx_BAT_SET_STATE = true;
+			bat_mode_tx = btmd_standby;
+
+			chg_timer = chVTGetSystemTimeX();
+			cp_state = batst_connect;
+		}
+		break;
+
+	case batst_connect:
+		if (standby_present)
+		{
+			if (U_DC > (U_bat_ext + 1))
+			{
+				commands_printf("Internal battery higher: Use internal and switch when equal.");
+
+				cp_state = batst_run_internal;
+			}
+			else if (U_DC < (U_bat_ext - 1))
+			{
+				commands_printf("External battery higher: Use external until equal.");
+				commands_printf("Internal battery deactivated. Waiting for external battery to switch on!");
+
+				external_battery_discharge_limit = 0;
+				BAT_OFF;
+				bat_mode_tx = btmd_run;
+
+				chg_timer = chVTGetSystemTimeX();
+				cp_state = batst_switch_external;
+			}
+			else
+			{
+				commands_printf("Batteries equal(ish): Simply switch on.");
+
+				CHRG_ON;
+				bat_mode_tx = btmd_run;
+
+				cp_state = batst_run_parallel;
+			}
+		}
+
+		if ((chVTTimeElapsedSinceX(chg_timer) >= S2ST(1)) || !battery_present || !standby_present)
+		{
+			commands_printf("Failed to obtain status messages!");
+			cp_state = cpst_error;
+		}
+		break;
+
+	case batst_run_parallel:
+		external_battery_discharge_limit = dis_limit_ext_bat;
+
+		if (!standby_present || !battery_present)
+		{
+			commands_printf("Lost external Battery!");
+
+			cp_state = batst_bat_lost;
+		}
+		break;
+
+	case batst_switch_external:
+		if (bat_mode_rx == btmd_run)
+		{
+			cp_state = batst_run_external;
+		}
+
+		if ((chVTTimeElapsedSinceX(chg_timer) >= S2ST(1)) || !battery_present || !standby_present)
+		{
+			commands_printf("Failed to obtain status messages!");
+			cp_state = cpst_error;
+		}
+		break;
+
+	case batst_bat_lost:
+		CHRG_OFF;
+		BAT_ON;
+		tx_BAT_SET_STATE = false;
+
+		cp_state = cpst_wait_for_reset;
 		break;
 
 	case chgst_wait_equalize:
@@ -225,12 +395,12 @@ void charge_statemachine()
 			charger_RPDO1.U_max = U2chg(45);
 
 			chg_timer = chVTGetSystemTimeX();
-			chg_state = chgst_wait_settle;
+			cp_state = chgst_wait_settle;
 			break;
 		}
 
 		if ((chVTTimeElapsedSinceX(chg_timer) >=	 S2ST(30)) || (!charger_present))
-			chg_state = chgst_error;
+			cp_state = cpst_error;
 
 		break;
 
@@ -240,14 +410,14 @@ void charge_statemachine()
 			commands_printf("Charging started!");
 
 			chg_timer = chVTGetSystemTimeX();
-			chg_state = chgst_charging;
+			cp_state = chgst_charging;
 		}
 
-		if (!BMS_Charge_permitted && !stand_alone)
-			chg_state = chgst_charge_finished;
+		if (!BMS_Charge_permitted)
+			cp_state = chgst_charge_finished;
 
 		if ((chVTTimeElapsedSinceX(chg_timer) >=	 S2ST(30)) || (!charger_present))
-			chg_state = chgst_error;
+			cp_state = cpst_error;
 
 		break;
 
@@ -256,7 +426,7 @@ void charge_statemachine()
 		{
 			CHRG_OFF;
 
-			chg_state = chgst_error;
+			cp_state = cpst_error;
 			break;
 		}
 
@@ -271,10 +441,10 @@ void charge_statemachine()
 			charger_RPDO1.I_max = I2chg(chg_I_filt/10);
 		}
 
-		if ((I_CHG < 0.5) || (!BMS_Charge_permitted && !stand_alone))
+		if ((I_CHG < 0.5) || !BMS_Charge_permitted)
 		{
 			commands_printf("Charge_Limit %.0f%% Max_U %.3fV", (double) BMS_Charge_Limit*100, (double) Global_Max_U);
-			chg_state = chgst_charge_finished;
+			cp_state = chgst_charge_finished;
 		}
 		break;
 
@@ -289,34 +459,37 @@ void charge_statemachine()
 		charge_cycles++;
 		mar_write_conf();
 
-		chg_state = chgst_wait_for_restart;
+		cp_state = cpst_wait_for_restart;
 		break;
 
-	case chgst_error:
-		commands_printf("Charging error!");
+	case cpst_error:
+		commands_printf("Charge port error!");
 		commands_printf("U_DC %.1fV U_CHG %.1fV", (double) U_DC, (double) U_CHG);
 		commands_printf("I_CHG %.3fA", (double) I_CHG);
 		commands_printf("Chargeport temperature %.1f°C", (double) BMS.Temp_sensors[4]);
 		commands_printf("charger present %d", charger_present);
+		commands_printf("battery present %d", battery_present);
+		commands_printf("status present %d", standby_present);
 
 		CHRG_OFF;
 		tx_NMT = false;
 		tx_RPDO1 = false;
+		tx_BAT_SET_STATE = false;
 
-		chg_state = chgst_wait_for_reset;
+		cp_state = cpst_wait_for_reset;
 		break;
 
-	case chgst_wait_for_restart:
+	case cpst_wait_for_restart:
 		if (!charger_present || (BMS_Charge_Limit >= 0.9))
-			chg_state = chgst_wait_charge_allowed;
+			cp_state = cpst_wait_charge_allowed;
 		break;
 
-	case chgst_wait_for_reset:
-		if (!charger_present)
-			chg_state = chgst_wait_charge_allowed;
+	case cpst_wait_for_reset:
+		if (!charger_present && !battery_present)
+			cp_state = cpst_wait_charge_allowed;
 		break;
 
 	default:
-		chg_state = chgst_init;
+		cp_state = cpst_init;
 	}
 }
