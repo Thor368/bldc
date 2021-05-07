@@ -157,6 +157,9 @@ void mar_write_conf(void)
 
 	mar_conf.as_u32 = rpm_trip_delay;
 	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
+
+	mar_conf.as_float = charge_finish_thr;
+	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 }
 
 void mar_read_config(void)
@@ -260,6 +263,9 @@ void mar_read_config(void)
 
 	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	rpm_trip_delay = mar_conf.as_u32;
+
+	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
+	charge_finish_thr = mar_conf.as_float;
 }
 
 void BMS_config(int argc, const char **argv)
@@ -294,7 +300,8 @@ void BMS_config(int argc, const char **argv)
 		commands_printf("%-20s: %.0f%%", "rpm_lower_limit", (double) rpm_lower_limit*100);
 		commands_printf("%-20s: %.0fRPM", "rpm_trip_max", (double) rpm_trip_max);
 		commands_printf("%-20s: %.1fA", "rpm_min_I", (double) rpm_min_I);
-		commands_printf("%-20s: %ds\n", "rpm_trip_delay", rpm_trip_delay);
+		commands_printf("%-20s: %ds", "rpm_trip_delay", rpm_trip_delay);
+		commands_printf("%-20s: %.3fA\n", "charge_finish_thr", (double) charge_finish_thr);
 	}
 	else if (argc == 3)
 	{
@@ -358,6 +365,8 @@ void BMS_config(int argc, const char **argv)
 			ret = sscanf(argv[2], "%f", &rpm_min_I);
 		else if (!strcmp(argv[1], "rpm_trip_delay"))
 			ret = sscanf(argv[2], "%d", (int *) &rpm_trip_delay);
+		else if (!strcmp(argv[1], "charge_finish_threshold"))
+			ret = sscanf(argv[2], "%f", &charge_finish_thr);
 		else if (!strcmp(argv[1], "BMS_set_cycles"))
 		{
 			eeprom_var chg_cy;
@@ -437,7 +446,7 @@ void BMS_cb_status(int argc, const char **argv)
 		}
 		else if (!strcmp(argv[1], "cell"))
 		{
-			commands_printf("\nCELLS");
+			commands_printf("---CELLS---");
 			commands_printf("Pack voltage: %.2fV", (double) BMS.Cell_All_U);
 			commands_printf("Cell average voltage: %.3fV", (double) BMS.Cell_Avr_U);
 			commands_printf("Cell count: %d", BMS.Cell_Count);
@@ -469,7 +478,7 @@ void BMS_cb_status(int argc, const char **argv)
 		}
 		else if (!strcmp(argv[1], "temp"))
 		{
-			commands_printf("\nTEMPERATURES");
+			commands_printf("---TEMPERATURES---");
 			commands_printf("Internal temperature:         %-3.1f°C", (double) BMS.Int_Temp);
 			commands_printf("Battery temperature #1:       %-3.1f°C", (double) BMS.Temp_sensors[0]);
 			commands_printf("Battery temperature #2:       %-3.1f°C", (double) BMS.Temp_sensors[1]);

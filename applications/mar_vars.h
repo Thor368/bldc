@@ -16,6 +16,7 @@ extern volatile float I_CHG, I_CHG_filt, I_CHG_offset;
 extern volatile float I_BAT;
 extern volatile float SoC;
 extern volatile float I_CHG_max;
+extern volatile float charge_finish_thr;
 
 extern volatile uint32_t sleep_time;
 extern volatile uint32_t CAN_HBT_timeout;

@@ -45,7 +45,7 @@ float BMS_Balance_U = 3.9;
 #ifdef BMS_soft_UV_set						// [V] Soft cell undervoltage threshold
 float BMS_soft_UV = BMS_soft_UV_set;
 #else
-float BMS_soft_UV = 2.8;
+float BMS_soft_UV = 3.0;
 #endif
 
 #ifdef BMS_UV_Delay_set						// [s] Soft cell undervoltage delay
@@ -57,13 +57,13 @@ float BMS_UV_Delay = 5;
 #ifdef BMS_hard_UV_set						// [V] Hard Cell undervoltage Threshold
 float BMS_hard_UV = BMS_hard_UV_set;
 #else
-float BMS_hard_UV = 2.5;
+float BMS_hard_UV = 2.8;
 #endif
 
 #ifdef BMS_UV_recovery_set					// [V] Voltage at which discharging is reenabled
 float BMS_UV_recovery = BMS_UV_recovery_set;
 #else
-float BMS_UV_recovery = 3.0;
+float BMS_UV_recovery = 3.3;
 #endif
 
 #ifdef BMS_soft_COT_set						// [°C] Soft cell overtemperature while charging threshold

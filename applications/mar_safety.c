@@ -57,16 +57,16 @@ void safety_lock_motor(void)
 void safety_checks(void)
 {
 	// I-n check
-	static uint32_t RPM_check_timer;
-	float I = mc_interface_get_tot_current_filtered();
-	float RPM = mc_interface_get_rpm();
-	float RPM_check = 0.0859*I*I*I - 13.47*I*I + 883*I + 2691.4;
-
-	if (((RPM < RPM_check*rpm_upper_limit) && (RPM > RPM_check*rpm_lower_limit) && (RPM < rpm_trip_max)) || (I < rpm_min_I))
-		RPM_check_timer = chVTGetSystemTimeX();
-
-	if ((chVTTimeElapsedSinceX(RPM_check_timer) > S2ST(rpm_trip_delay)) ||
-		(BMS.Temp_sensors[3] > AUX_temp_cutoff) || (BMS.Temp_sensors[4] > AUX_temp_cutoff))
+//	static uint32_t RPM_check_timer;
+//	float I = mc_interface_get_tot_current_filtered();
+//	float RPM = mc_interface_get_rpm();
+//	float RPM_check = 0.0859*I*I*I - 13.47*I*I + 883*I + 2691.4;
+//
+//	if (((RPM < RPM_check*rpm_upper_limit) && (RPM > RPM_check*rpm_lower_limit) && (RPM < rpm_trip_max)) || (I < rpm_min_I))
+//		RPM_check_timer = chVTGetSystemTimeX();
+//
+//	if ((chVTTimeElapsedSinceX(RPM_check_timer) > S2ST(rpm_trip_delay)) ||
+	if ((BMS.Temp_sensors[3] > AUX_temp_cutoff) || (BMS.Temp_sensors[4] > AUX_temp_cutoff))
 		safety_lock_motor();
 
 	if (motor_lock && (chVTTimeElapsedSinceX(Motor_lock_timer) > S2ST(30)))

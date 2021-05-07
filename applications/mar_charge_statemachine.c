@@ -52,6 +52,7 @@
 #define U2chg(x)			((uint16_t) (x*256))
 
 volatile float I_CHG_max = 25;
+volatile float charge_finish_thr = 0.25;
 
 bool charger_present, charger_detected;
 uint32_t charger_present_timeout;
@@ -301,18 +302,19 @@ void charge_statemachine()
 			chg_timer = chVTGetSystemTimeX();
 			cp_state = chgst_wait_equalize;
 		}
-		if (battery_present)
-		{
-			commands_printf("External battery found!");
-			I_CHG_offset = I_CHG_filt;
 
-			commands_printf("Activating battery!");
-			tx_BAT_SET_STATE = true;
-			bat_mode_tx = btmd_standby;
-
-			chg_timer = chVTGetSystemTimeX();
-			cp_state = batst_connect;
-		}
+//		if (battery_present)
+//		{
+//			commands_printf("External battery found!");
+//			I_CHG_offset = I_CHG_filt;
+//
+//			commands_printf("Activating battery!");
+//			tx_BAT_SET_STATE = true;
+//			bat_mode_tx = btmd_standby;
+//
+//			chg_timer = chVTGetSystemTimeX();
+//			cp_state = batst_connect;
+//		}
 		break;
 
 	case batst_connect:
@@ -441,7 +443,7 @@ void charge_statemachine()
 			charger_RPDO1.I_max = I2chg(chg_I_filt/10);
 		}
 
-		if ((I_CHG < 0.5) || !BMS_Charge_permitted)
+		if ((I_CHG < charge_finish_thr) || !BMS_Charge_permitted)
 		{
 			commands_printf("Charge_Limit %.0f%% Max_U %.3fV", (double) BMS_Charge_Limit*100, (double) Global_Max_U);
 			cp_state = chgst_charge_finished;
