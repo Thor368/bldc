@@ -67,15 +67,15 @@ void app_custom_start(void)
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
 			NORMALPRIO, my_thread, NULL);
 
-	mc_interface_set_pwm_callback(pwm_callback);
+//	mc_interface_set_pwm_callback(pwm_callback);
 
 	// Terminal commands for the VESC Tool terminal can be registered.
 
 	mar_Init();
-	safety_Init();
+//	safety_Init();
 	LTC_handler_Init();
 	mar_read_config();
-	CAN_Init();
+//	CAN_Init();
 }
 
 // Called when the custom application is stopped. Stop our threads
@@ -128,22 +128,7 @@ static THD_FUNCTION(my_thread, arg)
 		I_CHG_filt += GET_VOLTAGE_RAW(7)/0.0088;
 		I_CHG = (I_CHG_filt - I_CHG_offset)/100;
 
-		if (discharge_enable)
-		{
-			if (SoC < discharge_SoC)
-			{
-				discharge_SoC = 2;
-				mc_interface_release_motor();
-				discharge_enable = false;
-			}
-			else
-				mcpwm_foc_set_openloop(20, 10);
-		}
-
 		LTC_handler();
-		charge_statemachine();
-		safety_checks();
-		CAN_Status();
 
 		chThdSleepMilliseconds(10);
 	}
