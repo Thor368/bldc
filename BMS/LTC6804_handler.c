@@ -13,12 +13,8 @@ bool BMS_Balance_Scheduled;
 
 float Global_Max_U;
 float Global_Min_U;
-float BMS_Discharge_Limit;
-float BMS_Charge_Limit;
 bool BMS_Charge_permitted;
 bool BMS_Discharge_permitted;
-uint32_t BMS_charge_delay_timer;
-uint32_t BMS_discharge_delay_timer;
 
 void BMS_RES_sets(BMS_t *chip)
 {
@@ -105,13 +101,9 @@ void LTC_handler_Init()
 
 	Global_Max_U = 0;
 	Global_Min_U = 0;
-	BMS_Discharge_Limit = 0;
-	BMS_Charge_Limit = 0;
 
 	BMS_Charge_permitted = true;
 	BMS_Discharge_permitted = true;
-	BMS_charge_delay_timer = 0;
-	BMS_discharge_delay_timer = 0;
 
 	BMS_RES_sets(&BMS);
 	BMS.chip.address = LTC_ADDRESS(0);

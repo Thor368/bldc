@@ -57,9 +57,9 @@ void app_custom_start(void)
 
 	// Terminal commands for the VESC Tool terminal can be registered.
 
-	mar_Init();
+	BMS_Init();
 	LTC_handler_Init();
-	mar_read_config();
+	BMS_read_config();
 }
 
 // Called when the custom application is stopped. Stop our threads
@@ -68,7 +68,7 @@ void app_custom_stop(void)
 {
 	REL_OFF;
 
-	mar_Deinit();
+	BMS_Deinit();
 
 	stop_now = true;
 	while (is_running) {

@@ -26,9 +26,7 @@
 
 // BMS settings
 
-#define BMS_cell_count_set		10
-
-#define Sleep_Time_default		10800  // timer in seconds after which MC goes into deep sleep
+#define BMS_cell_count_set		7
 
 // Macros
 #define LED_GREEN_ON()			palSetPad(GPIOB, 0)
