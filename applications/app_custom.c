@@ -20,5 +20,5 @@
 #include "conf_general.h"
 
 #ifdef APP_CUSTOM_TO_USE
-#include APP_CUSTOM_TO_USE
+#include"app_BMS.c"
 #endif

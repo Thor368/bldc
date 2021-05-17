@@ -17,7 +17,6 @@ float BMS_Discharge_Limit;
 float BMS_Charge_Limit;
 bool BMS_Charge_permitted;
 bool BMS_Discharge_permitted;
-bool BMS_fault_latch;
 uint32_t BMS_charge_delay_timer;
 uint32_t BMS_discharge_delay_timer;
 
@@ -111,7 +110,6 @@ void LTC_handler_Init()
 
 	BMS_Charge_permitted = true;
 	BMS_Discharge_permitted = true;
-	BMS_fault_latch = false;
 	BMS_charge_delay_timer = 0;
 	BMS_discharge_delay_timer = 0;
 
@@ -338,10 +336,8 @@ void BMS_IO_handler(void)
 {
 	if (BMS.Health != BMS_Health_OK)
 	{
-		BMS_fault_latch = true;
 		BMS_Charge_permitted = false;
 		BMS_Discharge_permitted = false;
-		return;
 	}
 
 	for (uint8_t y = 0; y < BMS_cell_count; y++)
@@ -359,81 +355,10 @@ void BMS_IO_handler(void)
 		BMS_Discharge_permitted = true;
 }
 
-void BMS_Limits(void)
-{
-	static float UV_limit = 0;
-	static float OV_limit = 0;
-	static float DOT_limit = 0;
-	static float COT_limit = 0;
-	static float UT_limit = 0;
-
-	if (BMS.Health != BMS_Health_OK)  // Health Check (Charge&Discharge)
-	{
-		BMS_Discharge_Limit = 0;
-		BMS_Charge_Limit = 0;
-		return;
-	}
-
-	if (Global_Min_U > BMS_UV_recovery)  // Under Voltage limit (Discharge)
-		UV_limit = 1;
-	else if (Global_Min_U < BMS_soft_UV)
-		UV_limit = 0;
-	else
-		UV_limit = (Global_Min_U - BMS_soft_UV)/(BMS_UV_recovery - BMS_soft_UV);
-
-	if (Global_Max_U < BMS_OV_recovery)  // Over Voltage limit (Charge)
-		OV_limit = 1;
-	else if (Global_Max_U > BMS_soft_OV)
-		OV_limit = 0;
-	else
-		OV_limit = (BMS_soft_OV - Global_Max_U)/(BMS_soft_OV - BMS_OV_recovery);
-
-	float temp = BMS.Temp_sensors[0];  // Find highest cell temperature
-	for (uint8_t i = 0; i < (BMS_temp_count-1); i++)
-		if (BMS.Temp_sensors[i] > temp)
-			temp = BMS.Temp_sensors[i];
-	if (temp < BMS_soft_DOT)  // Discharge over temp limit
-		DOT_limit = 1;
-	else if (temp > BMS_hard_DOT)
-		DOT_limit = 0;
-	else
-		DOT_limit = (BMS_hard_DOT - temp)/(BMS_hard_DOT - BMS_soft_DOT);
-	if (temp < BMS_soft_COT)  // Charge over temp limit
-		COT_limit = 1;
-	else if (temp > BMS_hard_COT)
-		COT_limit = 0;
-	else
-		COT_limit = (BMS_hard_COT - temp)/(BMS_hard_COT - BMS_soft_COT);
-
-	temp = BMS.Temp_sensors[0];  // Find lowest cell temperature
-	for (uint8_t i = 0; i < (BMS_temp_count-1); i++)
-		if (BMS.Temp_sensors[i] < temp)
-			temp = BMS.Temp_sensors[i];
-	if (temp > BMS_soft_UT)  // Charge&Discharge under temp limit
-		UT_limit = 1;
-	else if (temp < BMS_hard_UT)
-		UT_limit = 0;
-	else
-		UT_limit = (temp - BMS_hard_UT)/(BMS_soft_UT - BMS_hard_UT);
-
-	BMS_Discharge_Limit = UT_limit;
-	if (DOT_limit < BMS_Discharge_Limit)
-		BMS_Discharge_Limit = DOT_limit;
-	if (UV_limit < BMS_Discharge_Limit)
-		BMS_Discharge_Limit = UV_limit;
-
-	BMS_Charge_Limit = UT_limit;
-	if (OV_limit < BMS_Charge_Limit)
-		BMS_Charge_Limit = OV_limit;
-	if (COT_limit < BMS_Charge_Limit)
-		BMS_Charge_Limit = COT_limit;
-}
-
 void LTC_handler()
 {
 	LTC_Balancing_handler();
 	BMS_IO_handler();
-	BMS_Limits();
 
 	switch (BMS.Status)
 	{

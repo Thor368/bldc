@@ -29,64 +29,44 @@
 #include "utils.h"
 #include "hw.h"
 
-#include "mar_vars.h"
 #include "LTC6804_handler.h"
-#include "mar_charge_statemachine.h"
-#include "mar_CAN.h"
 #include "mar_terminal.h"
-#include "mar_safety.h"
 
 // Threads
 static THD_FUNCTION(my_thread, arg);
 static THD_WORKING_AREA(my_thread_wa, 2048);
 
 // Private functions
-static void pwm_callback(void);
 
 // Private variables
 static volatile bool stop_now = true;
 static volatile bool is_running = false;
 
-volatile float discharge_SoC;
-volatile bool discharge_enable;
-
 volatile float U_DC = 0, U_DC_filt = 0;
 volatile float U_CHG = 0, U_CHG_filt = 0;
-volatile float I_CHG = 0, I_CHG_filt = 0, I_CHG_offset = 0;
 
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
 void app_custom_start(void)
 {
-	SHDN_OFF;
-	CAN_OFF;
-	BAT_ON;
-	CHRG_OFF;
+	REL_OFF;
 
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
 			NORMALPRIO, my_thread, NULL);
 
-//	mc_interface_set_pwm_callback(pwm_callback);
-
 	// Terminal commands for the VESC Tool terminal can be registered.
 
 	mar_Init();
-//	safety_Init();
 	LTC_handler_Init();
 	mar_read_config();
-//	CAN_Init();
 }
 
 // Called when the custom application is stopped. Stop our threads
 // and release callbacks.
 void app_custom_stop(void)
 {
-	CHRG_OFF;
-	CAN_ON;
-	BAT_OFF;
-
-	mc_interface_set_pwm_callback(0);
+	REL_OFF;
 
 	mar_Deinit();
 
@@ -105,7 +85,7 @@ static THD_FUNCTION(my_thread, arg)
 {
 	(void)arg;
 
-	chRegSetThreadName("App Custom");
+	chRegSetThreadName("BMS App");
 
 	is_running = true;
 
@@ -124,21 +104,13 @@ static THD_FUNCTION(my_thread, arg)
 		U_CHG_filt += GET_VOLTAGE(6);
 		U_CHG = U_CHG_filt/10;
 
-		I_CHG_filt -= I_CHG_filt/100;
-		I_CHG_filt += GET_VOLTAGE_RAW(7)/0.0088;
-		I_CHG = (I_CHG_filt - I_CHG_offset)/100;
-
 		LTC_handler();
 
-		chThdSleepMilliseconds(10);
-	}
-}
+		if (BMS_Charge_permitted && BMS_Discharge_permitted)
+			REL_ON;
+		else
+			REL_OFF;
 
-static void pwm_callback(void)
-{
-	if ((ADC_Value[7] > 3686) || (ADC_Value[7] < 1993))  // fast CP disconnect if curent >150A or <-5A
-	{
-		CHRG_OFF;
-		cp_state = cpst_error;
+		chThdSleepMilliseconds(10);
 	}
 }

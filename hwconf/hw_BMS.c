@@ -92,22 +92,7 @@ void hw_init_gpio(void) {
 	palSetPadMode(GPIOA, 6,  // Charge enable
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
-	CHRG_OFF;
-
-	palSetPadMode(GPIOC, 15,  // Charge enable
-			PAL_MODE_OUTPUT_PUSHPULL |
-			PAL_STM32_OSPEED_HIGHEST);
-	BAT_OFF;
-
-	palSetPadMode(GPIOC, 5,  // Shutdown pin
-			PAL_MODE_OUTPUT_PUSHPULL |
-			PAL_STM32_OSPEED_HIGHEST);
-	SHDN_OFF;
-
-	palSetPadMode(GPIOD, 2,  // Charge enable
-			PAL_MODE_OUTPUT_PUSHPULL |
-			PAL_STM32_OSPEED_HIGHEST);
-	CAN_OFF;
+	REL_OFF;
 }
 
 void hw_setup_adc_channels(void) {

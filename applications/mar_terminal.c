@@ -13,15 +13,12 @@
 #include "terminal.h"
 #include "LTC6804_handler.h"
 
-#include "mar_vars.h"
 #include "Battery_config.h"
-#include "mar_charge_statemachine.h"
-#include "mar_safety.h"
 
-static void BMS_charg_en(int argc, const char **argv);
+#define MAR_CONF_VERSION	1
+
 static void BMS_cb_status(int argc, const char **argv);
 static void BMS_config(int argc, const char **argv);
-static void BMS_cb_discharge(int argc, const char **argv);
 
 void mar_Init(void)
 {
@@ -32,29 +29,16 @@ void mar_Init(void)
 			BMS_cb_status);
 
 	terminal_register_command_callback(
-			"mar_charge_enable",
-			"Enable/disable charging (\"\" = report, 0 = off, 1 = on)",
-			"[d]",
-			BMS_charg_en);
-
-	terminal_register_command_callback(
 			"mar_config",
 			"set BMS parameter",
 			"[s] [f]",
 			BMS_config);
-
-	terminal_register_command_callback(
-			"mar_discharge",
-			"set SoC to which to discharge internal battery",
-			"[f]",
-			BMS_cb_discharge);
 }
 
 void mar_Deinit(void)
 {
-	terminal_unregister_callback(BMS_cb_status);
-	terminal_unregister_callback(BMS_charg_en);
 	terminal_unregister_callback(BMS_config);
+	terminal_unregister_callback(BMS_cb_status);
 }
 
 void mar_write_conf(void)
@@ -126,39 +110,6 @@ void mar_write_conf(void)
 	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 
 	mar_conf.as_u32 = BMS_Temp_beta;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_u32 = sleep_time;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_u32 = stand_alone;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_float = I_CHG_max;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_u32 = charge_cycles;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_float = AUX_temp_cutoff;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_float = rpm_upper_limit;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_float = rpm_lower_limit;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_float = rpm_trip_max;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_float = rpm_min_I;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_u32 = rpm_trip_delay;
-	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
-
-	mar_conf.as_float = charge_finish_thr;
 	conf_general_store_eeprom_var_custom(&mar_conf, pp++);
 }
 
@@ -233,39 +184,6 @@ void mar_read_config(void)
 
 	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
 	BMS_Temp_beta = mar_conf.as_u32;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	sleep_time = mar_conf.as_u32;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	stand_alone = mar_conf.as_u32;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	I_CHG_max = mar_conf.as_float;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	charge_cycles = mar_conf.as_u32;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	AUX_temp_cutoff = mar_conf.as_float;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	rpm_upper_limit = mar_conf.as_float;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	rpm_lower_limit = mar_conf.as_float;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	rpm_trip_max = mar_conf.as_float;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	rpm_min_I = mar_conf.as_float;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	rpm_trip_delay = mar_conf.as_u32;
-
-	conf_general_read_eeprom_var_custom(&mar_conf, pp++);
-	charge_finish_thr = mar_conf.as_float;
 }
 
 void BMS_config(int argc, const char **argv)
@@ -292,16 +210,6 @@ void BMS_config(int argc, const char **argv)
 		commands_printf("%-20s: %.1fs", "BMS_UT_Delay", (double) BMS_UT_Delay);
 		commands_printf("%-20s: %.1f°C", "BMS_hard_UT", (double) BMS_hard_UT);
 		commands_printf("%-20s: %d", "BMS_Temp_beta", BMS_Temp_beta);
-		commands_printf("%-20s: %ds", "sleep_time", sleep_time);
-		commands_printf("%-20s: %d", "stand_alone", stand_alone);
-		commands_printf("%-20s: %.1fA", "I_CHG_max", (double) I_CHG_max);
-		commands_printf("%-20s: %.1f°C", "AUX_temp_cutoff", (double) AUX_temp_cutoff);
-		commands_printf("%-20s: %.0f%%", "rpm_upper_limit", (double) rpm_upper_limit*100);
-		commands_printf("%-20s: %.0f%%", "rpm_lower_limit", (double) rpm_lower_limit*100);
-		commands_printf("%-20s: %.0fRPM", "rpm_trip_max", (double) rpm_trip_max);
-		commands_printf("%-20s: %.1fA", "rpm_min_I", (double) rpm_min_I);
-		commands_printf("%-20s: %ds", "rpm_trip_delay", rpm_trip_delay);
-		commands_printf("%-20s: %.3fA\n", "charge_finish_thr", (double) charge_finish_thr);
 	}
 	else if (argc == 3)
 	{
@@ -347,35 +255,6 @@ void BMS_config(int argc, const char **argv)
 			ret = sscanf(argv[2], "%f", &BMS_hard_UT);
 		else if (!strcmp(argv[1], "BMS_Temp_beta"))
 			ret = sscanf(argv[2], "%d", (int *) &BMS_Temp_beta);
-		else if (!strcmp(argv[1], "sleep_time"))
-			ret = sscanf(argv[2], "%d", (int *) &sleep_time);
-		else if (!strcmp(argv[1], "stand_alone"))
-			ret = sscanf(argv[2], "%d", (int *) &stand_alone);
-		else if (!strcmp(argv[1], "I_CHG_max"))
-			ret = sscanf(argv[2], "%f", &I_CHG_max);
-		else if (!strcmp(argv[1], "AUX_temp_cutoff"))
-			ret = sscanf(argv[2], "%f", &AUX_temp_cutoff);
-		else if (!strcmp(argv[1], "rpm_upper_limit"))
-			ret = sscanf(argv[2], "%f", &rpm_upper_limit);
-		else if (!strcmp(argv[1], "rpm_lower_limit"))
-			ret = sscanf(argv[2], "%f", &rpm_lower_limit);
-		else if (!strcmp(argv[1], "rpm_trip_max"))
-			ret = sscanf(argv[2], "%f", &rpm_trip_max);
-		else if (!strcmp(argv[1], "rpm_min_I"))
-			ret = sscanf(argv[2], "%f", &rpm_min_I);
-		else if (!strcmp(argv[1], "rpm_trip_delay"))
-			ret = sscanf(argv[2], "%d", (int *) &rpm_trip_delay);
-		else if (!strcmp(argv[1], "charge_finish_threshold"))
-			ret = sscanf(argv[2], "%f", &charge_finish_thr);
-		else if (!strcmp(argv[1], "BMS_set_cycles"))
-		{
-			eeprom_var chg_cy;
-			sscanf(argv[2], "%d", (int *) &chg_cy.as_u32);
-			conf_general_store_eeprom_var_custom(&chg_cy, 63);
-
-			commands_printf("OK\n");
-			return;
-		}
 		else
 			commands_printf("Unrecognized parameter name\n");
 
@@ -401,7 +280,6 @@ void BMS_cb_status(int argc, const char **argv)
 		if (!strcmp(argv[1], "bms"))
 		{
 			commands_printf("\n---BMS---");
-			commands_printf("SoC: %.1f%%", (double) SoC*100);
 			commands_printf("State: %d", BMS.Status);
 			commands_printf("Present: %d", BMS.BMS_present);
 			commands_printf("Balance permission: %d", BMS.Balance_Permission);
@@ -411,7 +289,6 @@ void BMS_cb_status(int argc, const char **argv)
 			commands_printf("Charge permission: %d", BMS_Charge_permitted);
 			commands_printf("Charge_Limit:    %3.0f%%", (double) BMS_Charge_Limit*100);
 			commands_printf("Discharge_Limit: %3.0f%%", (double) BMS_Discharge_Limit*100);
-			commands_printf("Charge cycles: %d", charge_cycles);
 
 			commands_printf("\nSELFCHECK");
 			commands_printf("Cell test passed: %d", BMS.Cell_Test_Passed);
@@ -426,22 +303,6 @@ void BMS_cb_status(int argc, const char **argv)
 			commands_printf("Health: %d", BMS.Health);
 			for (uint8_t i = 0; i < 12; i++)
 				commands_printf("Open test %2d: %.3fV %.3fV", i+1, (double) BMS.Cell_Source_U[i], (double) BMS.Cell_Sink_U[i]);
-			commands_printf("\n");
-		}
-		else if (!strcmp(argv[1], "cp"))
-		{
-			commands_printf("---CHARGEPORT---");
-			commands_printf("Port voltage: %.1fV", (double) U_CHG);
-			commands_printf("Port current: %.2fA", (double) I_CHG);
-			commands_printf("Port current offset: %.2fA", (double) I_CHG_offset/100);
-
-			if (!charge_enable)
-				commands_printf("Chargeport: Disabled");
-			else if (cp_state == chgst_charging)
-				commands_printf("Chargeport: Enabled, Charging");
-			else
-				commands_printf("Chargeport: Enabled, Idle");
-			commands_printf("Chargestate: %d", cp_state);
 			commands_printf("\n");
 		}
 		else if (!strcmp(argv[1], "cell"))
@@ -482,9 +343,9 @@ void BMS_cb_status(int argc, const char **argv)
 			commands_printf("Internal temperature:         %-3.1f°C", (double) BMS.Int_Temp);
 			commands_printf("Battery temperature #1:       %-3.1f°C", (double) BMS.Temp_sensors[0]);
 			commands_printf("Battery temperature #2:       %-3.1f°C", (double) BMS.Temp_sensors[1]);
-			commands_printf("Motor conector 1 temperature: %-3.1f°C", (double) BMS.Temp_sensors[2]);
-			commands_printf("Motor conector 2 temperature: %-3.1f°C", (double) BMS.Temp_sensors[3]);
-			commands_printf("Chargeport temperature:       %-3.1f°C", (double) BMS.Temp_sensors[4]);
+			commands_printf("Battery temperature #3:       %-3.1f°C", (double) BMS.Temp_sensors[2]);
+			commands_printf("Battery temperature #4:       %-3.1f°C", (double) BMS.Temp_sensors[3]);
+			commands_printf("Battery temperature #5:       %-3.1f°C", (double) BMS.Temp_sensors[4]);
 			commands_printf("\n");
 		}
 		else
@@ -492,7 +353,6 @@ void BMS_cb_status(int argc, const char **argv)
 			commands_printf("Unknown argument given!");
 			commands_printf("Possible arguments:");
 			commands_printf("bms:  BMS info");
-			commands_printf("cp:   Charge port info");
 			commands_printf("cell: Cell statistics");
 			commands_printf("temp: Temperature sensor readout");
 		}
@@ -502,50 +362,7 @@ void BMS_cb_status(int argc, const char **argv)
 		commands_printf("Wrong number of arguments given!");
 		commands_printf("Possible arguments:");
 		commands_printf("bms:  BMS info");
-		commands_printf("cp:   Charge port info");
 		commands_printf("cell: Cell statistics");
 		commands_printf("temp: Temperature sensor readout");
 	}
-}
-
-void BMS_charg_en(int argc, const char **argv)
-{
-	if (argc == 1)
-		commands_printf("charge enable = %d", charge_enable);
-	else if (argc == 2)
-	{
-		int ret;
-		if (!sscanf(argv[1], "%d", &ret))
-			commands_printf("Illegal argument!");
-		if (ret)
-			charge_enable = true;
-		else
-			charge_enable = false;
-		commands_printf("charge enable = %d", charge_enable);
-	}
-	else
-		commands_printf("Wrong argument count!");
-}
-
-void BMS_cb_discharge(int argc, const char **argv)
-{
-	if (argc == 1)
-	{
-		if (discharge_enable)
-			commands_printf("discharge_SoC = %.0f%%", (double) discharge_SoC*100);
-		else
-			commands_printf("discharge_enable = false");
-	}
-	else if (argc == 2)
-	{
-		if (!sscanf(argv[1], "%f", &discharge_SoC))
-			commands_printf("Illegal argument!");
-		else
-		{
-			discharge_enable = true;
-			commands_printf("discharge enable = %d", discharge_enable);
-		}
-	}
-	else
-		commands_printf("Wrong argument count!");
 }

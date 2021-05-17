@@ -148,8 +148,8 @@
 //#define HW_SOURCE "hw_stormcore_100s.c"
 //#define HW_HEADER "hw_stormcore_100s.h"
 
-#define HW_SOURCE "hw_maraneo.c"
-#define HW_HEADER "hw_maraneo.h"
+#define HW_SOURCE "hw_BMS.c"
+#define HW_HEADER "hw_BMS.h"
 #endif
 
 #ifndef HW_SOURCE

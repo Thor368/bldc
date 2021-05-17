@@ -17,12 +17,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     */
 
-#ifndef HW_MARANEO_H_
-#define HW_MARANEO_H_
+#ifndef HW_BMS_H_
+#define HW_BMSH_
 
-#define HW_NAME						"Maraneo"
+#define HW_NAME						"BMS Master"
 
-#define APP_CUSTOM_TO_USE			"app_maraneo.c"
+#define APP_CUSTOM_TO_USE			"app_BMS.c"
 
 // BMS settings
 
@@ -30,27 +30,14 @@
 
 #define Sleep_Time_default		10800  // timer in seconds after which MC goes into deep sleep
 
-// HW properties
-#define HW_HAS_3_SHUNTS
-#define HW_HAS_PHASE_SHUNTS
-
 // Macros
 #define LED_GREEN_ON()			palSetPad(GPIOB, 0)
 #define LED_GREEN_OFF()			palClearPad(GPIOB, 0)
 #define LED_RED_ON()			palSetPad(GPIOB, 1)
 #define LED_RED_OFF()			palClearPad(GPIOB, 1)
 
-#define CHRG_ON					palSetPad(GPIOA, 6)
-#define CHRG_OFF				palClearPad(GPIOA, 6)
-
-#define BAT_ON					palSetPad(GPIOC, 15)
-#define BAT_OFF					palClearPad(GPIOC, 15)
-
-#define SHDN_ON					palSetPad(GPIOC, 5)
-#define SHDN_OFF				palClearPad(GPIOC, 5)
-
-#define CAN_ON					palSetPad(GPIOD, 2)
-#define CAN_OFF					palClearPad(GPIOD, 2)
+#define REL_ON					palSetPad(GPIOA, 6)
+#define REL_OFF					palClearPad(GPIOA, 6)
 
 
 /*
@@ -285,16 +272,7 @@
 
 // Default app setting override
 #ifndef APPCONF_APP_TO_USE
-#define APPCONF_APP_TO_USE					APP_NONE
-#endif
-#ifndef APPCONF_CAN_BAUD_RATE
-#define APPCONF_CAN_BAUD_RATE				CAN_BAUD_125K
-#endif
-#ifndef APPCONF_SEND_CAN_STATUS
-#define APPCONF_SEND_CAN_STATUS				CAN_STATUS_1_2_3_4_5
-#endif
-#ifndef APPCONF_SEND_CAN_STATUS_RATE_HZ
-#define APPCONF_SEND_CAN_STATUS_RATE_HZ		10
+#define APPCONF_APP_TO_USE					APP_CUSTOM
 #endif
 
 // Setting limits
@@ -307,4 +285,4 @@
 #define HW_LIM_DUTY_MAX			0.0, 0.99
 #define HW_LIM_TEMP_FET			-40.0, 110.0
 
-#endif /* HW_MARANEO_H_ */
+#endif /* HW_BMS_H_ */
