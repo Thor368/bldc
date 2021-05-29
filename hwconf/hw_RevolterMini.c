@@ -47,20 +47,13 @@ void hw_init_gpio(void) {
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
 
-	// Custom IO
-	palSetPadMode(GPIOB, 3,
-			PAL_MODE_OUTPUT_PUSHPULL |
-			PAL_STM32_OSPEED_HIGHEST);
-	palSetPadMode(GPIOB, 10,
-			PAL_MODE_OUTPUT_PUSHPULL |
-			PAL_STM32_OSPEED_HIGHEST);
-	palSetPadMode(GPIOB, 11,
-			PAL_MODE_OUTPUT_PUSHPULL |
-			PAL_STM32_OSPEED_HIGHEST);
-	PUMP_OFF();
-	FAN1_OFF();
-	FAN2_OFF();
-
+	// Power output PWM
+	palSetPadMode(GPIOB, 6, PAL_MODE_ALTERNATE(GPIO_AF_TIM4) |  // Pump out
+			PAL_STM32_OSPEED_HIGHEST |
+			PAL_STM32_PUDR_PULLDOWN);
+	palSetPadMode(GPIOB, 7, PAL_MODE_ALTERNATE(GPIO_AF_TIM4) |  // Fan out
+			PAL_STM32_OSPEED_HIGHEST |
+			PAL_STM32_PUDR_PULLDOWN);
 
 	// GPIOA Configuration: Channel 1 to 3 as alternate function push-pull
 	palSetPadMode(GPIOA, 8, PAL_MODE_ALTERNATE(GPIO_AF_TIM1) |

@@ -39,8 +39,6 @@
 #include "commands.h"
 #include "timeout.h"
 #include "comm_can.h"
-#include "ws2811.h"
-#include "led_external.h"
 #include "encoder.h"
 #include "servo_simple.h"
 #include "utils.h"

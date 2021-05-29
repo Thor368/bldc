@@ -49,13 +49,6 @@
 #define LED_RED_ON()			palSetPad(GPIOB, 1)
 #define LED_RED_OFF()			palClearPad(GPIOB, 1)
 
-#define PUMP_ON()				palSetPad(GPIOB, 3)
-#define PUMP_OFF()				palClearPad(GPIOB, 3)
-#define FAN1_ON()				palSetPad(GPIOB, 10)
-#define FAN1_OFF()				palClearPad(GPIOB, 10)
-#define FAN2_ON()				palSetPad(GPIOB, 11)
-#define FAN2_OFF()				palClearPad(GPIOB, 11)
-
 /*
  * ADC Vector
  *

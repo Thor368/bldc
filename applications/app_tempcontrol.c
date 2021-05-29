@@ -39,6 +39,11 @@
 #define EXT_NTC_RES(volt)				(-volt*10000/(volt - 3.3))
 #define EXT_TEMP(ch)					(1.0 / ((logf(EXT_NTC_RES(ADC_VOLTS(ch)) / 10000.0) / mc_cfg->m_ntc_motor_beta) + (1.0 / 298.15)) - 273.15)
 
+#define TIM_PERIOD						3359l
+
+#define SET_PUMP(rel)					{if (rel >= 1) TIM4->CCR1 = TIM_PERIOD - 1; else TIM4->CCR1 = TIM_PERIOD*rel - 1;}
+#define SET_FAN(rel)					{if (rel >= 1) TIM4->CCR2 = TIM_PERIOD - 1; else TIM4->CCR2 = TIM_PERIOD*rel - 1;}
+
 
 // Threads
 static THD_FUNCTION(my_thread, arg);
@@ -47,12 +52,10 @@ static THD_WORKING_AREA(my_thread_wa, 2048);
 // Private variables
 const volatile mc_configuration *mc_cfg;
 
+
 volatile bool stop_now = true;
 volatile bool is_running = false;
 volatile bool debug_on = false;
-
-volatile uint8_t fan_pwm = 0;
-volatile uint8_t pump_pwm = 0;
 
 enum
 {
@@ -68,7 +71,7 @@ bool compressor_call = false;
 bool manual_mode = false;
 
 float T_tank = 0, T_cond = 0;
-float U_fan = 0;
+float U_fan = 0, U_DC = 0;
 
 float T_target = T_TARGET_DEFAULT;
 float T_fan_ramp_start = T_FAN_RAMP_START;
@@ -158,8 +161,9 @@ static void temp_print_all(int argc, const char **argv)
 	commands_printf("TMOS: %.1f°C", (double) NTC_TEMP(ADC_IND_TEMP_MOS));
 	commands_printf("TMOT: %.1f°C", (double) NTC_TEMP_MOTOR(mc_cfg->m_ntc_motor_beta));
 	commands_printf("---------------------");
-	commands_printf("Pump_PWM: %d", pump_pwm);
-	commands_printf("Fan_PWM: %d\n", fan_pwm);
+	commands_printf("U_DC: %.2fV", (double) U_DC);
+	commands_printf("Pump_PWM: %d", TIM4->CCR1);
+	commands_printf("Fan_PWM: %d\n", TIM4->CCR2);
 }
 
 static void temp_config(int argc, const char **argv)
@@ -231,39 +235,10 @@ static void temp_manual(int argc, const char **argv)
 	commands_printf("Manual override activated.\n");
 }
 
-static void pwm_callback(void)
-{
-	static uint8_t cc = 0;
-	if (cc >= 255)
-	{
-		cc = 0;
-		PUMP_ON();
-		FAN1_ON();
-		FAN2_ON();
-	}
-	else
-		cc++;
-
-	if (cc == pump_pwm)
-		PUMP_OFF();
-	if (cc == fan_pwm)
-	{
-		FAN1_OFF();
-		FAN2_OFF();
-	}
-}
-
 // Called when the custom application is started. Start our
 // threads here and set up callbacks.
 void app_custom_start(void)
 {
-	PUMP_OFF();
-	FAN1_OFF();
-	FAN2_OFF();
-
-	pump_pwm = 0;
-	fan_pwm = 0;
-
 	U_fan = 0;
 	manual_mode = false;
 	debug_on = false;
@@ -274,9 +249,6 @@ void app_custom_start(void)
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
 			NORMALPRIO, my_thread, NULL);
-
-	// Register PWM callback for soft PWM
-	mc_interface_set_pwm_callback(pwm_callback);
 
 	// Terminal commands for the VESC Tool terminal can be registered.
 	terminal_register_command_callback(
@@ -298,6 +270,34 @@ void app_custom_start(void)
 			temp_manual);
 
 	mc_cfg = mc_interface_get_configuration();
+
+	// Power output config
+	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+	TIM_OCInitTypeDef  TIM_OCInitStructure;
+
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
+
+	// Time Base configuration
+	TIM_TimeBaseStructure.TIM_Prescaler = 0;
+	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseStructure.TIM_Period = TIM_PERIOD - 1;
+	TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+	TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
+
+	TIM_TimeBaseInit(TIM4, &TIM_TimeBaseStructure);
+
+	// Channel 1 Configuration in PWM mode
+	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
+	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+	TIM_OCInitStructure.TIM_Pulse = 0;
+	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+
+	TIM_OC1Init(TIM4, &TIM_OCInitStructure);  // Pump PWM
+	TIM_OC1PreloadConfig(TIM4, TIM_OCPreload_Enable);
+	TIM_OC2Init(TIM4, &TIM_OCInitStructure);  // Fan PWM
+	TIM_OC2PreloadConfig(TIM4, TIM_OCPreload_Enable);
+
+	TIM_Cmd(TIM4, ENABLE);
 }
 
 // Called when the custom application is stopped. Stop our threads
@@ -306,18 +306,12 @@ void app_custom_stop(void) {
 	terminal_unregister_callback(temp_print_all);
 	mc_interface_set_pwm_callback(0);
 
-	pump_pwm = 0;
-	fan_pwm = 0;
-
-
 	stop_now = true;
 	while (is_running) {
 		chThdSleepMilliseconds(1);
 	}
 
-	PUMP_OFF();
-	FAN1_OFF();
-	FAN2_OFF();
+	TIM_Cmd(TIM4, DISABLE);
 }
 
 void app_custom_configure(app_configuration *conf) {
@@ -351,9 +345,6 @@ void sm_compressor(void)
 		break;
 
 	case cmp_ramp_up:
-//		mcpwm_foc_set_openloop(mc_cfg->l_current_max, ST2MS(chVTTimeElapsedSinceX(cmp_timer))*10000/t_RAMP_TIME);
-
-//		if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(t_RAMP_TIME))
 		if (mc_interface_get_rpm() >= 7500)
 		{
 			mc_interface_set_pid_speed(7500);
@@ -444,6 +435,12 @@ static THD_FUNCTION(my_thread, arg)
 		T_cond_filt += EXT_TEMP(ADC_IND_T2);
 		T_cond = T_cond_filt/20;
 
+		static float U_DC_filt = 0;
+		U_DC_filt -= U_DC_filt/10;
+		U_DC_filt += GET_INPUT_VOLTAGE();
+		U_DC = U_DC_filt/10;
+
+
 		static systime_t log_t;
 		if (chVTTimeElapsedSinceX(log_t) >= S2ST(1) && debug_on)
 		{
@@ -466,13 +463,8 @@ static THD_FUNCTION(my_thread, arg)
 
 		sm_compressor();
 
-#ifdef BRIDGED_12V
-			fan_pwm = U_fan/GET_INPUT_VOLTAGE()*255;
-			pump_pwm = U_pump_std/GET_INPUT_VOLTAGE()*255;
-#else
-			fan_pwm = U_fan/12*255;
-			pump_pwm = U_pump_std/12*255;
-#endif
+		SET_FAN(U_fan/U_DC);
+		SET_PUMP(U_pump_std/U_DC);
 
 		chThdSleepMilliseconds(100);
 	}
