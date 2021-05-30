@@ -81,6 +81,7 @@ float U_fan_max = U_FAN_MAX;
 float U_pump_std = U_PUMP_STD;
 float T_hyst_pos = T_HYST_POS;
 float T_hyst_neg = T_HYST_NEG;
+float RPM_std = RPM_STD;
 
 
 void write_conf(void)
@@ -113,6 +114,9 @@ void write_conf(void)
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 
 	eep_conf.as_float = T_hyst_neg;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = RPM_std;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 }
 
@@ -148,6 +152,9 @@ void read_conf(void)
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
 	T_hyst_neg = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	RPM_std = eep_conf.as_float;
 }
 
 // Callback function for the terminal command with arguments.
@@ -173,11 +180,12 @@ static void temp_config(int argc, const char **argv)
 		commands_printf("T_target: %.1f°C", (double) T_target);
 		commands_printf("T_fan_ramp_start: %.1f°C", (double) T_fan_ramp_start);
 		commands_printf("T_fan_ramp_end: %.1f°C", (double) T_fan_ramp_end);
-		commands_printf("T_fan_min: %.1fV", (double) U_fan_min);
-		commands_printf("T_fan_max: %.1fV", (double) U_fan_max);
+		commands_printf("U_fan_min: %.1fV", (double) U_fan_min);
+		commands_printf("U_fan_max: %.1fV", (double) U_fan_max);
 		commands_printf("U_pump_std: %.1fV", (double) U_pump_std);
 		commands_printf("T_hyst_pos: %.1f°C", (double) T_hyst_pos);
 		commands_printf("T_hyst_neg: %.1f°C", (double) T_hyst_neg);
+		commands_printf("RPM_std: %.1fRPM", (double) RPM_std/5);
 		commands_printf("Debugging print: %d", debug_on);
 	}
 	else if (argc == 3)
@@ -210,6 +218,8 @@ static void temp_config(int argc, const char **argv)
 			debug_on = true;
 		else if (!strcmp(argv[1], "U_fan"))
 			U_fan = val;
+		else if (!strcmp(argv[1], "RPM_std"))
+			RPM_std = val*5;
 		else
 			success = false;
 
@@ -338,16 +348,16 @@ void sm_compressor(void)
 		{
 			cmp_timer = chVTGetSystemTime();
 			U_fan = U_fan_min;
-			mc_interface_set_current(5.);
+			mc_interface_set_current(10);
 			compressor_state = cmp_ramp_up;
 			cmp_counter = 0;
 		}
 		break;
 
 	case cmp_ramp_up:
-		if (mc_interface_get_rpm() >= 7500)
+		if (mc_interface_get_rpm() >= RPM_std)
 		{
-			mc_interface_set_pid_speed(7500);
+			mc_interface_set_pid_speed(RPM_std);
 			compressor_state = cmp_running;
 		}
 		else if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500) || (mc_interface_get_fault() != FAULT_CODE_NONE))
@@ -456,10 +466,7 @@ static THD_FUNCTION(my_thread, arg)
 				compressor_call = false;
 		}
 		else
-		{
 			compressor_call = false;
-			mc_interface_release_motor();
-		}
 
 		sm_compressor();
 
