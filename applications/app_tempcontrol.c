@@ -55,7 +55,6 @@ const volatile mc_configuration *mc_cfg;
 
 volatile bool stop_now = true;
 volatile bool is_running = false;
-volatile bool debug_on = false;
 
 enum
 {
@@ -67,11 +66,19 @@ enum
 	cmp_equalize
 } compressor_state;
 
+static SerialConfig uart_cfg = {
+		9600,
+		0,
+		USART_CR2_LINEN,
+		0
+};
+
 bool compressor_call = false;
 bool manual_mode = false;
 
 float T_tank = 0, T_cond = 0;
 float U_fan = 0, U_DC = 0;
+float SoC = 0;
 
 float T_target = T_TARGET_DEFAULT;
 float T_fan_ramp_start = T_FAN_RAMP_START;
@@ -82,6 +89,7 @@ float U_pump_std = U_PUMP_STD;
 float T_hyst_pos = T_HYST_POS;
 float T_hyst_neg = T_HYST_NEG;
 float RPM_std = RPM_STD;
+float tt = -1.0;
 
 
 void write_conf(void)
@@ -157,6 +165,21 @@ void read_conf(void)
 	RPM_std = eep_conf.as_float;
 }
 
+// start plotting
+static void temp_plot(int argc, const char **argv)
+{
+	(void) argc;
+	(void) argv;
+
+	commands_init_plot("Time", "Temperature");
+	commands_plot_add_graph("Tank Temperature");
+	commands_plot_set_graph(0);
+
+	tt = 0.0;
+
+	commands_printf("Plot init.");
+}
+
 // Callback function for the terminal command with arguments.
 static void temp_print_all(int argc, const char **argv)
 {
@@ -186,7 +209,6 @@ static void temp_config(int argc, const char **argv)
 		commands_printf("T_hyst_pos: %.1f°C", (double) T_hyst_pos);
 		commands_printf("T_hyst_neg: %.1f°C", (double) T_hyst_neg);
 		commands_printf("RPM_std: %.1fRPM", (double) RPM_std/5);
-		commands_printf("Debugging print: %d", debug_on);
 	}
 	else if (argc == 3)
 	{
@@ -214,8 +236,6 @@ static void temp_config(int argc, const char **argv)
 			T_hyst_pos = val;
 		else if (!strcmp(argv[1], "T_hyst_neg"))
 			T_hyst_neg = val;
-		else if (!strcmp(argv[1], "debug_on"))
-			debug_on = true;
 		else if (!strcmp(argv[1], "U_fan"))
 			U_fan = val;
 		else if (!strcmp(argv[1], "RPM_std"))
@@ -251,7 +271,7 @@ void app_custom_start(void)
 {
 	U_fan = 0;
 	manual_mode = false;
-	debug_on = false;
+	tt = -1;
 	compressor_state = cmp_init;
 
 	read_conf();
@@ -278,6 +298,12 @@ void app_custom_start(void)
 			"Activate manual override",
 			"",
 			temp_manual);
+
+	terminal_register_command_callback(
+			"temp_plot",
+			"Start ploting",
+			"",
+			temp_plot);
 
 	mc_cfg = mc_interface_get_configuration();
 
@@ -308,6 +334,18 @@ void app_custom_start(void)
 	TIM_OC2PreloadConfig(TIM4, TIM_OCPreload_Enable);
 
 	TIM_Cmd(TIM4, ENABLE);
+
+	palSetPadMode(GPIOC, 6, PAL_MODE_ALTERNATE(GPIO_AF_USART6) |
+			PAL_STM32_OSPEED_HIGHEST |
+			PAL_STM32_PUDR_PULLUP);
+	palSetPadMode(GPIOC, 7, PAL_MODE_ALTERNATE(GPIO_AF_USART6) |
+			PAL_STM32_OSPEED_HIGHEST |
+			PAL_STM32_PUDR_PULLUP);
+	sdStart(&SD6, &uart_cfg);
+
+	char str[30];
+	sprintf(str, "tempSet.val=%d\xFF\xFF\xFF", (uint32_t) (T_target*10));
+	sdWrite(&SD6, (uint8_t *) str, strlen(str));
 }
 
 // Called when the custom application is stopped. Stop our threads
@@ -322,6 +360,10 @@ void app_custom_stop(void) {
 	}
 
 	TIM_Cmd(TIM4, DISABLE);
+
+	sdStop(&SD6);
+	palSetPadMode(GPIOC, 6, PAL_MODE_INPUT_PULLUP);
+	palSetPadMode(GPIOC, 7, PAL_MODE_INPUT_PULLUP);
 }
 
 void app_custom_configure(app_configuration *conf) {
@@ -347,27 +389,22 @@ void sm_compressor(void)
 		if (compressor_call && !manual_mode)
 		{
 			cmp_timer = chVTGetSystemTime();
-			U_fan = U_fan_min;
-			mc_interface_set_current(10);
+			mc_interface_set_pid_speed(RPM_std);
 			compressor_state = cmp_ramp_up;
 			cmp_counter = 0;
 		}
 		break;
 
 	case cmp_ramp_up:
-		if (mc_interface_get_rpm() >= RPM_std)
-		{
-			mc_interface_set_pid_speed(RPM_std);
-			compressor_state = cmp_running;
-		}
-		else if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500) || (mc_interface_get_fault() != FAULT_CODE_NONE))
+		if ((mc_interface_get_fault() != FAULT_CODE_NONE) || (chVTTimeElapsedSinceX(cmp_timer) >= S2ST(1)))
 		{
 			mc_interface_release_motor();
 			cmp_timer = chVTGetSystemTime();
 			cmp_counter++;
-			U_fan = U_fan_min;
 			compressor_state = cmp_failed_start;
 		}
+		else if ((chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500)) && (mc_interface_get_rpm() >= (RPM_std*.8)))
+			compressor_state = cmp_running;
 		break;
 
 	case cmp_failed_start:
@@ -416,6 +453,24 @@ void sm_compressor(void)
 	}
 }
 
+char * finddel(char *buf, char *del, uint8_t len)
+{
+	uint8_t del_len = strlen(del);
+	uint8_t cc = 0;
+	for (uint8_t i = 0; i < len; i++)
+	{
+		if (buf[i] == del[cc])
+			cc++;
+		else
+			cc = 0;
+
+		if (cc >= del_len)
+			return &buf[i];
+	}
+
+	return NULL;
+}
+
 static THD_FUNCTION(my_thread, arg)
 {
 	(void)arg;
@@ -452,10 +507,57 @@ static THD_FUNCTION(my_thread, arg)
 
 
 		static systime_t log_t;
-		if (chVTTimeElapsedSinceX(log_t) >= S2ST(1) && debug_on)
+		if (chVTTimeElapsedSinceX(log_t) >= MS2ST(250))
 		{
 			log_t = chVTGetSystemTime();
-			commands_printf("T_tank: %.1f°C", (double) T_tank);
+
+			if (tt >= 0)
+			{
+				commands_send_plot_points(tt, T_tank);
+				tt += 0.25;
+			}
+
+			SoC = (U_DC-14)/2.8;
+
+			char str[30];
+
+			sprintf(str, "SoC.val=%d\xFF\xFF\xFF", (uint8_t) (SoC*100));
+			sdWrite(&SD6, (uint8_t *) str, strlen(str));
+			sprintf(str, "SoCp.val=%d\xFF\xFF\xFF", (uint8_t) (SoC*100));
+			sdWrite(&SD6, (uint8_t *) str, strlen(str));
+
+			sprintf(str, "running.val=%d\xFF\xFF\xFF", (uint8_t) (mc_interface_get_rpm() > 100));
+			sdWrite(&SD6, (uint8_t *) str, strlen(str));
+
+			sprintf(str, "tempActual.val=%d\xFF\xFF\xFF", (uint8_t) (T_tank*10));
+			sdWrite(&SD6, (uint8_t *) str, strlen(str));
+
+			strcpy(str, "get tempSet.val\xFF\xFF\xFF");
+			sdWrite(&SD6, (uint8_t *) str, strlen(str));
+
+			static char rec_buf[30];
+			static uint8_t rec_p = 0;
+
+
+			msg_t res = sdGetTimeout(&SD6, TIME_IMMEDIATE);
+			while (res != MSG_TIMEOUT)
+			{
+				rec_buf[rec_p++] = (char) res;
+				rec_buf[rec_p] = 0;
+				if (rec_p >= 29)
+					rec_p = 0;
+
+				if (finddel(rec_buf, "\xFF\xFF\xFF", rec_p))
+				{
+					if ((rec_p == 8) && (rec_buf[0] == 0x71))
+						T_target = ((float) *((uint32_t *) &rec_buf[1]))/10;
+
+
+					rec_p = 0;
+				}
+
+				res = sdGetTimeout(&SD6, TIME_IMMEDIATE);
+			}
 		}
 
 		if (T_tank > -20)  // Tank sensor present

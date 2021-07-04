@@ -30,8 +30,8 @@
 #define T_TARGET_DEFAULT		19.
 #define T_FAN_RAMP_START		35.
 #define T_FAN_RAMP_END			50.
-#define U_FAN_MIN				1.
-#define U_FAN_MAX				1.
+#define U_FAN_MIN				5.
+#define U_FAN_MAX				8.
 #define U_PUMP_STD				8.
 #define t_RAMP_TIME				300			// ms ramp up time
 #define T_HYST_POS				2.			// positive temperature hysteresis
@@ -209,17 +209,17 @@
 #define MCCONF_DEFAULT_MOTOR_TYPE		MOTOR_TYPE_FOC
 #endif
 #ifndef MCCONF_L_MAX_ABS_CURRENT
-#define MCCONF_L_MAX_ABS_CURRENT		23.0	// The maximum absolute current above which a fault is generated
+#define MCCONF_L_MAX_ABS_CURRENT		30.0	// The maximum absolute current above which a fault is generated
 #endif
 #ifndef MCCONF_FOC_SAMPLE_V0_V7
 #define MCCONF_FOC_SAMPLE_V0_V7			false	// Run control loop in both v0 and v7 (requires phase shunts)
 #endif
 
 // Setting limits
-#define HW_LIM_CURRENT			-30.0, 30.0
-#define HW_LIM_CURRENT_IN		-30.0, 30.0
+#define HW_LIM_CURRENT			-0.0, 20.0
+#define HW_LIM_CURRENT_IN		-0.0, 10.0
 #define HW_LIM_CURRENT_ABS		0.0, 30.0
-#define HW_LIM_VIN				6.0, 20.0
+#define HW_LIM_VIN				6.0, 18.0
 #define HW_LIM_ERPM				-200e3, 200e3
 #define HW_LIM_DUTY_MIN			0.0, 0.1
 #define HW_LIM_DUTY_MAX			0.0, 0.99
