@@ -76,13 +76,13 @@ static SerialConfig uart_cfg = {
 bool compressor_call = false;
 bool manual_mode = false;
 
-float T_tank = 0, T_cond = 0;
+float T_tank = 0, T_cond = 0, I_Comp = 0;
 float U_fan = 0, U_DC = 0;
 float SoC = 0;
 
 float T_target = T_TARGET_DEFAULT;
-float T_fan_ramp_start = T_FAN_RAMP_START;
-float T_fan_ramp_end = T_FAN_RAMP_END;
+float I_fan_ramp_start = I_FAN_RAMP_START;
+float I_fan_ramp_end = I_FAN_RAMP_END;
 float U_fan_min = U_FAN_MIN;
 float U_fan_max = U_FAN_MAX;
 float U_pump_std = U_PUMP_STD;
@@ -90,6 +90,7 @@ float T_hyst_pos = T_HYST_POS;
 float T_hyst_neg = T_HYST_NEG;
 float RPM_std = RPM_STD;
 float tt = -1.0;
+bool FAN_PWM_invert = false;
 
 
 void write_conf(void)
@@ -103,10 +104,10 @@ void write_conf(void)
 	eep_conf.as_float = T_target;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 
-	eep_conf.as_float = T_fan_ramp_start;
+	eep_conf.as_float = I_fan_ramp_start;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 
-	eep_conf.as_float = T_fan_ramp_end;
+	eep_conf.as_float = I_fan_ramp_end;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 
 	eep_conf.as_float = U_fan_min;
@@ -126,6 +127,9 @@ void write_conf(void)
 
 	eep_conf.as_float = RPM_std;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_u32 = FAN_PWM_invert;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 }
 
 void read_conf(void)
@@ -141,10 +145,10 @@ void read_conf(void)
 	T_target = eep_conf.as_float;
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
-	T_fan_ramp_start = eep_conf.as_float;
+	I_fan_ramp_start = eep_conf.as_float;
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
-	T_fan_ramp_end = eep_conf.as_float;
+	I_fan_ramp_end = eep_conf.as_float;
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
 	U_fan_min = eep_conf.as_float;
@@ -163,6 +167,9 @@ void read_conf(void)
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
 	RPM_std = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	FAN_PWM_invert = eep_conf.as_u32;
 }
 
 // start plotting
@@ -201,14 +208,15 @@ static void temp_config(int argc, const char **argv)
 	if (argc == 1)
 	{
 		commands_printf("T_target: %.1f°C", (double) T_target);
-		commands_printf("T_fan_ramp_start: %.1f°C", (double) T_fan_ramp_start);
-		commands_printf("T_fan_ramp_end: %.1f°C", (double) T_fan_ramp_end);
+		commands_printf("I_fan_ramp_start: %.1f°C", (double) I_fan_ramp_start);
+		commands_printf("I_fan_ramp_end: %.1f°C", (double) I_fan_ramp_end);
 		commands_printf("U_fan_min: %.1fV", (double) U_fan_min);
 		commands_printf("U_fan_max: %.1fV", (double) U_fan_max);
 		commands_printf("U_pump_std: %.1fV", (double) U_pump_std);
 		commands_printf("T_hyst_pos: %.1f°C", (double) T_hyst_pos);
 		commands_printf("T_hyst_neg: %.1f°C", (double) T_hyst_neg);
 		commands_printf("RPM_std: %.1fRPM", (double) RPM_std/5);
+		commands_printf("FAN_PWM_invert: %d", FAN_PWM_invert);
 	}
 	else if (argc == 3)
 	{
@@ -222,10 +230,10 @@ static void temp_config(int argc, const char **argv)
 		bool success = true;
 		if (!strcmp(argv[1], "T_target"))
 			T_target = val;
-		else if (!strcmp(argv[1], "T_fan_ramp_start"))
-			T_fan_ramp_start = val;
-		else if (!strcmp(argv[1], "T_fan_ramp_end"))
-			T_fan_ramp_end = val;
+		else if (!strcmp(argv[1], "I_fan_ramp_start"))
+			I_fan_ramp_start = val;
+		else if (!strcmp(argv[1], "I_fan_ramp_end"))
+			I_fan_ramp_end = val;
 		else if (!strcmp(argv[1], "U_fan_min"))
 			U_fan_min = val;
 		else if (!strcmp(argv[1], "U_fan_max"))
@@ -240,6 +248,12 @@ static void temp_config(int argc, const char **argv)
 			U_fan = val;
 		else if (!strcmp(argv[1], "RPM_std"))
 			RPM_std = val*5;
+		else if (!strcmp(argv[1], "FAN_PWM_invert"))
+		{
+			TIM4->CCER &= (uint16_t)~TIM_CCER_CC2P;
+			if (val < 0.5)
+				TIM4->CCER |= TIM_CCER_CC2P;
+		}
 		else
 			success = false;
 
@@ -330,6 +344,9 @@ void app_custom_start(void)
 
 	TIM_OC1Init(TIM4, &TIM_OCInitStructure);  // Pump PWM
 	TIM_OC1PreloadConfig(TIM4, TIM_OCPreload_Enable);
+
+	if (FAN_PWM_invert)
+		TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
 	TIM_OC2Init(TIM4, &TIM_OCInitStructure);  // Fan PWM
 	TIM_OC2PreloadConfig(TIM4, TIM_OCPreload_Enable);
 
@@ -344,7 +361,7 @@ void app_custom_start(void)
 	sdStart(&SD6, &uart_cfg);
 
 	char str[30];
-	sprintf(str, "tempSet.val=%d\xFF\xFF\xFF", (uint32_t) (T_target*10));
+	sprintf(str, "tempSet.val=%d\xFF\xFF\xFF", (int) (T_target*10));
 	sdWrite(&SD6, (uint8_t *) str, strlen(str));
 }
 
@@ -425,10 +442,12 @@ void sm_compressor(void)
 		break;
 
 	case cmp_running:
-		if ((T_cond < -20) || (T_cond > 50))
+		if (I_Comp >= I_fan_ramp_end)
 			U_fan = U_fan_max;
-		else if (T_cond < 35)
+		else if (I_Comp <= I_fan_ramp_start)
 			U_fan = U_fan_min;
+		else
+			U_fan = U_fan_min + (U_fan_max - U_fan_min)*((I_Comp - I_fan_ramp_start)/(I_fan_ramp_end - I_fan_ramp_start));
 
 		if (!compressor_call)
 		{
@@ -505,6 +524,10 @@ static THD_FUNCTION(my_thread, arg)
 		U_DC_filt += GET_INPUT_VOLTAGE();
 		U_DC = U_DC_filt/10;
 
+		static float I_Comp_filt = 0;
+		I_Comp_filt -= I_Comp_filt/10;
+		I_Comp_filt += mc_interface_get_tot_current_filtered();
+		I_Comp = I_Comp_filt/10;
 
 		static systime_t log_t;
 		if (chVTTimeElapsedSinceX(log_t) >= MS2ST(250))
