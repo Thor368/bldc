@@ -208,8 +208,8 @@ static void temp_config(int argc, const char **argv)
 	if (argc == 1)
 	{
 		commands_printf("T_target: %.1f°C", (double) T_target);
-		commands_printf("I_fan_ramp_start: %.1f°C", (double) I_fan_ramp_start);
-		commands_printf("I_fan_ramp_end: %.1f°C", (double) I_fan_ramp_end);
+		commands_printf("I_fan_ramp_start: %.1fA", (double) I_fan_ramp_start);
+		commands_printf("I_fan_ramp_end: %.1fA", (double) I_fan_ramp_end);
 		commands_printf("U_fan_min: %.1fV", (double) U_fan_min);
 		commands_printf("U_fan_max: %.1fV", (double) U_fan_max);
 		commands_printf("U_pump_std: %.1fV", (double) U_pump_std);
@@ -251,7 +251,9 @@ static void temp_config(int argc, const char **argv)
 		else if (!strcmp(argv[1], "FAN_PWM_invert"))
 		{
 			TIM4->CCER &= (uint16_t)~TIM_CCER_CC2P;
-			if (val < 0.5)
+			FAN_PWM_invert = (val > 0.5);
+
+			if (FAN_PWM_invert)
 				TIM4->CCER |= TIM_CCER_CC2P;
 		}
 		else
@@ -595,7 +597,15 @@ static THD_FUNCTION(my_thread, arg)
 
 		sm_compressor();
 
-		SET_FAN(U_fan/U_DC);
+		if (FAN_PWM_invert)
+		{
+			SET_FAN(U_fan/12);
+		}
+		else
+		{
+			SET_FAN(U_fan/U_DC);
+		}
+
 		SET_PUMP(U_pump_std/U_DC);
 
 		chThdSleepMilliseconds(100);
