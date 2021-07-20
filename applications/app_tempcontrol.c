@@ -73,7 +73,6 @@ static SerialConfig uart_cfg = {
 		0
 };
 
-bool compressor_call = false;
 bool manual_mode = false;
 
 float T_tank = 0, T_cond = 0, I_Comp = 0;
@@ -88,8 +87,9 @@ float U_fan_max = U_FAN_MAX;
 float U_pump_std = U_PUMP_STD;
 float T_hyst_pos = T_HYST_POS;
 float T_hyst_neg = T_HYST_NEG;
-float RPM_std = RPM_STD;
-float tt = -1.0;
+float RPM_min = RPM_MIN, RPM_max = RPM_MAX;
+float RPM_P = 0, RPM_I = 0, RPM_D = 0;
+float dt_plot = -1.0;
 bool FAN_PWM_invert = false;
 
 
@@ -125,7 +125,19 @@ void write_conf(void)
 	eep_conf.as_float = T_hyst_neg;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 
-	eep_conf.as_float = RPM_std;
+	eep_conf.as_float = RPM_min;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = RPM_max;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = RPM_P;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = RPM_I;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = RPM_D;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 
 	eep_conf.as_u32 = FAN_PWM_invert;
@@ -166,7 +178,19 @@ void read_conf(void)
 	T_hyst_neg = eep_conf.as_float;
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
-	RPM_std = eep_conf.as_float;
+	RPM_min = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	RPM_max = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	RPM_P = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	RPM_I = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	RPM_D = eep_conf.as_float;
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
 	FAN_PWM_invert = eep_conf.as_u32;
@@ -182,7 +206,7 @@ static void temp_plot(int argc, const char **argv)
 	commands_plot_add_graph("Tank Temperature");
 	commands_plot_set_graph(0);
 
-	tt = 0.0;
+	dt_plot = 0.0;
 
 	commands_printf("Plot init.");
 }
@@ -215,7 +239,11 @@ static void temp_config(int argc, const char **argv)
 		commands_printf("U_pump_std: %.1fV", (double) U_pump_std);
 		commands_printf("T_hyst_pos: %.1f°C", (double) T_hyst_pos);
 		commands_printf("T_hyst_neg: %.1f°C", (double) T_hyst_neg);
-		commands_printf("RPM_std: %.1fRPM", (double) RPM_std/5);
+		commands_printf("RPM_min: %.1fRPM", (double) RPM_min);
+		commands_printf("RPM_max: %.1fRPM", (double) RPM_max);
+		commands_printf("RPM_P: %.1fRPM", (double) RPM_P);
+		commands_printf("RPM_I: %.1fRPM", (double) RPM_I);
+		commands_printf("RPM_D: %.1fRPM", (double) RPM_D);
 		commands_printf("FAN_PWM_invert: %d", FAN_PWM_invert);
 	}
 	else if (argc == 3)
@@ -246,8 +274,16 @@ static void temp_config(int argc, const char **argv)
 			T_hyst_neg = val;
 		else if (!strcmp(argv[1], "U_fan"))
 			U_fan = val;
-		else if (!strcmp(argv[1], "RPM_std"))
-			RPM_std = val*5;
+		else if (!strcmp(argv[1], "RPM_min"))
+			RPM_min = val*5;
+		else if (!strcmp(argv[1], "RPM_max"))
+			RPM_max = val*5;
+		else if (!strcmp(argv[1], "RPM_P"))
+			RPM_P = val*5;
+		else if (!strcmp(argv[1], "RPM_I"))
+			RPM_I = val*5;
+		else if (!strcmp(argv[1], "RPM_D"))
+			RPM_D = val*5;
 		else if (!strcmp(argv[1], "FAN_PWM_invert"))
 		{
 			TIM4->CCER &= (uint16_t)~TIM_CCER_CC2P;
@@ -287,7 +323,7 @@ void app_custom_start(void)
 {
 	U_fan = 0;
 	manual_mode = false;
-	tt = -1;
+	dt_plot = -1;
 	compressor_state = cmp_init;
 
 	read_conf();
@@ -405,10 +441,10 @@ void sm_compressor(void)
 		break;
 
 	case cmp_wait_for_start:
-		if (compressor_call && !manual_mode)
+		if ((T_tank > (T_target + T_hyst_pos)) && !manual_mode)
 		{
 			cmp_timer = chVTGetSystemTime();
-			mc_interface_set_pid_speed(RPM_std);
+			mc_interface_set_pid_speed(RPM_min*5);
 			compressor_state = cmp_ramp_up;
 			cmp_counter = 0;
 		}
@@ -422,7 +458,7 @@ void sm_compressor(void)
 			cmp_counter++;
 			compressor_state = cmp_failed_start;
 		}
-		else if ((chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500)) && (mc_interface_get_rpm() >= (RPM_std*.8)))
+		else if ((chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500)) && (mc_interface_get_rpm() >= (RPM_min*4)))
 			compressor_state = cmp_running;
 		break;
 
@@ -444,6 +480,9 @@ void sm_compressor(void)
 		break;
 
 	case cmp_running:
+	{
+		static float P = 0, I = 0, D = 0;
+
 		if (I_Comp >= I_fan_ramp_end)
 			U_fan = U_fan_max;
 		else if (I_Comp <= I_fan_ramp_start)
@@ -451,13 +490,41 @@ void sm_compressor(void)
 		else
 			U_fan = U_fan_min + (U_fan_max - U_fan_min)*((I_Comp - I_fan_ramp_start)/(I_fan_ramp_end - I_fan_ramp_start));
 
-		if (!compressor_call)
+		static systime_t RPM_timer = 0;
+		if (chVTTimeElapsedSinceX(RPM_timer) >= MS2ST(100))
+		{
+			float dRPM = T_tank - T_target;
+			P = dRPM*RPM_P;
+
+			float dt = ST2MS(chVTTimeElapsedSinceX(RPM_timer))/1000.;
+			RPM_timer = chVTGetSystemTime();
+			static float T_tank_last = 0;
+			D = (T_tank - T_tank_last)*dt*RPM_D;
+			T_tank_last = T_tank;
+
+			float RPM_set = P + I - D;
+
+			if (RPM_set > RPM_max)
+				RPM_set = RPM_max;
+			else if (RPM_set < RPM_min)
+				RPM_set = RPM_min;
+			else
+				I += dRPM*dt*RPM_I;
+
+			mc_interface_set_pid_speed(RPM_set*5);
+		}
+
+		if (T_tank < (T_target - T_hyst_neg))
 		{
 			mc_interface_release_motor();
 			cmp_timer = chVTGetSystemTime();
 			U_fan = U_fan_min;
+			P = 0;
+			I = 0;
+			D = 0;
 			compressor_state = cmp_equalize;
 		}
+	}
 		break;
 
 	case cmp_equalize:
@@ -536,10 +603,10 @@ static THD_FUNCTION(my_thread, arg)
 		{
 			log_t = chVTGetSystemTime();
 
-			if (tt >= 0)
+			if (dt_plot >= 0)
 			{
-				commands_send_plot_points(tt, T_tank);
-				tt += 0.25;
+				commands_send_plot_points(dt_plot, T_tank);
+				dt_plot += 0.25;
 			}
 
 			SoC = (U_DC-14)/2.8;
@@ -584,16 +651,6 @@ static THD_FUNCTION(my_thread, arg)
 				res = sdGetTimeout(&SD6, TIME_IMMEDIATE);
 			}
 		}
-
-		if (T_tank > -20)  // Tank sensor present
-		{
-			if (T_tank > (T_target + T_hyst_pos))
-				compressor_call = true;
-			else if (T_tank < (T_target - T_hyst_neg))
-				compressor_call = false;
-		}
-		else
-			compressor_call = false;
 
 		sm_compressor();
 

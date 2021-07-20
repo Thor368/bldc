@@ -36,7 +36,8 @@
 #define t_RAMP_TIME				300			// ms ramp up time
 #define T_HYST_POS				2.			// positive temperature hysteresis
 #define T_HYST_NEG				2.			// negative temperature hysteresis
-#define RPM_STD					7500		// Standard compressor speed
+#define RPM_MIN					1500		// Standard compressor speed
+#define RPM_MAX					6000		// Standard compressor speed
 
 #define BRIDGED_12V
 
