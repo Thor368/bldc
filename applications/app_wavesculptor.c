@@ -14,6 +14,7 @@
 #include "commands.h"
 
 #include <string.h>
+#include <stdio.h>
 
 static THD_FUNCTION(WS_thread, arg);
 static THD_WORKING_AREA(WS_thread_wa, 1024);
@@ -33,8 +34,7 @@ static volatile bool is_running = false;
 
 
 uint32_t CAN_base_adr;
-#define DRV_CMD_OFFSET				0x100  // GT
-//#define DRV_CMD_OFFSET				-0x100  // else
+int32_t DRV_CMD_OFFSET = 0x100;  // +0x100 GT, -0x100 (else)
 #define CAN_DRIVE_CONTROLS_BASE		(CAN_base_adr + DRV_CMD_OFFSET)
 #define CAN_DATA_BASE				CAN_base_adr
 
@@ -50,6 +50,7 @@ static SerialConfig uart_cfg = {
 uint8_t if_buffer[2], if_buffer_state;
 uint16_t pos1, pos2;
 uint8_t temp1, temp2;
+systime_t plot_timebase = 0;
 
 enum
 {
@@ -68,6 +69,9 @@ void write_conf(void)
 
 	eep_conf.as_u32 = ws_protocol;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_u32 = DRV_CMD_OFFSET;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 }
 
 void read_conf(void)
@@ -81,43 +85,96 @@ void read_conf(void)
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
 	ws_protocol = eep_conf.as_u32;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	DRV_CMD_OFFSET = eep_conf.as_u32;
 }
 
-static void ws_set_protocol(int argc, const char **argv)
+static void ws_config(int argc, const char **argv)
 {
 	if (argc == 1)
 	{
 		switch (ws_protocol)
 		{
 		case ws_none:
-			commands_printf("none");
+			commands_printf("protocol: none");
 			break;
 
 		case ws_20:
-			commands_printf("ws20");
+			commands_printf("protocol: ws20");
 			break;
 
 		case ws_22:
-			commands_printf("ws22");
+			commands_printf("protocol: ws22");
 			break;
 		}
+
+		commands_printf("GT_mode: %d", (DRV_CMD_OFFSET > 0));
 	}
-	else if (argc == 2)
+	else if (argc == 3)
 	{
-		if (!strcmp(argv[1], "none"))
-			ws_protocol = ws_none;
-		else if (!strcmp(argv[1], "ws20"))
-			ws_protocol = ws_20;
-		else if (!strcmp(argv[1], "ws22"))
-			ws_protocol = ws_22;
-		else
+		float val;
+		if (sscanf(argv[2], "%f", &val) != 1)
 		{
-			commands_printf("Illegal parameter!");
-			commands_printf("Allowed parameters: none, ws20, ws22");
+			commands_printf("Invalid value");
+			return;
 		}
 
-		write_conf();
+		bool success = true;
+		if (!strcmp(argv[1], "protocol"))
+		{
+			if (!strcmp(argv[2], "none"))
+				ws_protocol = ws_none;
+			else if (!strcmp(argv[2], "ws20"))
+				ws_protocol = ws_20;
+			else if (!strcmp(argv[2], "ws22"))
+				ws_protocol = ws_22;
+			else
+			{
+				commands_printf("Illegal parameter!");
+				commands_printf("Allowed parameters: none, ws20, ws22");
+				success = false;
+			}
+		}
+		else if (!strcmp(argv[1], "GT_mode"))
+		{
+			if (val > 0.5)
+				DRV_CMD_OFFSET = 0x100;
+			else
+				DRV_CMD_OFFSET = -0x100;
+		}
+		else
+			success = false;
+
+		if (success)
+		{
+			commands_printf("OK.\n");
+			write_conf();
+		}
+		else
+			commands_printf("Unknown parameter\n");
 	}
+	else
+		commands_printf("Wrong argument count\n");
+
+	commands_printf(" ");
+}
+
+// start plotting
+static void ws_plot(int argc, const char **argv)
+{
+	(void) argc;
+	(void) argv;
+
+	commands_init_plot("Time", "v_cmd");
+	commands_plot_add_graph("Velocity command");
+	commands_plot_set_graph(1);
+	commands_init_plot("Time", "I_cmd");
+	commands_plot_add_graph("Current command");
+
+	plot_timebase = chVTGetSystemTime();
+
+	commands_printf("Plot init.");
 }
 
 void app_custom_start(void)
@@ -133,10 +190,16 @@ void app_custom_start(void)
 	sdStart(&HW_UART_DEV, &uart_cfg);
 
 	terminal_register_command_callback(
-				"ws_protocol",
-				"Set/Get Wavesculptor protocol",
+				"ws_config",
+				"Get/Set configuration",
 				"",
-				ws_set_protocol);
+				ws_config);
+
+	terminal_register_command_callback(
+				"ws_plot",
+				"Init custom plot",
+				"",
+				ws_plot);
 
 	ws_protocol = ws_none;
 
@@ -151,6 +214,8 @@ void app_custom_stop(void)
 	palSetPadMode(HW_UART_TX_PORT, HW_UART_TX_PIN, PAL_MODE_INPUT_PULLUP);
 	palSetPadMode(HW_UART_RX_PORT, HW_UART_RX_PIN, PAL_MODE_INPUT_PULLUP);
 
+	plot_timebase = 0;
+
 	stop_now = true;
 	while (is_running)
 		chThdSleepMilliseconds(1);
@@ -159,7 +224,7 @@ void app_custom_stop(void)
 bool rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 {
 	(void) len;
-	float temp_v, temp_I;
+	float v_cmd, I_cmd;
 
 	if ((id < CAN_DRIVE_CONTROLS_BASE) ||
 		(id > (CAN_DRIVE_CONTROLS_BASE + 0x20)))
@@ -172,18 +237,29 @@ bool rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 	switch (id)
 	{
 	case ID_DRIVE_CMD:
-		temp_v = *(float *) &data[0];
-		temp_I = *(float *) &data[4];
+		v_cmd = *(float *) &data[0];
+		I_cmd = *(float *) &data[4];
 
-		if ((temp_I > 1) || (temp_I < 0))
-			temp_I = 0;
+		if ((I_cmd > 1) || (I_cmd < 0.01))
+			I_cmd = 0;
 
-		if (temp_v > 1.)
-			mc_interface_set_current(temp_I*mc_conf->l_current_max);
-		else if (temp_v < -1.)
-			mc_interface_set_current(-temp_I*mc_conf->l_current_max);
+		if (I_cmd < 0.01)
+			mc_interface_release_motor();
+		else if (v_cmd > 1.)
+			mc_interface_set_current(I_cmd*mc_conf->l_current_max);
+		else if (v_cmd < -1.)
+			mc_interface_set_current(-I_cmd*mc_conf->l_current_max);
 		else
-			mc_interface_set_brake_current(temp_I*mc_conf->l_current_max);
+			mc_interface_set_brake_current(I_cmd*mc_conf->l_current_max);
+
+		if (plot_timebase > 0)
+		{
+			commands_plot_set_graph(0);
+			commands_send_plot_points(ST2MS(chVTTimeElapsedSinceX(plot_timebase)), v_cmd);
+
+			commands_plot_set_graph(1);
+			commands_send_plot_points(ST2MS(chVTTimeElapsedSinceX(plot_timebase)), I_cmd);
+		}
 
 		timeout_reset();
 		return true;
