@@ -504,14 +504,14 @@ void sm_compressor(void)
 
 			float RPM_set = P + I - D;
 
-			if (RPM_set > RPM_max)
-				RPM_set = RPM_max;
-			else if (RPM_set < RPM_min)
-				RPM_set = RPM_min;
+			if (RPM_set >= 1)
+				RPM_set = 1;
+			else if (RPM_set <= 0)
+				RPM_set = 0;
 			else
 				I += dRPM*dt*RPM_I;
 
-			mc_interface_set_pid_speed(RPM_set*5);
+			mc_interface_set_pid_speed(RPM_min + RPM_set*(RPM_max - RPM_min));
 		}
 
 		if (T_tank < (T_target - T_hyst_neg))
