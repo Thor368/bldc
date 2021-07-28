@@ -114,11 +114,7 @@ static void ws_config(int argc, const char **argv)
 	else if (argc == 3)
 	{
 		float val;
-		if (sscanf(argv[2], "%f", &val) != 1)
-		{
-			commands_printf("Invalid value");
-			return;
-		}
+		sscanf(argv[2], "%f", &val);
 
 		bool success = true;
 		if (!strcmp(argv[1], "protocol"))
@@ -166,10 +162,8 @@ static void ws_plot(int argc, const char **argv)
 	(void) argc;
 	(void) argv;
 
-	commands_init_plot("Time", "v_cmd");
+	commands_init_plot("Time", "");
 	commands_plot_add_graph("Velocity command");
-	commands_plot_set_graph(1);
-	commands_init_plot("Time", "I_cmd");
 	commands_plot_add_graph("Current command");
 
 	plot_timebase = chVTGetSystemTime();
@@ -177,6 +171,55 @@ static void ws_plot(int argc, const char **argv)
 	commands_printf("Plot init.");
 }
 
+
+bool rx_callback(uint32_t id, uint8_t *data, uint8_t len)
+{
+	(void) len;
+	float v_cmd, I_cmd;
+
+	if ((id < CAN_DRIVE_CONTROLS_BASE) ||
+		(id > (CAN_DRIVE_CONTROLS_BASE + 0x20)))
+		return false;
+
+	if (ws_protocol == ws_none)
+		return false;
+
+	id -= CAN_DRIVE_CONTROLS_BASE;
+	switch (id)
+	{
+	case ID_DRIVE_CMD:
+		v_cmd = *(float *) &data[0];
+		I_cmd = *(float *) &data[4];
+
+		if ((I_cmd > 1) || (I_cmd < 0.01))
+			I_cmd = 0;
+
+		if (I_cmd < 0.01)
+			mc_interface_release_motor();
+		else if (v_cmd > 1.)
+			mc_interface_set_current(I_cmd*mc_conf->l_current_max);
+		else if (v_cmd < -1.)
+			mc_interface_set_current(-I_cmd*mc_conf->l_current_max);
+		else
+			mc_interface_set_brake_current(I_cmd*mc_conf->l_current_max);
+
+		if (plot_timebase > 0)
+		{
+			float ti = ST2MS(chVTTimeElapsedSinceX(plot_timebase))/1000.;
+			commands_plot_set_graph(0);
+			commands_send_plot_points(ti, v_cmd);
+
+			commands_plot_set_graph(1);
+			commands_send_plot_points(ti, I_cmd*100);
+		}
+
+		timeout_reset();
+		return true;
+	break;
+	}
+
+	return false;
+}
 void app_custom_start(void)
 {
 	stop_now = false;
@@ -216,57 +259,11 @@ void app_custom_stop(void)
 
 	plot_timebase = 0;
 
+	comm_can_set_sid_rx_callback(NULL);
+
 	stop_now = true;
 	while (is_running)
 		chThdSleepMilliseconds(1);
-}
-
-bool rx_callback(uint32_t id, uint8_t *data, uint8_t len)
-{
-	(void) len;
-	float v_cmd, I_cmd;
-
-	if ((id < CAN_DRIVE_CONTROLS_BASE) ||
-		(id > (CAN_DRIVE_CONTROLS_BASE + 0x20)))
-		return false;
-
-	if (ws_protocol == ws_none)
-		return false;
-
-	id -= CAN_DRIVE_CONTROLS_BASE;
-	switch (id)
-	{
-	case ID_DRIVE_CMD:
-		v_cmd = *(float *) &data[0];
-		I_cmd = *(float *) &data[4];
-
-		if ((I_cmd > 1) || (I_cmd < 0.01))
-			I_cmd = 0;
-
-		if (I_cmd < 0.01)
-			mc_interface_release_motor();
-		else if (v_cmd > 1.)
-			mc_interface_set_current(I_cmd*mc_conf->l_current_max);
-		else if (v_cmd < -1.)
-			mc_interface_set_current(-I_cmd*mc_conf->l_current_max);
-		else
-			mc_interface_set_brake_current(I_cmd*mc_conf->l_current_max);
-
-		if (plot_timebase > 0)
-		{
-			commands_plot_set_graph(0);
-			commands_send_plot_points(ST2MS(chVTTimeElapsedSinceX(plot_timebase)), v_cmd);
-
-			commands_plot_set_graph(1);
-			commands_send_plot_points(ST2MS(chVTTimeElapsedSinceX(plot_timebase)), I_cmd);
-		}
-
-		timeout_reset();
-		return true;
-	break;
-	}
-
-	return false;
 }
 
 void app_custom_configure(app_configuration *conf)
