@@ -241,9 +241,9 @@ static void temp_config(int argc, const char **argv)
 		commands_printf("T_hyst_neg: %.1f°C", (double) T_hyst_neg);
 		commands_printf("RPM_min: %.1fRPM", (double) RPM_min);
 		commands_printf("RPM_max: %.1fRPM", (double) RPM_max);
-		commands_printf("RPM_P: %.1fRPM", (double) RPM_P);
-		commands_printf("RPM_I: %.1fRPM", (double) RPM_I);
-		commands_printf("RPM_D: %.1fRPM", (double) RPM_D);
+		commands_printf("RPM_P: %.1f", (double) RPM_P);
+		commands_printf("RPM_I: %.1f", (double) RPM_I);
+		commands_printf("RPM_D: %.1f", (double) RPM_D);
 		commands_printf("FAN_PWM_invert: %d", FAN_PWM_invert);
 	}
 	else if (argc == 3)
@@ -275,9 +275,9 @@ static void temp_config(int argc, const char **argv)
 		else if (!strcmp(argv[1], "U_fan"))
 			U_fan = val;
 		else if (!strcmp(argv[1], "RPM_min"))
-			RPM_min = val*5;
+			RPM_min = val;
 		else if (!strcmp(argv[1], "RPM_max"))
-			RPM_max = val*5;
+			RPM_max = val;
 		else if (!strcmp(argv[1], "RPM_P"))
 			RPM_P = val*5;
 		else if (!strcmp(argv[1], "RPM_I"))
@@ -511,7 +511,7 @@ void sm_compressor(void)
 			else
 				I += dRPM*dt*RPM_I;
 
-			mc_interface_set_pid_speed(RPM_min + RPM_set*(RPM_max - RPM_min));
+			mc_interface_set_pid_speed((RPM_min + RPM_set*(RPM_max - RPM_min))*5);
 		}
 
 		if (T_tank < (T_target - T_hyst_neg))
@@ -519,9 +519,7 @@ void sm_compressor(void)
 			mc_interface_release_motor();
 			cmp_timer = chVTGetSystemTime();
 			U_fan = U_fan_min;
-			P = 0;
 			I = 0;
-			D = 0;
 			compressor_state = cmp_equalize;
 		}
 	}
