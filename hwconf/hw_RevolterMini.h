@@ -30,9 +30,9 @@
 #define T_TARGET_DEFAULT		19.
 #define I_FAN_RAMP_START		5.
 #define I_FAN_RAMP_END			12.
-#define U_FAN_MIN				5.
-#define U_FAN_MAX				8.
-#define U_PUMP_STD				8.
+#define U_FAN_MIN				0.
+#define U_FAN_MAX				0.
+#define U_PUMP_STD				0.
 #define t_RAMP_TIME				300			// ms ramp up time
 #define T_HYST_POS				2.			// positive temperature hysteresis
 #define T_HYST_NEG				2.			// negative temperature hysteresis
