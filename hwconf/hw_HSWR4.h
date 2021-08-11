@@ -22,6 +22,11 @@
 
 #define HW_NAME					"HSWR4"
 
+// HSWR specific defines
+
+#define FAN_TEMP_TH				45
+#define FAN_TEMP_HYST			5
+
 // HW properties
 #define HW_HAS_3_SHUNTS
 #define HW_HAS_PHASE_SHUNTS
@@ -32,6 +37,9 @@
 #define LED_GREEN_OFF()			palClearPad(GPIOC, 10)
 #define LED_RED_ON()			palSetPad(GPIOC, 11)
 #define LED_RED_OFF()			palClearPad(GPIOC, 11)
+
+#define FAN_ON()				palSetPad(GPIOB, 10)
+#define FAN_OFF()				palClearPad(GPIOB, 10)
 
 /*
  * ADC Vector

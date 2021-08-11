@@ -39,6 +39,11 @@ void hw_init_gpio(void) {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
 
+	// HSWR specific
+	palSetPadMode(GPIOB, 10,
+			PAL_MODE_OUTPUT_PUSHPULL |
+			PAL_STM32_OSPEED_HIGHEST);
+
 	// LEDs
 	palSetPadMode(GPIOC, 10,
 			PAL_MODE_OUTPUT_PUSHPULL |

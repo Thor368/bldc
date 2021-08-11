@@ -15,6 +15,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 static THD_FUNCTION(WS_thread, arg);
 static THD_WORKING_AREA(WS_thread_wa, 1024);
@@ -406,6 +407,11 @@ static THD_FUNCTION(WS_thread, arg)
 			}
 
 			UART_handler();
+
+			if (NTC_TEMP(ADC_IND_TEMP_MOS) >= (FAN_TEMP_TH + FAN_TEMP_HYST))
+				FAN_ON();
+			else if (NTC_TEMP(ADC_IND_TEMP_MOS) <= (FAN_TEMP_TH - FAN_TEMP_HYST))
+				FAN_OFF();
 		}
 	}
 }
