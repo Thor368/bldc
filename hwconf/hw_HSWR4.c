@@ -43,6 +43,7 @@ void hw_init_gpio(void) {
 	palSetPadMode(GPIOB, 10,
 			PAL_MODE_OUTPUT_PUSHPULL |
 			PAL_STM32_OSPEED_HIGHEST);
+	FAN_OFF();
 
 	// LEDs
 	palSetPadMode(GPIOC, 10,

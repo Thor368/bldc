@@ -121,7 +121,7 @@ static void ws_config(int argc, const char **argv)
 		}
 
 		commands_printf("GT_mode: %d", (DRV_CMD_OFFSET > 0));
-		commands_printf("fan_hysteresis: %f.0", (double) fan_hyst);
+		commands_printf("fan_hysteresis: %.0fK", (double) fan_hyst);
 	}
 	else if (argc == 3)
 	{
@@ -268,6 +268,8 @@ void app_custom_start(void)
 				ws_plot);
 
 	read_conf();
+
+	FAN_OFF();
 
 	chThdCreateStatic(WS_thread_wa, sizeof(WS_thread_wa), NORMALPRIO, WS_thread, NULL);
 }
