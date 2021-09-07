@@ -22,11 +22,6 @@
 
 #define HW_NAME					"HSWR4"
 
-// HSWR specific defines
-
-#define FAN_TEMP_TH				45
-#define FAN_TEMP_HYST			5
-
 // HW properties
 #define HW_HAS_3_SHUNTS
 #define HW_HAS_PHASE_SHUNTS

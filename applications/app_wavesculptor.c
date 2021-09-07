@@ -48,17 +48,21 @@ static SerialConfig uart_cfg = {
 		0
 };
 
+float fan_hyst = 10;
+
 uint8_t if_buffer[2], if_buffer_state;
 uint16_t pos1, pos2;
 uint8_t temp1, temp2;
 systime_t plot_timebase = 0;
+
+float Ph_I_input = 0;
 
 enum
 {
 	ws_none,
 	ws_20,
 	ws_22
-} ws_protocol;
+} ws_protocol = ws_none;
 
 void write_conf(void)
 {
@@ -72,6 +76,9 @@ void write_conf(void)
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 
 	eep_conf.as_u32 = DRV_CMD_OFFSET;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_u32 = fan_hyst;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 }
 
@@ -89,6 +96,9 @@ void read_conf(void)
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
 	DRV_CMD_OFFSET = eep_conf.as_u32;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	fan_hyst = eep_conf.as_u32;
 }
 
 static void ws_config(int argc, const char **argv)
@@ -111,6 +121,7 @@ static void ws_config(int argc, const char **argv)
 		}
 
 		commands_printf("GT_mode: %d", (DRV_CMD_OFFSET > 0));
+		commands_printf("fan_hysteresis: %f.0", (double) fan_hyst);
 	}
 	else if (argc == 3)
 	{
@@ -139,6 +150,17 @@ static void ws_config(int argc, const char **argv)
 				DRV_CMD_OFFSET = 0x100;
 			else
 				DRV_CMD_OFFSET = -0x100;
+		}
+		else if (!strcmp(argv[1], "fan_hysteresis"))
+		{
+			if ((val >= 0) && (val <= 50))
+				fan_hyst = val;
+			else
+			{
+				success = false;
+				commands_printf("Illegal value!");
+				commands_printf("Allowed range 0-50K");
+			}
 		}
 		else
 			success = false;
@@ -196,13 +218,13 @@ bool rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 			I_cmd = 0;
 
 		if (I_cmd < 0.01)
-			mc_interface_release_motor();
+			Ph_I_input = 0;
 		else if (v_cmd > 1.)
-			mc_interface_set_current(I_cmd*mc_conf->l_current_max);
-		else if (v_cmd < -1.)
-			mc_interface_set_current(-I_cmd*mc_conf->l_current_max);
+			Ph_I_input = I_cmd*mc_conf->l_current_max;
+//		else if (v_cmd < -1.)
 		else
-			mc_interface_set_brake_current(I_cmd*mc_conf->l_current_max);
+			Ph_I_input = -I_cmd*mc_conf->l_current_max;
+//			mc_interface_set_brake_current(I_cmd*mc_conf->l_current_max);
 
 		if (plot_timebase > 0)
 		{
@@ -244,8 +266,6 @@ void app_custom_start(void)
 				"Init custom plot",
 				"",
 				ws_plot);
-
-	ws_protocol = ws_none;
 
 	read_conf();
 
@@ -405,12 +425,30 @@ static THD_FUNCTION(WS_thread, arg)
 				data_F[1] = mc_interface_get_speed();
 				comm_can_transmit_sid(ID_VELOCITY + CAN_DATA_BASE, (uint8_t *) data_F, sizeof(data_F));
 			}
+			static systime_t wait_20ms = 0;
+			if (chVTTimeElapsedSinceX(wait_20ms) > MS2ST(20))
+			{
+				wait_20ms = chVTGetSystemTime();
+
+				static float Ph_I_filt = 0;
+				float Ph_I_delta = Ph_I_input - Ph_I_filt;
+				if (Ph_I_delta > 2.)
+					Ph_I_delta = 2;
+				else if (Ph_I_delta < -2.)
+					Ph_I_delta = -2;
+				Ph_I_filt += Ph_I_delta;
+
+				if ((Ph_I_filt < 1) && (Ph_I_filt > -1))
+					mc_interface_release_motor();
+				else
+					mc_interface_set_current(Ph_I_filt);
+			}
 
 			UART_handler();
 
-			if (NTC_TEMP(ADC_IND_TEMP_MOS) >= (FAN_TEMP_TH + FAN_TEMP_HYST))
+			if (NTC_TEMP(ADC_IND_TEMP_MOS) >= mc_conf->l_temp_fet_start)
 				FAN_ON();
-			else if (NTC_TEMP(ADC_IND_TEMP_MOS) <= (FAN_TEMP_TH - FAN_TEMP_HYST))
+			else if (NTC_TEMP(ADC_IND_TEMP_MOS) <= (mc_conf->l_temp_fet_start - fan_hyst))
 				FAN_OFF();
 		}
 	}
