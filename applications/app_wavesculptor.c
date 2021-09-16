@@ -33,6 +33,10 @@ static volatile bool is_running = false;
 #define ID_VELOCITY					0x03
 #define ID_TEMP						0x0B
 
+#define RPM_MIN_BREAK				100
+#define RPM_MAX_BREAK				500
+#define DUTY_LIMIT					0.05
+#define CURRENT_SLOPE				2
 
 uint32_t CAN_base_adr;
 int32_t DRV_CMD_OFFSET = 0x100;  // +0x100 GT, -0x100 (else)
@@ -214,17 +218,23 @@ bool rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 		v_cmd = *(float *) &data[0];
 		I_cmd = *(float *) &data[4];
 
-		if ((I_cmd > 1) || (I_cmd < 0.01))
-			I_cmd = 0;
-
 		if (I_cmd < 0.01)
 			Ph_I_input = 0;
-		else if (v_cmd > 1.)
+		else if (v_cmd > 0.01)
 			Ph_I_input = I_cmd*mc_conf->l_current_max;
-//		else if (v_cmd < -1.)
+		else if (v_cmd < -0.01)
+		{
+			static bool break_allowed = false;
+			if (break_allowed)
+				Ph_I_input = -I_cmd*mc_conf->l_current_max;
+
+			if (mc_interface_get_rpm() < RPM_MIN_BREAK)
+				break_allowed = false;
+			else if (mc_interface_get_rpm() > RPM_MAX_BREAK)
+				break_allowed = true;
+		}
 		else
-			Ph_I_input = -I_cmd*mc_conf->l_current_max;
-//			mc_interface_set_brake_current(I_cmd*mc_conf->l_current_max);
+			Ph_I_input = 0;
 
 		if (plot_timebase > 0)
 		{
@@ -434,14 +444,21 @@ static THD_FUNCTION(WS_thread, arg)
 
 				static float Ph_I_filt = 0;
 				float Ph_I_delta = Ph_I_input - Ph_I_filt;
-				if (Ph_I_delta > 2.)
-					Ph_I_delta = 2;
-				else if (Ph_I_delta < -2.)
-					Ph_I_delta = -2;
+				if (Ph_I_delta > CURRENT_SLOPE)
+					Ph_I_delta = CURRENT_SLOPE;
+				else if (Ph_I_delta < -CURRENT_SLOPE)
+					Ph_I_delta = -CURRENT_SLOPE;
 				Ph_I_filt += Ph_I_delta;
 
-				if ((Ph_I_filt < 1) && (Ph_I_filt > -1))
+				float duty = mc_interface_get_duty_cycle_now();
+				if (((Ph_I_filt < 1) && (Ph_I_filt > -1)) || (duty >= mc_conf->l_max_duty))
 					mc_interface_release_motor();
+				else if (duty > (mc_conf->l_max_duty - DUTY_LIMIT))
+				{
+					float duty_lim = (duty - (mc_conf->l_max_duty - DUTY_LIMIT))/DUTY_LIMIT;
+
+					mc_interface_set_current(Ph_I_filt*duty_lim);
+				}
 				else
 					mc_interface_set_current(Ph_I_filt);
 			}
