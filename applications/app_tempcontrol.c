@@ -279,11 +279,11 @@ static void temp_config(int argc, const char **argv)
 		else if (!strcmp(argv[1], "RPM_max"))
 			RPM_max = val;
 		else if (!strcmp(argv[1], "RPM_P"))
-			RPM_P = val*5;
+			RPM_P = val;
 		else if (!strcmp(argv[1], "RPM_I"))
-			RPM_I = val*5;
+			RPM_I = val;
 		else if (!strcmp(argv[1], "RPM_D"))
-			RPM_D = val*5;
+			RPM_D = val;
 		else if (!strcmp(argv[1], "FAN_PWM_invert"))
 		{
 			TIM4->CCER &= (uint16_t)~TIM_CCER_CC2P;
@@ -502,16 +502,14 @@ void sm_compressor(void)
 			D = (T_tank - T_tank_last)*dt*RPM_D;
 			T_tank_last = T_tank;
 
-			float RPM_set = P + I - D;
+			float RPM_setpoint = P + I - D + RPM_min;
 
-			if (RPM_set >= 1)
-				RPM_set = 1;
-			else if (RPM_set <= 0)
-				RPM_set = 0;
-			else
-				I += dRPM*dt*RPM_I;
+			if (RPM_setpoint > RPM_max)
+				RPM_setpoint = RPM_max;
+			else if (RPM_setpoint < RPM_min)
+				RPM_setpoint = RPM_min;
 
-			mc_interface_set_pid_speed((RPM_min + RPM_set*(RPM_max - RPM_min))*5);
+			mc_interface_set_pid_speed(RPM_setpoint*5);
 		}
 
 		if (T_tank < (T_target - T_hyst_neg))
