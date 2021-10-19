@@ -88,7 +88,7 @@ float U_pump_std = U_PUMP_STD;
 float T_hyst_pos = T_HYST_POS;
 float T_hyst_neg = T_HYST_NEG;
 float RPM_min = RPM_MIN, RPM_max = RPM_MAX;
-float RPM_P = 0, RPM_I = 0, RPM_D = 0;
+float RPM_P = 50, RPM_I = 5, RPM_D = 20000, RPM_D_t = 10;
 float dt_plot = -1.0;
 bool FAN_PWM_invert = false;
 
@@ -138,6 +138,9 @@ void write_conf(void)
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 
 	eep_conf.as_float = RPM_D;
+	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
+
+	eep_conf.as_float = RPM_D_t;
 	conf_general_store_eeprom_var_custom(&eep_conf, pp++);
 
 	eep_conf.as_u32 = FAN_PWM_invert;
@@ -193,6 +196,9 @@ void read_conf(void)
 	RPM_D = eep_conf.as_float;
 
 	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
+	RPM_D_t = eep_conf.as_float;
+
+	conf_general_read_eeprom_var_custom(&eep_conf, pp++);
 	FAN_PWM_invert = eep_conf.as_u32;
 }
 
@@ -244,6 +250,7 @@ static void temp_config(int argc, const char **argv)
 		commands_printf("RPM_P: %.1f", (double) RPM_P);
 		commands_printf("RPM_I: %.1f", (double) RPM_I);
 		commands_printf("RPM_D: %.1f", (double) RPM_D);
+		commands_printf("RPM_D_t: %.1f", (double) RPM_D_t);
 		commands_printf("FAN_PWM_invert: %d", FAN_PWM_invert);
 	}
 	else if (argc == 3)
@@ -284,6 +291,8 @@ static void temp_config(int argc, const char **argv)
 			RPM_I = val;
 		else if (!strcmp(argv[1], "RPM_D"))
 			RPM_D = val;
+		else if (!strcmp(argv[1], "RPM_D_t"))
+			RPM_D_t = val;
 		else if (!strcmp(argv[1], "FAN_PWM_invert"))
 		{
 			TIM4->CCER &= (uint16_t)~TIM_CCER_CC2P;
@@ -498,11 +507,17 @@ void sm_compressor(void)
 
 			float dt = ST2MS(chVTTimeElapsedSinceX(RPM_timer))/1000.;
 			RPM_timer = chVTGetSystemTime();
-			static float T_tank_last = 0;
-			D = (T_tank - T_tank_last)*dt*RPM_D;
+			static float T_tank_last = 0, D_filt = 0;
+			D_filt -= D_filt/10;
+			D_filt += (T_tank - T_tank_last)*dt*RPM_D;
+			D = D_filt/10;
 			T_tank_last = T_tank;
 
 			float RPM_setpoint = P + I - D + RPM_min;
+
+			float dI = dt*dRPM*RPM_I;
+			if ((dI < 0) || (RPM_setpoint < RPM_max))
+				I += dI;
 
 			if (RPM_setpoint > RPM_max)
 				RPM_setpoint = RPM_max;
@@ -590,9 +605,9 @@ static THD_FUNCTION(my_thread, arg)
 		U_DC = U_DC_filt/10;
 
 		static float I_Comp_filt = 0;
-		I_Comp_filt -= I_Comp_filt/10;
+		I_Comp_filt -= I_Comp_filt/25;
 		I_Comp_filt += mc_interface_get_tot_current_filtered();
-		I_Comp = I_Comp_filt/10;
+		I_Comp = I_Comp_filt/25;
 
 		static systime_t log_t;
 		if (chVTTimeElapsedSinceX(log_t) >= MS2ST(250))

@@ -30,13 +30,13 @@
 #define T_TARGET_DEFAULT		19.
 #define I_FAN_RAMP_START		5.
 #define I_FAN_RAMP_END			18.
-#define U_FAN_MIN				3.
+#define U_FAN_MIN				4.
 #define U_FAN_MAX				8.
 #define U_PUMP_STD				0.
 #define T_HYST_POS				2.			// positive temperature hysteresis
 #define T_HYST_NEG				2.			// negative temperature hysteresis
 #define RPM_MIN					1500		// Standard compressor speed
-#define RPM_MAX					6000		// Standard compressor speed
+#define RPM_MAX					4000		// Standard compressor speed
 
 #define BRIDGED_12V
 
