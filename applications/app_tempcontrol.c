@@ -436,7 +436,8 @@ void app_custom_configure(app_configuration *conf) {
 
 void sm_compressor(void)
 {
-	static systime_t cmp_timer = 0, cmp_counter = 0;
+	static systime_t cmp_timer = 0, cmp_counter = 0, RPM_timer = 0;
+;
 
 	if (manual_mode)
 		compressor_state = cmp_wait_for_start;
@@ -468,7 +469,10 @@ void sm_compressor(void)
 			compressor_state = cmp_failed_start;
 		}
 		else if ((chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500)) && (mc_interface_get_rpm() >= (RPM_min*4)))
+		{
 			compressor_state = cmp_running;
+			RPM_timer = chVTGetSystemTime();
+		}
 		break;
 
 	case cmp_failed_start:
@@ -499,7 +503,6 @@ void sm_compressor(void)
 		else
 			U_fan = U_fan_min + (U_fan_max - U_fan_min)*((I_Comp - I_fan_ramp_start)/(I_fan_ramp_end - I_fan_ramp_start));
 
-		static systime_t RPM_timer = 0;
 		if (chVTTimeElapsedSinceX(RPM_timer) >= MS2ST(100))
 		{
 			float dRPM = T_tank - T_target;
