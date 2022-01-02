@@ -17,24 +17,17 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
     */
 
+#include "temp_control.h"
+#include "temp_compressor.h"
+
 #include "app.h"
 #include "ch.h"
 #include "hal.h"
 
-// Some useful includes
-#include "mc_interface.h"
-#include "mcpwm_foc.h"
-#include "utils.h"
-#include "encoder.h"
-#include "terminal.h"
-#include "comm_can.h"
-#include "hw.h"
-#include "commands.h"
-#include "timeout.h"
-
 #include <math.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
+#include "temp_HMI.h"
 
 #define EXT_NTC_RES(volt)				(-volt*10000/(volt - 3.3))
 #define EXT_TEMP(ch)					(1.0 / ((logf(EXT_NTC_RES(ADC_VOLTS(ch)) / 10000.0) / mc_cfg->m_ntc_motor_beta) + (1.0 / 298.15)) - 273.15)
@@ -43,6 +36,26 @@
 
 #define SET_PUMP(rel)					{if (rel >= 1) TIM4->CCR1 = TIM_PERIOD - 1; else TIM4->CCR1 = TIM_PERIOD*rel - 1;}
 #define SET_FAN(rel)					{if (rel >= 1) TIM4->CCR2 = TIM_PERIOD - 1; else TIM4->CCR2 = TIM_PERIOD*rel - 1;}
+
+
+// GLOBAL VARS
+bool manual_mode = false;
+
+float T_tank = 0, T_cond = 0, I_Comp = 0;
+float U_fan = 0, U_DC = 0;
+
+float T_target = T_TARGET_DEFAULT;
+float I_fan_ramp_start = I_FAN_RAMP_START;
+float I_fan_ramp_end = I_FAN_RAMP_END;
+float U_fan_min = U_FAN_MIN;
+float U_fan_max = U_FAN_MAX;
+float U_pump_std = U_PUMP_STD;
+float T_hyst_pos = T_HYST_POS;
+float T_hyst_neg = T_HYST_NEG;
+float RPM_min = RPM_MIN, RPM_max = RPM_MAX;
+float RPM_P = 150, RPM_I = 5, RPM_D = 0, RPM_D_t = 10;
+float dt_plot = -1.0;
+bool FAN_PWM_invert = false;
 
 
 // Threads
@@ -55,43 +68,6 @@ const volatile mc_configuration *mc_cfg;
 
 volatile bool stop_now = true;
 volatile bool is_running = false;
-
-enum
-{
-	cmp_init,
-	cmp_wait_for_start,
-	cmp_ramp_up,
-	cmp_failed_start,
-	cmp_running,
-	cmp_equalize
-} compressor_state;
-
-static SerialConfig uart_cfg = {
-		9600,
-		0,
-		USART_CR2_LINEN,
-		0
-};
-
-bool manual_mode = false;
-
-float T_tank = 0, T_cond = 0, I_Comp = 0;
-float U_fan = 0, U_DC = 0;
-float SoC = 0;
-
-float T_target = T_TARGET_DEFAULT;
-float I_fan_ramp_start = I_FAN_RAMP_START;
-float I_fan_ramp_end = I_FAN_RAMP_END;
-float U_fan_min = U_FAN_MIN;
-float U_fan_max = U_FAN_MAX;
-float U_pump_std = U_PUMP_STD;
-float T_hyst_pos = T_HYST_POS;
-float T_hyst_neg = T_HYST_NEG;
-float RPM_min = RPM_MIN, RPM_max = RPM_MAX;
-float RPM_P = 50, RPM_I = 5, RPM_D = 20000, RPM_D_t = 10;
-float dt_plot = -1.0;
-bool FAN_PWM_invert = false;
-
 
 void write_conf(void)
 {
@@ -333,9 +309,10 @@ void app_custom_start(void)
 	U_fan = 0;
 	manual_mode = false;
 	dt_plot = -1;
-	compressor_state = cmp_init;
 
 	read_conf();
+	compressor_init();
+	HMI_init();
 
 	stop_now = false;
 	chThdCreateStatic(my_thread_wa, sizeof(my_thread_wa),
@@ -398,18 +375,6 @@ void app_custom_start(void)
 	TIM_OC2PreloadConfig(TIM4, TIM_OCPreload_Enable);
 
 	TIM_Cmd(TIM4, ENABLE);
-
-	palSetPadMode(GPIOC, 6, PAL_MODE_ALTERNATE(GPIO_AF_USART6) |
-			PAL_STM32_OSPEED_HIGHEST |
-			PAL_STM32_PUDR_PULLUP);
-	palSetPadMode(GPIOC, 7, PAL_MODE_ALTERNATE(GPIO_AF_USART6) |
-			PAL_STM32_OSPEED_HIGHEST |
-			PAL_STM32_PUDR_PULLUP);
-	sdStart(&SD6, &uart_cfg);
-
-	char str[30];
-	sprintf(str, "tempSet.val=%d\xFF\xFF\xFF", (int) (T_target*10));
-	sdWrite(&SD6, (uint8_t *) str, strlen(str));
 }
 
 // Called when the custom application is stopped. Stop our threads
@@ -432,145 +397,6 @@ void app_custom_stop(void) {
 
 void app_custom_configure(app_configuration *conf) {
 	(void)conf;
-}
-
-void sm_compressor(void)
-{
-	static systime_t cmp_timer = 0, cmp_counter = 0, RPM_timer = 0;
-;
-
-	if (manual_mode)
-		compressor_state = cmp_wait_for_start;
-
-	switch(compressor_state)
-	{
-	case cmp_init:
-		cmp_timer = chVTGetSystemTime();
-		mc_interface_release_motor();
-		compressor_state = cmp_wait_for_start;
-		break;
-
-	case cmp_wait_for_start:
-		if ((T_tank > (T_target + T_hyst_pos)) && !manual_mode)
-		{
-			cmp_timer = chVTGetSystemTime();
-			mc_interface_set_pid_speed(RPM_min*5);
-			compressor_state = cmp_ramp_up;
-			cmp_counter = 0;
-		}
-		break;
-
-	case cmp_ramp_up:
-		if ((mc_interface_get_fault() != FAULT_CODE_NONE) || (chVTTimeElapsedSinceX(cmp_timer) >= S2ST(1)))
-		{
-			mc_interface_release_motor();
-			cmp_timer = chVTGetSystemTime();
-			cmp_counter++;
-			compressor_state = cmp_failed_start;
-		}
-		else if ((chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500)) && (mc_interface_get_rpm() >= (RPM_min*4)))
-		{
-			compressor_state = cmp_running;
-			RPM_timer = chVTGetSystemTime();
-		}
-		break;
-
-	case cmp_failed_start:
-		if (chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(5000))
-		{
-			if (cmp_counter >= 3)
-			{
-				compressor_state = cmp_equalize;
-				cmp_timer = chVTGetSystemTime();
-			}
-			else
-			{
-				cmp_timer = chVTGetSystemTime();
-				mc_interface_set_current(5.);
-				compressor_state = cmp_ramp_up;
-			}
-		}
-		break;
-
-	case cmp_running:
-	{
-		static float P = 0, I = 0, D = 0;
-
-		if (I_Comp >= I_fan_ramp_end)
-			U_fan = U_fan_max;
-		else if (I_Comp <= I_fan_ramp_start)
-			U_fan = U_fan_min;
-		else
-			U_fan = U_fan_min + (U_fan_max - U_fan_min)*((I_Comp - I_fan_ramp_start)/(I_fan_ramp_end - I_fan_ramp_start));
-
-		if (chVTTimeElapsedSinceX(RPM_timer) >= MS2ST(100))
-		{
-			float dRPM = T_tank - T_target;
-			P = dRPM*RPM_P;
-
-			float dt = ST2MS(chVTTimeElapsedSinceX(RPM_timer))/1000.;
-			RPM_timer = chVTGetSystemTime();
-			static float T_tank_last = 0, D_filt = 0;
-			D_filt -= D_filt/10;
-			D_filt += (T_tank - T_tank_last)*dt*RPM_D;
-			D = D_filt/10;
-			T_tank_last = T_tank;
-
-			float RPM_setpoint = P + I - D + RPM_min;
-
-			float dI = dt*dRPM*RPM_I;
-			if ((dI < 0) || (RPM_setpoint < RPM_max))
-				I += dI;
-
-			if (RPM_setpoint > RPM_max)
-				RPM_setpoint = RPM_max;
-			else if (RPM_setpoint < RPM_min)
-				RPM_setpoint = RPM_min;
-
-			mc_interface_set_pid_speed(RPM_setpoint*5);
-		}
-
-		if (T_tank < (T_target - T_hyst_neg))
-		{
-			mc_interface_release_motor();
-			cmp_timer = chVTGetSystemTime();
-			U_fan = U_fan_min;
-			I = 0;
-			compressor_state = cmp_equalize;
-		}
-	}
-		break;
-
-	case cmp_equalize:
-		if (chVTTimeElapsedSinceX(cmp_timer) >= S2ST(120))
-		{
-			U_fan = 0;
-			compressor_state = cmp_wait_for_start;
-		}
-		break;
-
-	default:
-		compressor_state = cmp_init;
-		break;
-	}
-}
-
-char * finddel(char *buf, char *del, uint8_t len)
-{
-	uint8_t del_len = strlen(del);
-	uint8_t cc = 0;
-	for (uint8_t i = 0; i < len; i++)
-	{
-		if (buf[i] == del[cc])
-			cc++;
-		else
-			cc = 0;
-
-		if (cc >= del_len)
-			return &buf[i];
-	}
-
-	return NULL;
 }
 
 static THD_FUNCTION(my_thread, arg)
@@ -622,50 +448,9 @@ static THD_FUNCTION(my_thread, arg)
 				commands_send_plot_points(dt_plot, T_tank);
 				dt_plot += 0.25;
 			}
-
-			SoC = (U_DC-14)/2.8;
-
-			char str[30];
-
-			sprintf(str, "SoC.val=%d\xFF\xFF\xFF", (uint8_t) (SoC*100));
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
-			sprintf(str, "SoCp.val=%d\xFF\xFF\xFF", (uint8_t) (SoC*100));
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
-
-			sprintf(str, "running.val=%d\xFF\xFF\xFF", (uint8_t) (mc_interface_get_rpm() > 100));
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
-
-			sprintf(str, "tempActual.val=%d\xFF\xFF\xFF", (uint8_t) (T_tank*10));
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
-
-			strcpy(str, "get tempSet.val\xFF\xFF\xFF");
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
-
-			static char rec_buf[30];
-			static uint8_t rec_p = 0;
-
-
-			msg_t res = sdGetTimeout(&SD6, TIME_IMMEDIATE);
-			while (res != MSG_TIMEOUT)
-			{
-				rec_buf[rec_p++] = (char) res;
-				rec_buf[rec_p] = 0;
-				if (rec_p >= 29)
-					rec_p = 0;
-
-				if (finddel(rec_buf, "\xFF\xFF\xFF", rec_p))
-				{
-					if ((rec_p == 8) && (rec_buf[0] == 0x71))
-						T_target = ((float) *((uint32_t *) &rec_buf[1]))/10;
-
-
-					rec_p = 0;
-				}
-
-				res = sdGetTimeout(&SD6, TIME_IMMEDIATE);
-			}
 		}
 
+		sm_HMI();
 		sm_compressor();
 
 		if (FAN_PWM_invert)
