@@ -3,6 +3,8 @@
 # NOTE: Can be overridden externally.
 #
 
+USE_LISPBM=0
+
 # Compiler options here.
 ifeq ($(USE_OPT),)
   USE_OPT = -O2 -ggdb -fomit-frame-pointer -falign-functions=16 -std=gnu99 -D_GNU_SOURCE
@@ -42,7 +44,7 @@ endif
 
 # Enable this if you want to see the full log while compiling.
 ifeq ($(USE_VERBOSE_COMPILE),)
-  USE_VERBOSE_COMPILE = yes
+  USE_VERBOSE_COMPILE = no
 endif
 
 # If enabled, this option makes the build process faster by not compiling
@@ -106,9 +108,14 @@ include $(CHIBIOS)/os/rt/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 # Other files
 include hwconf/hwconf.mk
 include applications/applications.mk
-include libcanard/canard.mk
-include compression/compression.mk
+include lora/lora.mk
+include lzo/lzo.mk
 include blackmagic/blackmagic.mk
+
+ifeq ($(USE_LISPBM),1)
+  include lispBM/lispbm.mk
+  USE_OPT += -DUSE_LISPBM
+endif
 
 # Define linker script file here
 LDSCRIPT= ld_eeprom_emu.ld
@@ -157,13 +164,19 @@ CSRC = $(STARTUPSRC) \
        mempools.c \
        worker.c \
        bms.c \
+       events.c \
        $(HWSRC) \
        $(APPSRC) \
        $(NRFSRC) \
        $(CANARDSRC) \
        $(IMUSRC) \
-       $(COMPRESSIONSRC) \
+       $(LORASRC) \
+       $(LZOSRC) \
        $(BLACKMAGICSRC)
+       
+ifeq ($(USE_LISPBM),1)
+  CSRC += $(LISPBMSRC)
+endif
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
@@ -203,8 +216,20 @@ INCDIR = $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC) \
          $(NRFINC) \
          $(CANARDINC) \
          $(IMUINC) \
-         $(COMPRESSIONINC) \
-         $(BLACKMAGICINC)
+         $(LORAINC) \
+         $(LZOINC) \
+         $(BLACKMAGICINC) \
+         qmlui \
+         qmlui/hw \
+         qmlui/app
+
+ifeq ($(USE_LISPBM),1)
+  INCDIR += $(LISPBMINC)
+endif
+
+ifdef app_custom_mkfile
+include $(app_custom_mkfile)
+endif
 
 #
 # Project, sources and paths
@@ -308,3 +333,6 @@ upload-pi-remote: build/$(PROJECT).elf
 
 debug-start:
 	openocd -f stm32-bv_openocd.cfg
+
+size: build/$(PROJECT).elf
+	@$(SZ) $<

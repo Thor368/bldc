@@ -23,6 +23,7 @@
 #include "hw.h"
 #include "comm_can.h"
 #include "crc.h"
+#include "servo_simple.h"
 
 // Private variables
 static app_configuration appconf;
