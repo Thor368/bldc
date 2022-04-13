@@ -13,7 +13,6 @@
 // Some useful includes
 #include "mc_interface.h"
 #include "mcpwm_foc.h"
-#include "utils.h"
 #include "encoder.h"
 #include "terminal.h"
 #include "comm_can.h"

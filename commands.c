@@ -1,5 +1,5 @@
 /*
-	Copyright 2016 - 2019 Benjamin Vedder	benjamin@vedder.se
+	Copyright 2016 - 2021 Benjamin Vedder	benjamin@vedder.se
 
 	This file is part of the VESC firmware.
 
@@ -34,11 +34,14 @@
 #include "servo_dec.h"
 #include "comm_can.h"
 #include "flash_helper.h"
-#include "utils.h"
+#include "utils_math.h"
+#include "utils_sys.h"
 #include "packet.h"
-#include "encoder.h"
+#include "encoder/encoder.h"
+#include "nrf_driver.h"
 #include "gpdrive.h"
 #include "confgenerator.h"
+#include "imu.h"
 #include "shutdown.h"
 #if HAS_BLACKMAGIC
 #include "bm_if.h"
@@ -46,24 +49,32 @@
 #include "minilzo.h"
 #include "mempools.h"
 #include "bms.h"
+#include "qmlui.h"
 #include "crc.h"
+#ifdef USE_LISPBM
+#include "lispif.h"
+#endif
+#include "main.h"
 
 #include <math.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
 
+// Settings
+#define PRINT_BUFFER_SIZE	400
+
 // Threads
 static THD_FUNCTION(blocking_thread, arg);
-#ifdef USE_LISPBM
-static THD_WORKING_AREA(blocking_thread_wa, 6000);
-#else
-static THD_WORKING_AREA(blocking_thread_wa, 2048);
-#endif
+static THD_WORKING_AREA(blocking_thread_wa, 3000);
 static thread_t *blocking_tp;
 
+// Global variables (for conserving RAM)
+uint8_t send_buffer_global[PACKET_MAX_PL_LEN];
+mutex_t send_buffer_mutex;
+
 // Private variables
-static uint8_t send_buffer_global[PACKET_MAX_PL_LEN];
+static char print_buffer[PRINT_BUFFER_SIZE];
 static uint8_t blocking_thread_cmd_buffer[PACKET_MAX_PL_LEN];
 static volatile unsigned int blocking_thread_cmd_len = 0;
 static volatile bool is_blocking = false;
@@ -76,22 +87,23 @@ static void(* volatile appdata_func)(unsigned char *data, unsigned int len) = 0;
 static void(* volatile hwdata_func)(unsigned char *data, unsigned int len) = 0;
 static disp_pos_mode display_position_mode;
 static mutex_t print_mutex;
-static mutex_t send_buffer_mutex;
 static mutex_t terminal_mutex;
 static volatile int fw_version_sent_cnt = 0;
-static bool isInitialized = false;
+static bool is_initialized = false;
+static int nrf_flags = 0;
 
 void commands_init(void) {
 	chMtxObjectInit(&print_mutex);
 	chMtxObjectInit(&send_buffer_mutex);
 	chMtxObjectInit(&terminal_mutex);
 	chThdCreateStatic(blocking_thread_wa, sizeof(blocking_thread_wa), NORMALPRIO, blocking_thread, NULL);
-	isInitialized = true;
+	is_initialized = true;
 }
 
 bool commands_is_initialized(void) {
-	return isInitialized;
+	return is_initialized;
 }
+
 /**
  * Send a packet using the set send function.
  *
@@ -101,7 +113,6 @@ bool commands_is_initialized(void) {
  * @param len
  * The data length.
  */
-
 void commands_send_packet(unsigned char *data, unsigned int len) {
 	if (send_func) {
 		send_func(data, len);
@@ -202,7 +213,7 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 	switch (packet_id) {
 	case COMM_FW_VERSION: {
 		int32_t ind = 0;
-		uint8_t send_buffer[60];
+		uint8_t send_buffer[65];
 		send_buffer[ind++] = COMM_FW_VERSION;
 		send_buffer[ind++] = FW_VERSION_MAJOR;
 		send_buffer[ind++] = FW_VERSION_MINOR;
@@ -249,12 +260,13 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		send_buffer[ind++] = 1;
 #endif
 #else
-		if (flash_helper_qmlui_data()) {
-			send_buffer[ind++] = flash_helper_qmlui_flags();
+		if (flash_helper_code_data(CODE_IND_QML)) {
+			send_buffer[ind++] = flash_helper_code_flags(CODE_IND_QML);
 		} else {
 			send_buffer[ind++] = 0;
 		}
 #endif
+		send_buffer[ind++] = nrf_flags;
 
 		fw_version_sent_cnt++;
 
@@ -272,6 +284,10 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		break;
 
 	case COMM_ERASE_NEW_APP_ALL_CAN:
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(6000);
+		}
+
 		data[-1] = COMM_ERASE_NEW_APP;
 		comm_can_send_buffer(255, data - 1, len + 1, 2);
 		chThdSleepMilliseconds(1500);
@@ -280,6 +296,9 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 	case COMM_ERASE_NEW_APP: {
 		int32_t ind = 0;
 
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(6000);
+		}
 		uint16_t flash_res = flash_helper_erase_new_app(buffer_get_uint32(data, &ind));
 
 		ind = 0;
@@ -299,6 +318,10 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 			lzo1x_decompress_safe(send_buffer_global, len - 6, data + 4, &decompressed_len, NULL);
 			chMtxUnlock(&send_buffer_mutex);
 			len = decompressed_len + 4;
+		}
+
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(2000);
 		}
 
 		data[-1] = COMM_WRITE_NEW_APP_DATA;
@@ -321,6 +344,9 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		int32_t ind = 0;
 		uint32_t new_app_offset = buffer_get_uint32(data, &ind);
 
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(2000);
+		}
 		uint16_t flash_res = flash_helper_write_new_app_data(new_app_offset, data + ind, len - ind);
 
 		SHUTDOWN_RESET();
@@ -629,6 +655,52 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		timeout_reset();
 		break;
 
+	case COMM_GET_DECODED_PPM: {
+		int32_t ind = 0;
+		uint8_t send_buffer[50];
+		send_buffer[ind++] = COMM_GET_DECODED_PPM;
+		buffer_append_int32(send_buffer, (int32_t)(app_ppm_get_decoded_level() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(servodec_get_last_pulse_len(0) * 1000000.0), &ind);
+		reply_func(send_buffer, ind);
+	} break;
+
+	case COMM_GET_DECODED_ADC: {
+		int32_t ind = 0;
+		uint8_t send_buffer[50];
+		send_buffer[ind++] = COMM_GET_DECODED_ADC;
+		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_decoded_level() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_voltage() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_decoded_level2() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_adc_get_voltage2() * 1000000.0), &ind);
+		reply_func(send_buffer, ind);
+	} break;
+
+	case COMM_GET_DECODED_CHUK: {
+		int32_t ind = 0;
+		uint8_t send_buffer[50];
+		send_buffer[ind++] = COMM_GET_DECODED_CHUK;
+		buffer_append_int32(send_buffer, (int32_t)(app_nunchuk_get_decoded_y() * 1000000.0), &ind);
+		reply_func(send_buffer, ind);
+	} break;
+
+	case COMM_GET_DECODED_BALANCE: {
+		int32_t ind = 0;
+		uint8_t send_buffer[50];
+		send_buffer[ind++] = COMM_GET_DECODED_BALANCE;
+		buffer_append_int32(send_buffer, (int32_t)(app_balance_get_pid_output() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_balance_get_pitch_angle() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_balance_get_roll_angle() * 1000000.0), &ind);
+		buffer_append_uint32(send_buffer, app_balance_get_diff_time(), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_balance_get_motor_current() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_balance_get_debug1() * 1000000.0), &ind);
+		buffer_append_uint16(send_buffer, app_balance_get_state(), &ind);
+		buffer_append_uint16(send_buffer, app_balance_get_switch_state(), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_balance_get_adc1() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_balance_get_adc2() * 1000000.0), &ind);
+		buffer_append_int32(send_buffer, (int32_t)(app_balance_get_debug2() * 1000000.0), &ind);
+		reply_func(send_buffer, ind);
+	} break;
+
 	case COMM_FORWARD_CAN: {
 		send_func_can_fwd = reply_func;
 
@@ -646,12 +718,34 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 	} break;
 
 	case COMM_SET_CHUCK_DATA: {
+		chuck_data chuck_d_tmp;
+
+		int32_t ind = 0;
+		chuck_d_tmp.js_x = data[ind++];
+		chuck_d_tmp.js_y = data[ind++];
+		chuck_d_tmp.bt_c = data[ind++];
+		chuck_d_tmp.bt_z = data[ind++];
+		chuck_d_tmp.acc_x = buffer_get_int16(data, &ind);
+		chuck_d_tmp.acc_y = buffer_get_int16(data, &ind);
+		chuck_d_tmp.acc_z = buffer_get_int16(data, &ind);
+
+		if (len >= (unsigned int)ind + 2) {
+			chuck_d_tmp.rev_has_state = data[ind++];
+			chuck_d_tmp.is_rev = data[ind++];
+		} else {
+			chuck_d_tmp.rev_has_state = false;
+			chuck_d_tmp.is_rev = false;
+		}
+		app_nunchuk_update_output(&chuck_d_tmp);
 	} break;
 
 	case COMM_CUSTOM_APP_DATA:
 		if (appdata_func) {
 			appdata_func(data, len);
 		}
+#ifdef USE_LISPBM
+		lispif_process_custom_app_data(data, len);
+#endif
 		break;
 
 	case COMM_CUSTOM_HW_DATA:
@@ -659,6 +753,17 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 			hwdata_func(data, len);
 		}
 		break;
+
+	case COMM_NRF_START_PAIRING: {
+		int32_t ind = 0;
+		nrf_driver_start_pairing(buffer_get_int32(data, &ind));
+
+		ind = 0;
+		uint8_t send_buffer[50];
+		send_buffer[ind++] = packet_id;
+		send_buffer[ind++] = NRF_PAIR_STARTED;
+		reply_func(send_buffer, ind);
+	} break;
 
 	case COMM_GPD_SET_FSW: {
 		timeout_reset();
@@ -944,6 +1049,42 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		reply_func(send_buffer, ind);
 	} break;
 
+	case COMM_EXT_NRF_PRESENT: {
+		if (!conf_general_permanent_nrf_found) {
+			if (len >= 1) {
+				nrf_flags = data[0];
+			}
+
+			nrf_driver_init_ext_nrf();
+			if (!nrf_driver_is_pairing()) {
+				const app_configuration *appconf = app_get_configuration();
+				uint8_t send_buffer[50];
+				send_buffer[0] = COMM_EXT_NRF_ESB_SET_CH_ADDR;
+				send_buffer[1] = appconf->app_nrf_conf.channel;
+				send_buffer[2] = appconf->app_nrf_conf.address[0];
+				send_buffer[3] = appconf->app_nrf_conf.address[1];
+				send_buffer[4] = appconf->app_nrf_conf.address[2];
+				commands_send_packet_nrf(send_buffer, 5);
+			}
+		}
+	} break;
+
+	case COMM_EXT_NRF_ESB_RX_DATA: {
+		if (len > 2) {
+			unsigned short crc = crc16((unsigned char*)data, len - 2);
+
+			if (crc	== ((unsigned short) data[len - 2] << 8 |
+					(unsigned short) data[len - 1])) {
+				nrf_driver_process_packet(data, len);
+			}
+		}
+	} break;
+
+	case COMM_SET_BLE_PIN:
+	case COMM_SET_BLE_NAME: {
+		commands_send_packet_nrf(data - 1, len + 1);
+	} break;
+
 	case COMM_APP_DISABLE_OUTPUT: {
 		int32_t ind = 0;
 		bool fwd_can = data[ind++];
@@ -963,7 +1104,94 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		chMtxUnlock(&terminal_mutex);
 		break;
 
+	case COMM_GET_IMU_DATA: {
+		int32_t ind = 0;
+		uint8_t send_buffer[70];
+		send_buffer[ind++] = packet_id;
+
+		int32_t ind2 = 0;
+		uint32_t mask = buffer_get_uint16(data, &ind2);
+
+		float rpy[3], acc[3], gyro[3], mag[3], q[4];
+		imu_get_rpy(rpy);
+		imu_get_accel(acc);
+		imu_get_gyro(gyro);
+		imu_get_mag(mag);
+		imu_get_quaternions(q);
+
+		buffer_append_uint16(send_buffer, mask, &ind);
+
+		if (mask & ((uint32_t)1 << 0)) {
+			buffer_append_float32_auto(send_buffer, rpy[0], &ind);
+		}
+		if (mask & ((uint32_t)1 << 1)) {
+			buffer_append_float32_auto(send_buffer, rpy[1], &ind);
+		}
+		if (mask & ((uint32_t)1 << 2)) {
+			buffer_append_float32_auto(send_buffer, rpy[2], &ind);
+		}
+
+		if (mask & ((uint32_t)1 << 3)) {
+			buffer_append_float32_auto(send_buffer, acc[0], &ind);
+		}
+		if (mask & ((uint32_t)1 << 4)) {
+			buffer_append_float32_auto(send_buffer, acc[1], &ind);
+		}
+		if (mask & ((uint32_t)1 << 5)) {
+			buffer_append_float32_auto(send_buffer, acc[2], &ind);
+		}
+
+		if (mask & ((uint32_t)1 << 6)) {
+			buffer_append_float32_auto(send_buffer, gyro[0], &ind);
+		}
+		if (mask & ((uint32_t)1 << 7)) {
+			buffer_append_float32_auto(send_buffer, gyro[1], &ind);
+		}
+		if (mask & ((uint32_t)1 << 8)) {
+			buffer_append_float32_auto(send_buffer, gyro[2], &ind);
+		}
+
+		if (mask & ((uint32_t)1 << 9)) {
+			buffer_append_float32_auto(send_buffer, mag[0], &ind);
+		}
+		if (mask & ((uint32_t)1 << 10)) {
+			buffer_append_float32_auto(send_buffer, mag[1], &ind);
+		}
+		if (mask & ((uint32_t)1 << 11)) {
+			buffer_append_float32_auto(send_buffer, mag[2], &ind);
+		}
+
+		if (mask & ((uint32_t)1 << 12)) {
+			buffer_append_float32_auto(send_buffer, q[0], &ind);
+		}
+		if (mask & ((uint32_t)1 << 13)) {
+			buffer_append_float32_auto(send_buffer, q[1], &ind);
+		}
+		if (mask & ((uint32_t)1 << 14)) {
+			buffer_append_float32_auto(send_buffer, q[2], &ind);
+		}
+		if (mask & ((uint32_t)1 << 15)) {
+			buffer_append_float32_auto(send_buffer, q[3], &ind);
+		}
+
+		if (mask & ((uint32_t)1 << 16)) {
+			uint8_t current_controller_id = app_get_configuration()->controller_id;
+#ifdef HW_HAS_DUAL_MOTORS
+			if (mc_interface_get_motor_thread() == 2) {
+				current_controller_id = utils_second_motor_id();
+			}
+#endif
+			send_buffer[ind++] = current_controller_id;
+		}
+
+		reply_func(send_buffer, ind);
+	} break;
+
 	case COMM_ERASE_BOOTLOADER_ALL_CAN:
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(6000);
+		}
+
 		data[-1] = COMM_ERASE_BOOTLOADER;
 		comm_can_send_buffer(255, data - 1, len + 1, 2);
 		chThdSleepMilliseconds(1500);
@@ -972,6 +1200,9 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 	case COMM_ERASE_BOOTLOADER: {
 		int32_t ind = 0;
 
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(6000);
+		}
 		uint16_t flash_res = flash_helper_erase_bootloader();
 
 		ind = 0;
@@ -1082,7 +1313,7 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		break;
 	}
 
-	// Blocking commands. Only one of them runs at any given time, in their
+	// Power switch
 	case COMM_PSW_GET_STATUS: {
 		int32_t ind = 0;
 		bool by_id = data[ind++];
@@ -1156,21 +1387,33 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 #endif
 	} break;
 
-	case COMM_GET_QML_UI_APP: {
+	case COMM_GET_QML_UI_APP:
+	case COMM_LISP_READ_CODE: {
 		int32_t ind = 0;
 
 		int32_t len_qml = buffer_get_int32(data, &ind);
 		int32_t ofs_qml = buffer_get_int32(data, &ind);
 
-		uint8_t *qmlui_data = flash_helper_qmlui_data();
-		int32_t qmlui_len = flash_helper_qmlui_size();
+		uint8_t *qmlui_data = flash_helper_code_data(CODE_IND_QML);
+		int32_t qmlui_len = flash_helper_code_size(CODE_IND_QML);
 
 #ifdef QMLUI_SOURCE_APP
 		qmlui_data = data_qml_app;
 		qmlui_len = DATA_QML_APP_SIZE;
 #endif
 
+		if (packet_id == COMM_LISP_READ_CODE) {
+			qmlui_data = flash_helper_code_data(CODE_IND_LISP);
+			qmlui_len = flash_helper_code_size(CODE_IND_LISP);
+		}
+
 		if (!qmlui_data) {
+			ind = 0;
+			uint8_t send_buffer[50];
+			send_buffer[ind++] = packet_id;
+			buffer_append_int32(send_buffer, 0, &ind);
+			buffer_append_int32(send_buffer, 0, &ind);
+			reply_func(send_buffer, ind);
 			break;
 		}
 
@@ -1190,29 +1433,37 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		chMtxUnlock(&send_buffer_mutex);
 	} break;
 
-	case COMM_QMLUI_ERASE: {
+	case COMM_QMLUI_ERASE:
+	case COMM_LISP_ERASE_CODE: {
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(6000);
+		}
+
+		uint16_t flash_res = flash_helper_erase_code(packet_id == COMM_QMLUI_ERASE ? CODE_IND_QML : CODE_IND_LISP);
+
 		int32_t ind = 0;
-
-		uint16_t flash_res = flash_helper_erase_qmlui();
-
-		ind = 0;
 		uint8_t send_buffer[50];
-		send_buffer[ind++] = COMM_QMLUI_ERASE;
+		send_buffer[ind++] = packet_id;
 		send_buffer[ind++] = flash_res == FLASH_COMPLETE ? 1 : 0;
 		reply_func(send_buffer, ind);
 	} break;
 
-	case COMM_QMLUI_WRITE: {
+	case COMM_QMLUI_WRITE:
+	case COMM_LISP_WRITE_CODE: {
 		int32_t ind = 0;
 		uint32_t qmlui_offset = buffer_get_uint32(data, &ind);
 
-		uint16_t flash_res = flash_helper_write_qmlui(qmlui_offset, data + ind, len - ind);
+		if (nrf_driver_ext_nrf_running()) {
+			nrf_driver_pause(2000);
+		}
+		uint16_t flash_res = flash_helper_write_code(packet_id == COMM_QMLUI_WRITE ? CODE_IND_QML : CODE_IND_LISP,
+				qmlui_offset, data + ind, len - ind);
 
 		SHUTDOWN_RESET();
 
 		ind = 0;
 		uint8_t send_buffer[50];
-		send_buffer[ind++] = COMM_QMLUI_WRITE;
+		send_buffer[ind++] = packet_id;
 		send_buffer[ind++] = flash_res == FLASH_COMPLETE ? 1 : 0;
 		buffer_append_uint32(send_buffer, qmlui_offset, &ind);
 		reply_func(send_buffer, ind);
@@ -1320,8 +1571,17 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 		}
 	} break;
 
+	case COMM_LISP_SET_RUNNING:
+	case COMM_LISP_GET_STATS:
+	case COMM_LISP_REPL_CMD: {
+#ifdef USE_LISPBM
+		lispif_process_cmd(data - 1, len + 1, reply_func);
+#endif
+		break;
+	}
+
+	// Blocking commands. Only one of them runs at any given time, in their
 	// own thread. If other blocking commands come before the previous one has
-	// finished, they are discarded.
 	// finished, they are discarded.
 	case COMM_TERMINAL_CMD:
 	case COMM_DETECT_MOTOR_PARAM:
@@ -1358,24 +1618,52 @@ void commands_process_packet(unsigned char *data, unsigned int len,
 	}
 }
 
-void commands_printf(const char* format, ...) {
+int commands_printf(const char* format, ...) {
 	chMtxLock(&print_mutex);
 
 	va_list arg;
 	va_start (arg, format);
 	int len;
-	static char print_buffer[255];
 
 	print_buffer[0] = COMM_PRINT;
-	len = vsnprintf(print_buffer + 1, 254, format, arg);
+	len = vsnprintf(print_buffer + 1, (PRINT_BUFFER_SIZE - 1), format, arg);
 	va_end (arg);
 
+	int len_to_print = (len < (PRINT_BUFFER_SIZE - 1)) ? len + 1 : PRINT_BUFFER_SIZE;
+
 	if(len > 0) {
-		commands_send_packet_last_blocking((unsigned char*)print_buffer,
-				(len < 254) ? len + 1 : 255);
+		commands_send_packet_last_blocking((unsigned char*)print_buffer, len_to_print);
 	}
 
 	chMtxUnlock(&print_mutex);
+
+	return len_to_print - 1;
+}
+
+int commands_printf_lisp(const char* format, ...) {
+	chMtxLock(&print_mutex);
+
+	va_list arg;
+	va_start (arg, format);
+	int len;
+
+	print_buffer[0] = COMM_LISP_PRINT;
+	len = vsnprintf(print_buffer + 1, (PRINT_BUFFER_SIZE - 1), format, arg);
+	va_end (arg);
+
+	int len_to_print = (len < (PRINT_BUFFER_SIZE - 1)) ? len + 1 : PRINT_BUFFER_SIZE;
+
+	if(len > 0) {
+		if (print_buffer[len_to_print - 1] == '\n') {
+			len_to_print--;
+		}
+
+		commands_send_packet_last_blocking((unsigned char*)print_buffer, len_to_print);
+	}
+
+	chMtxUnlock(&print_mutex);
+
+	return len_to_print - 1;
 }
 
 void commands_send_rotor_pos(float rotor_pos) {
@@ -1607,6 +1895,16 @@ static THD_FUNCTION(blocking_thread, arg) {
 	chRegSetThreadName("comm_block");
 
 	blocking_tp = chThdGetSelfX();
+
+	// Wait for main to finish
+	while(!main_init_done()) {
+		chThdSleepMilliseconds(10);
+	}
+
+	// Start lisp from here because main does not have enough stack space.
+#ifdef USE_LISPBM
+	lispif_init();
+#endif
 
 	for(;;) {
 		is_blocking = false;
@@ -2012,6 +2310,26 @@ static THD_FUNCTION(blocking_thread, arg) {
 		} break;
 #endif
 		case COMM_GET_IMU_CALIBRATION: {
+			int32_t ind = 0;
+			float yaw = buffer_get_float32(data, 1e3, &ind);
+			float imu_cal[9];
+			imu_get_calibration(yaw, imu_cal);
+
+			ind = 0;
+			send_buffer[ind++] = COMM_GET_IMU_CALIBRATION;
+			buffer_append_float32(send_buffer, imu_cal[0], 1e6, &ind);
+			buffer_append_float32(send_buffer, imu_cal[1], 1e6, &ind);
+			buffer_append_float32(send_buffer, imu_cal[2], 1e6, &ind);
+			buffer_append_float32(send_buffer, imu_cal[3], 1e6, &ind);
+			buffer_append_float32(send_buffer, imu_cal[4], 1e6, &ind);
+			buffer_append_float32(send_buffer, imu_cal[5], 1e6, &ind);
+			buffer_append_float32(send_buffer, imu_cal[6], 1e6, &ind);
+			buffer_append_float32(send_buffer, imu_cal[7], 1e6, &ind);
+			buffer_append_float32(send_buffer, imu_cal[8], 1e6, &ind);
+
+			if (send_func_blocking) {
+				send_func_blocking(send_buffer, ind);
+			}
 		} break;
 
 		default:

@@ -21,7 +21,10 @@
 #include "ch.h"
 #include "hal.h"
 #include "hw.h"
+#include "nrf_driver.h"
+#include "rfhelp.h"
 #include "comm_can.h"
+#include "imu.h"
 #include "crc.h"
 #include "servo_simple.h"
 
@@ -47,6 +50,17 @@ const app_configuration* app_get_configuration(void) {
 void app_set_configuration(app_configuration *conf) {
 	appconf = *conf;
 
+	app_ppm_stop();
+	app_adc_stop();
+	app_uartcomm_stop(UART_PORT_COMM_HEADER);
+	app_nunchuk_stop();
+	app_balance_stop();
+	app_pas_stop();
+
+	if (!conf_general_permanent_nrf_found) {
+		nrf_driver_stop();
+	}
+
 #if CAN_ENABLE
 	comm_can_set_baud(conf->can_baud_rate);
 #endif
@@ -55,8 +69,73 @@ void app_set_configuration(app_configuration *conf) {
 	app_custom_stop();
 #endif
 
+	imu_init(&conf->imu_conf);
+
+	if (appconf.app_to_use != APP_PPM &&
+			appconf.app_to_use != APP_PPM_UART &&
+			appconf.servo_out_enable) {
+		servo_simple_init();
+	} else {
+		servo_simple_stop();
+	}
+
 	// Configure balance app before starting it.
+	app_balance_configure(&appconf.app_balance_conf, &appconf.imu_conf);
+
 	switch (appconf.app_to_use) {
+	case APP_PPM:
+		app_ppm_start();
+		break;
+
+	case APP_ADC:
+		app_adc_start(true);
+		break;
+
+	case APP_UART:
+		hw_stop_i2c();
+		app_uartcomm_start(UART_PORT_COMM_HEADER);
+		break;
+
+	case APP_PPM_UART:
+		hw_stop_i2c();
+		app_ppm_start();
+		app_uartcomm_start(UART_PORT_COMM_HEADER);
+		break;
+
+	case APP_ADC_UART:
+		hw_stop_i2c();
+		app_adc_start(false);
+		app_uartcomm_start(UART_PORT_COMM_HEADER);
+		break;
+
+	case APP_NUNCHUK:
+		app_nunchuk_start();
+		break;
+
+	case APP_BALANCE:
+		app_balance_start();
+		if(appconf.imu_conf.type == IMU_TYPE_INTERNAL){
+			hw_stop_i2c();
+			app_uartcomm_start(UART_PORT_COMM_HEADER);
+		}
+		break;
+
+	case APP_PAS:
+		app_pas_start(true);
+		break;
+
+	case APP_ADC_PAS:
+		app_adc_start(false);
+		app_pas_start(false);
+		break;
+
+	case APP_NRF:
+		if (!conf_general_permanent_nrf_found) {
+			nrf_driver_init();
+			rfhelp_restart();
+		}
+		break;
+
 	case APP_CUSTOM:
 #ifdef APP_CUSTOM_TO_USE
 		hw_stop_i2c();
@@ -68,9 +147,18 @@ void app_set_configuration(app_configuration *conf) {
 		break;
 	}
 
+	app_ppm_configure(&appconf.app_ppm_conf);
+	app_adc_configure(&appconf.app_adc_conf);
+	app_pas_configure(&appconf.app_pas_conf);
+	app_uartcomm_configure(appconf.app_uart_baudrate, true, UART_PORT_COMM_HEADER);
+	app_uartcomm_configure(0, appconf.permanent_uart_enabled, UART_PORT_BUILTIN);
+	app_nunchuk_configure(&appconf.app_chuk_conf);
+
 #ifdef APP_CUSTOM_TO_USE
 	app_custom_configure(&appconf);
 #endif
+
+	rfhelp_update_conf(&appconf.app_nrf_conf);
 }
 
 /**

@@ -377,10 +377,16 @@
 #define MCCONF_FOC_HFI_VOLTAGE_START	20 // HFI voltage at start when resolving ambiguity
 #endif
 #ifndef MCCONF_FOC_HFI_VOLTAGE_RUN
-#define MCCONF_FOC_HFI_VOLTAGE_RUN		4 // HFI voltage during tracking
+#define MCCONF_FOC_HFI_VOLTAGE_RUN		3 // HFI voltage during tracking
+#endif
+#ifndef MCCONF_FOC_HFI_GAIN
+#define MCCONF_FOC_HFI_GAIN				0.4 // Correction gain for HFI V2
+#endif
+#ifndef MCCONF_FOC_HFI_HYST
+#define MCCONF_FOC_HFI_HYST				2.0 // Sense vector offset hysteresis for HFI V2
 #endif
 #ifndef MCCONF_FOC_HFI_VOLTAGE_MAX
-#define MCCONF_FOC_HFI_VOLTAGE_MAX		10 // HFI voltage during tracking at max current
+#define MCCONF_FOC_HFI_VOLTAGE_MAX		5 // HFI voltage during tracking at max current
 #endif
 #ifndef MCCONF_FOC_SL_ERPM_HFI
 #define MCCONF_FOC_SL_ERPM_HFI			2000.0	// ERPM above which only the observer is used
@@ -444,6 +450,9 @@
 #endif
 #ifndef MCCONF_FOC_FW_Q_CURRENT_FACTOR
 #define MCCONF_FOC_FW_Q_CURRENT_FACTOR	0.02 // Factor of the FW-current to feed to the Q-axis to slow motor down when setting 0 current
+#endif
+#ifndef MCCONF_FOC_SPEED_SOURCE
+#define MCCONF_FOC_SPEED_SOURCE			SPEED_SRC_OBSERVER // Position source for speed trackers
 #endif
 
 // GPD
@@ -523,6 +532,12 @@
 #endif
 #ifndef MCCONF_M_PTC_MOTOR_COEFF
 #define MCCONF_M_PTC_MOTOR_COEFF		0.61 // %/K coefficient for motor PTC sensor
+#endif
+#ifndef MCCONF_M_NTCX_PTCX_RES
+#define MCCONF_M_NTCX_PTCX_RES			10000.0 // Custom NTC/PTC resistance
+#endif
+#ifndef MCCONF_M_NTCX_PTCX_BASE_TEMP
+#define MCCONF_M_NTCX_PTCX_BASE_TEMP	25.0 // Custom NTC/PTC base temperature
 #endif
 #ifndef MCCONF_M_HALL_EXTRA_SAMPLES
 #define MCCONF_M_HALL_EXTRA_SAMPLES		1 // Extra samples for filtering when reading hall sensors

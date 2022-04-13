@@ -1,5 +1,5 @@
 /*
-	Copyright 2016 - 2019 Benjamin Vedder	benjamin@vedder.se
+	Copyright 2016 - 2021 Benjamin Vedder	benjamin@vedder.se
 
 	This file is part of the VESC firmware.
 
@@ -38,11 +38,14 @@
 #include "packet.h"
 #include "commands.h"
 #include "timeout.h"
-#include "comm_can.h"
-#include "encoder.h"
+#include "encoder/encoder.h"
 #include "servo_simple.h"
-#include "utils.h"
+#include "utils_math.h"
+#include "nrf_driver.h"
+#include "rfhelp.h"
+#include "spi_sw.h"
 #include "timer.h"
+#include "imu.h"
 #include "flash_helper.h"
 #if HAS_BLACKMAGIC
 #include "bm_if.h"
@@ -51,10 +54,16 @@
 #include "mempools.h"
 #include "events.h"
 #include "main.h"
+#ifdef CAN_ENABLE
+#include "comm_can.h"
+
+#define CAN_FRAME_MAX_PL_SIZE	8
+#endif
 
 #ifdef USE_LISPBM
 #include "lispif.h"
 #endif
+
 /*
  * HW resources used:
  *
@@ -75,11 +84,10 @@
  */
 
 // Private variables
-// Private variables
-static THD_WORKING_AREA(periodic_thread_wa, 512);
+static THD_WORKING_AREA(periodic_thread_wa, 256);
 static THD_WORKING_AREA(led_thread_wa, 256);
 static THD_WORKING_AREA(flash_integrity_check_thread_wa, 256);
-static bool m_init_done = false;
+static volatile bool m_init_done = false;
 
 static THD_FUNCTION(flash_integrity_check_thread, arg) {
 	(void)arg;
@@ -190,7 +198,7 @@ static THD_FUNCTION(periodic_thread, arg) {
 	}
 }
 
-
+// When assertions enabled halve PWM frequency. The control loop ISR runs 40% slower
 void assert_failed(uint8_t* file, uint32_t line) {
 	commands_printf("Wrong parameters value: file %s on line %d\r\n", file, line);
 	mc_interface_release_motor();
@@ -254,9 +262,12 @@ int main(void) {
 	comm_can_init();
 #endif
 
+	app_uartcomm_initialize();
 	app_configuration *appconf = mempools_alloc_appconf();
 	conf_general_read_app_configuration(appconf);
 	app_set_configuration(appconf);
+	app_uartcomm_start(UART_PORT_BUILTIN);
+	app_uartcomm_start(UART_PORT_EXTRA_HEADER);
 
 #ifdef HW_HAS_PERMANENT_NRF
 	conf_general_permanent_nrf_found = nrf_driver_init();
@@ -293,16 +304,22 @@ int main(void) {
 	shutdown_init();
 #endif
 
-#ifdef BOOT_OK_GPIO
+	imu_reset_orientation();
+
 	chThdSleepMilliseconds(500);
+	m_init_done = true;
+
+#ifdef BOOT_OK_GPIO
 	palSetPad(BOOT_OK_GPIO, BOOT_OK_PIN);
 #endif
 
-#ifdef USE_LISPBM
-	lispif_init();
+#ifdef CAN_ENABLE
+	// Transmit a CAN boot-frame to notify other nodes on the bus about it.
+	comm_can_transmit_eid(
+		app_get_configuration()->controller_id | (CAN_PACKET_NOTIFY_BOOT << 8),
+		(uint8_t *)HW_NAME, (strlen(HW_NAME) <= CAN_FRAME_MAX_PL_SIZE) ?
+		strlen(HW_NAME) : CAN_FRAME_MAX_PL_SIZE);
 #endif
-
-	m_init_done = true;
 
 	for(;;) {
 		chThdSleepMilliseconds(10);

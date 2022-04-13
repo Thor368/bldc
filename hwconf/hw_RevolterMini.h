@@ -22,8 +22,6 @@
 
 #define HW_NAME					"RevolterMini"
 
-#define APP_CUSTOM_TO_USE		"app_tempcontrol.c"
-
 #define REVOLTER_CONF_VERSION	1
 
 // Temperature control settings
@@ -91,6 +89,7 @@
 #define ADC_IND_T2				10
 
 // ADC macros and settings
+#define GET_CURRENT3()		0
 
 // Component parameters (can be overridden)
 #ifndef V_REG
@@ -205,6 +204,9 @@
 #define READ_HALL3()			palReadPad(HW_HALL_ENC_GPIO3, HW_HALL_ENC_PIN3)
 
 // Default setting overrides
+#define APP_CUSTOM_TO_USE				"app_tempcontrol.c"
+#define APPCONF_APP_TO_USE				APP_CUSTOM
+
 #ifndef MCCONF_DEFAULT_MOTOR_TYPE
 #define MCCONF_DEFAULT_MOTOR_TYPE		MOTOR_TYPE_FOC
 #endif

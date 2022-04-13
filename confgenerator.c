@@ -109,6 +109,8 @@ int32_t confgenerator_serialize_mcconf(uint8_t *buffer, const mc_configuration *
 	buffer_append_float32_auto(buffer, conf->foc_hfi_voltage_start, &ind);
 	buffer_append_float32_auto(buffer, conf->foc_hfi_voltage_run, &ind);
 	buffer_append_float32_auto(buffer, conf->foc_hfi_voltage_max, &ind);
+	buffer_append_float16(buffer, conf->foc_hfi_gain, 1000, &ind);
+	buffer_append_float16(buffer, conf->foc_hfi_hyst, 100, &ind);
 	buffer_append_float32_auto(buffer, conf->foc_sl_erpm_hfi, &ind);
 	buffer_append_uint16(buffer, conf->foc_hfi_start_samples, &ind);
 	buffer_append_float32_auto(buffer, conf->foc_hfi_obs_ovr_sec, &ind);
@@ -130,6 +132,7 @@ int32_t confgenerator_serialize_mcconf(uint8_t *buffer, const mc_configuration *
 	buffer_append_float16(buffer, conf->foc_fw_duty_start, 10000, &ind);
 	buffer_append_float16(buffer, conf->foc_fw_ramp_time, 1000, &ind);
 	buffer_append_float16(buffer, conf->foc_fw_q_current_factor, 10000, &ind);
+	buffer[ind++] = conf->foc_speed_soure;
 	buffer_append_int16(buffer, conf->gpd_buffer_notify_left, &ind);
 	buffer_append_int16(buffer, conf->gpd_buffer_interpol, &ind);
 	buffer_append_float16(buffer, conf->gpd_current_filter_const, 10000, &ind);
@@ -170,6 +173,8 @@ int32_t confgenerator_serialize_mcconf(uint8_t *buffer, const mc_configuration *
 	buffer[ind++] = conf->m_out_aux_mode;
 	buffer[ind++] = conf->m_motor_temp_sens_type;
 	buffer_append_float32_auto(buffer, conf->m_ptc_motor_coeff, &ind);
+	buffer_append_float16(buffer, conf->m_ntcx_ptcx_res, 0.1, &ind);
+	buffer_append_float16(buffer, conf->m_ntcx_ptcx_temp_base, 10, &ind);
 	buffer[ind++] = (uint8_t)conf->m_hall_extra_samples;
 	buffer[ind++] = (uint8_t)conf->si_motor_poles;
 	buffer_append_float32_auto(buffer, conf->si_gear_ratio, &ind);
@@ -196,8 +201,10 @@ int32_t confgenerator_serialize_appconf(uint8_t *buffer, const app_configuration
 	buffer[ind++] = (uint8_t)conf->controller_id;
 	buffer_append_uint32(buffer, conf->timeout_msec, &ind);
 	buffer_append_float32_auto(buffer, conf->timeout_brake_current, &ind);
-	buffer[ind++] = conf->send_can_status;
-	buffer_append_uint16(buffer, conf->send_can_status_rate_hz, &ind);
+	buffer_append_uint16(buffer, conf->can_status_rate_1, &ind);
+	buffer_append_uint16(buffer, conf->can_status_rate_2, &ind);
+	buffer[ind++] = conf->can_status_msgs_r1;
+	buffer[ind++] = conf->can_status_msgs_r2;
 	buffer[ind++] = conf->can_baud_rate;
 	buffer[ind++] = conf->pairing_done;
 	buffer[ind++] = conf->permanent_uart_enabled;
@@ -478,6 +485,8 @@ bool confgenerator_deserialize_mcconf(const uint8_t *buffer, mc_configuration *c
 	conf->foc_hfi_voltage_start = buffer_get_float32_auto(buffer, &ind);
 	conf->foc_hfi_voltage_run = buffer_get_float32_auto(buffer, &ind);
 	conf->foc_hfi_voltage_max = buffer_get_float32_auto(buffer, &ind);
+	conf->foc_hfi_gain = buffer_get_float16(buffer, 1000, &ind);
+	conf->foc_hfi_hyst = buffer_get_float16(buffer, 100, &ind);
 	conf->foc_sl_erpm_hfi = buffer_get_float32_auto(buffer, &ind);
 	conf->foc_hfi_start_samples = buffer_get_uint16(buffer, &ind);
 	conf->foc_hfi_obs_ovr_sec = buffer_get_float32_auto(buffer, &ind);
@@ -499,6 +508,7 @@ bool confgenerator_deserialize_mcconf(const uint8_t *buffer, mc_configuration *c
 	conf->foc_fw_duty_start = buffer_get_float16(buffer, 10000, &ind);
 	conf->foc_fw_ramp_time = buffer_get_float16(buffer, 1000, &ind);
 	conf->foc_fw_q_current_factor = buffer_get_float16(buffer, 10000, &ind);
+	conf->foc_speed_soure = buffer[ind++];
 	conf->gpd_buffer_notify_left = buffer_get_int16(buffer, &ind);
 	conf->gpd_buffer_interpol = buffer_get_int16(buffer, &ind);
 	conf->gpd_current_filter_const = buffer_get_float16(buffer, 10000, &ind);
@@ -539,6 +549,8 @@ bool confgenerator_deserialize_mcconf(const uint8_t *buffer, mc_configuration *c
 	conf->m_out_aux_mode = buffer[ind++];
 	conf->m_motor_temp_sens_type = buffer[ind++];
 	conf->m_ptc_motor_coeff = buffer_get_float32_auto(buffer, &ind);
+	conf->m_ntcx_ptcx_res = buffer_get_float16(buffer, 0.1, &ind);
+	conf->m_ntcx_ptcx_temp_base = buffer_get_float16(buffer, 10, &ind);
 	conf->m_hall_extra_samples = buffer[ind++];
 	conf->si_motor_poles = buffer[ind++];
 	conf->si_gear_ratio = buffer_get_float32_auto(buffer, &ind);
@@ -568,8 +580,10 @@ bool confgenerator_deserialize_appconf(const uint8_t *buffer, app_configuration 
 	conf->controller_id = buffer[ind++];
 	conf->timeout_msec = buffer_get_uint32(buffer, &ind);
 	conf->timeout_brake_current = buffer_get_float32_auto(buffer, &ind);
-	conf->send_can_status = buffer[ind++];
-	conf->send_can_status_rate_hz = buffer_get_uint16(buffer, &ind);
+	conf->can_status_rate_1 = buffer_get_uint16(buffer, &ind);
+	conf->can_status_rate_2 = buffer_get_uint16(buffer, &ind);
+	conf->can_status_msgs_r1 = buffer[ind++];
+	conf->can_status_msgs_r2 = buffer[ind++];
 	conf->can_baud_rate = buffer[ind++];
 	conf->pairing_done = buffer[ind++];
 	conf->permanent_uart_enabled = buffer[ind++];
@@ -843,6 +857,8 @@ void confgenerator_set_defaults_mcconf(mc_configuration *conf) {
 	conf->foc_hfi_voltage_start = MCCONF_FOC_HFI_VOLTAGE_START;
 	conf->foc_hfi_voltage_run = MCCONF_FOC_HFI_VOLTAGE_RUN;
 	conf->foc_hfi_voltage_max = MCCONF_FOC_HFI_VOLTAGE_MAX;
+	conf->foc_hfi_gain = MCCONF_FOC_HFI_GAIN;
+	conf->foc_hfi_hyst = MCCONF_FOC_HFI_HYST;
 	conf->foc_sl_erpm_hfi = MCCONF_FOC_SL_ERPM_HFI;
 	conf->foc_hfi_start_samples = MCCONF_FOC_HFI_START_SAMPLES;
 	conf->foc_hfi_obs_ovr_sec = MCCONF_FOC_HFI_OBS_OVR_SEC;
@@ -864,6 +880,7 @@ void confgenerator_set_defaults_mcconf(mc_configuration *conf) {
 	conf->foc_fw_duty_start = MCCONF_FOC_FW_DUTY_START;
 	conf->foc_fw_ramp_time = MCCONF_FOC_FW_RAMP_TIME;
 	conf->foc_fw_q_current_factor = MCCONF_FOC_FW_Q_CURRENT_FACTOR;
+	conf->foc_speed_soure = MCCONF_FOC_SPEED_SOURCE;
 	conf->gpd_buffer_notify_left = MCCONF_GPD_BUFFER_NOTIFY_LEFT;
 	conf->gpd_buffer_interpol = MCCONF_GPD_BUFFER_INTERPOL;
 	conf->gpd_current_filter_const = MCCONF_GPD_CURRENT_FILTER_CONST;
@@ -904,6 +921,8 @@ void confgenerator_set_defaults_mcconf(mc_configuration *conf) {
 	conf->m_out_aux_mode = MCCONF_M_OUT_AUX_MODE;
 	conf->m_motor_temp_sens_type = MCCONF_M_MOTOR_TEMP_SENS_TYPE;
 	conf->m_ptc_motor_coeff = MCCONF_M_PTC_MOTOR_COEFF;
+	conf->m_ntcx_ptcx_res = MCCONF_M_NTCX_PTCX_RES;
+	conf->m_ntcx_ptcx_temp_base = MCCONF_M_NTCX_PTCX_BASE_TEMP;
 	conf->m_hall_extra_samples = MCCONF_M_HALL_EXTRA_SAMPLES;
 	conf->si_motor_poles = MCCONF_SI_MOTOR_POLES;
 	conf->si_gear_ratio = MCCONF_SI_GEAR_RATIO;
@@ -924,8 +943,10 @@ void confgenerator_set_defaults_appconf(app_configuration *conf) {
 	conf->controller_id = HW_DEFAULT_ID;
 	conf->timeout_msec = APPCONF_TIMEOUT_MSEC;
 	conf->timeout_brake_current = APPCONF_TIMEOUT_BRAKE_CURRENT;
-	conf->send_can_status = APPCONF_SEND_CAN_STATUS;
-	conf->send_can_status_rate_hz = APPCONF_SEND_CAN_STATUS_RATE_HZ;
+	conf->can_status_rate_1 = APPCONF_CAN_STATUS_RATE_1;
+	conf->can_status_rate_2 = APPCONF_CAN_STATUS_RATE_2;
+	conf->can_status_msgs_r1 = APPCONF_CAN_STATUS_MSGS_R1;
+	conf->can_status_msgs_r2 = APPCONF_CAN_STATUS_MSGS_R2;
 	conf->can_baud_rate = APPCONF_CAN_BAUD_RATE;
 	conf->pairing_done = APPCONF_PAIRING_DONE;
 	conf->permanent_uart_enabled = APPCONF_PERMANENT_UART_ENABLED;
