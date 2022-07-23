@@ -41,7 +41,7 @@
 // GLOBAL VARS
 bool manual_mode = false;
 
-float T_tank = 0, T_cond = 0, I_Comp = 0;
+float T_tank = 0, T_return = 0, I_Comp = 0;
 float U_fan = 0, U_DC = 0;
 
 float T_target = T_TARGET_DEFAULT;
@@ -200,7 +200,7 @@ static void temp_print_all(int argc, const char **argv)
 	(void) argv;
 
 	commands_printf("T_tank: %.1f°C", (double) T_tank);
-	commands_printf("T_cond: %.1f°C", (double) T_cond);
+	commands_printf("T_return: %.1f°C", (double) T_return);
 	commands_printf("TMOS: %.1f°C", (double) NTC_TEMP(ADC_IND_TEMP_MOS));
 	commands_printf("TMOT: %.1f°C", (double) NTC_TEMP_MOTOR(mc_cfg->m_ntc_motor_beta));
 	commands_printf("---------------------");
@@ -418,17 +418,23 @@ static THD_FUNCTION(my_thread, arg)
 
 		timeout_reset(); // Reset timeout if everything is OK.
 
-		static float T_tank_filt = 0;
+		static float T_tank_filt = NAN;
+		if (isnan(T_tank_filt))
+			T_tank_filt = EXT_TEMP(ADC_IND_T1)*20;
 		T_tank_filt -= T_tank_filt/20;
 		T_tank_filt += EXT_TEMP(ADC_IND_T1);
 		T_tank = T_tank_filt/20;
 
-		static float T_cond_filt = 0;
-		T_cond_filt -= T_cond_filt/20;
-		T_cond_filt += EXT_TEMP(ADC_IND_T2);
-		T_cond = T_cond_filt/20;
+		static float T_return_filt = NAN;
+		if (isnan(T_return_filt))
+			T_return_filt = EXT_TEMP(ADC_IND_T2)*20;
+		T_return_filt -= T_return_filt/20;
+		T_return_filt += EXT_TEMP(ADC_IND_T2);
+		T_return = T_return_filt/20;
 
-		static float U_DC_filt = 0;
+		static float U_DC_filt = NAN;
+		if (isnan(U_DC_filt))
+			U_DC_filt = GET_INPUT_VOLTAGE()*10;
 		U_DC_filt -= U_DC_filt/10;
 		U_DC_filt += GET_INPUT_VOLTAGE();
 		U_DC = U_DC_filt/10;

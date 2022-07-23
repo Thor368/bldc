@@ -9,6 +9,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 static systime_t disp_timer;
 
@@ -71,10 +72,19 @@ void sm_HMI(void)
 		if (rec_p >= 29)
 			rec_p = 0;
 
-		if (finddel(rec_buf, "\xFF\xFF\xFF", rec_p))
+		if (finddel(rec_buf, "\n", rec_p))
 		{
 			if ((rec_p == 8) && (rec_buf[0] == 0x71))
-				T_target = ((float) *((uint32_t *) &rec_buf[1]))/10;
+			{
+				float T_target_tmp = *((uint32_t *) &rec_buf[1]);
+				T_target_tmp /= 10;
+
+				if (fabs(T_target_tmp - T_target) >= (double) 0.1)
+				{
+					T_target = T_target_tmp;
+					write_conf();
+				}
+			}
 
 
 			rec_p = 0;
@@ -97,8 +107,8 @@ void sm_HMI(void)
 			disp_timer = chVTGetSystemTime();
 
 			char str[30];
-			sprintf(str, "tempSet.val=%d\xFF\xFF\xFF", (int) (T_target*10));
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
+			sprintf(str, "tempSet=%.1f\n", (double) T_target);
+			sdAsynchronousWrite(&SD6, (uint8_t *) str, strlen(str));
 
 			HMI_state = hst_run;
 		}
@@ -114,19 +124,26 @@ void sm_HMI(void)
 
 			char str[30];
 
-			sprintf(str, "SoC.val=%d\xFF\xFF\xFF", (uint8_t) (SoC*100));
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
-			sprintf(str, "SoCp.val=%d\xFF\xFF\xFF", (uint8_t) (SoC*100));
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
+			sprintf(str, "SoC=%.2f\n", (double) SoC);
+			sdAsynchronousWrite(&SD6, (uint8_t *) str, strlen(str));
 
-			sprintf(str, "running.val=%d\xFF\xFF\xFF", (uint8_t) (mc_interface_get_rpm() > 100));
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
+			sprintf(str, "tempTank=%.1f\n", (double) T_tank);
+			sdAsynchronousWrite(&SD6, (uint8_t *) str, strlen(str));
 
-			sprintf(str, "tempActual.val=%d\xFF\xFF\xFF", (uint8_t) (T_tank*10));
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
+			sprintf(str, "tempRet=%.1f\n", (double) T_return);
+			sdAsynchronousWrite(&SD6, (uint8_t *) str, strlen(str));
 
-			strcpy(str, "get tempSet.val\xFF\xFF\xFF");
-			sdWrite(&SD6, (uint8_t *) str, strlen(str));
+			sprintf(str, "tempCtrlr=%.1f\n", (double) mc_interface_temp_fet_filtered());
+			sdAsynchronousWrite(&SD6, (uint8_t *) str, strlen(str));
+
+			sprintf(str, "RPM=%.0f\n", (double) mc_interface_get_rpm()/5);
+			sdAsynchronousWrite(&SD6, (uint8_t *) str, strlen(str));
+
+			sprintf(str, "Current=%.1f\n", (double) I_Comp);
+			sdAsynchronousWrite(&SD6, (uint8_t *) str, strlen(str));
+
+			sprintf(str, "Ufan=%.1f\n", (double) U_fan);
+			sdAsynchronousWrite(&SD6, (uint8_t *) str, strlen(str));
 		}
 		break;
 	}

@@ -5,6 +5,7 @@
  *      Author: main
  */
 
+#include "app.h"
 #include "temp_control.h"
 
 enum
@@ -25,6 +26,7 @@ void compressor_init(void)
 void sm_compressor(void)
 {
 	static systime_t cmp_timer = 0, cmp_counter = 0, RPM_timer = 0;
+	static float RPM_max_local = RPM_MAX;
 
 	if (manual_mode)
 		compressor_state = cmp_wait_for_start;
@@ -57,6 +59,7 @@ void sm_compressor(void)
 		}
 		else if ((chVTTimeElapsedSinceX(cmp_timer) >= MS2ST(500)) && (mc_interface_get_rpm() >= (RPM_min*4)))
 		{
+			RPM_max_local = RPM_max;
 			compressor_state = cmp_running;
 			RPM_timer = chVTGetSystemTime();
 		}
@@ -105,12 +108,15 @@ void sm_compressor(void)
 
 			float RPM_setpoint = P + I - D + RPM_min;
 
+			if (I_Comp >= mc_cfg->l_current_max*0.8)
+				RPM_max_local = RPM_min;
+
 			float dI = dt*dRPM*RPM_I;
-			if ((dI < 0) || (RPM_setpoint < RPM_max))
+			if ((dI < 0) || (RPM_setpoint < RPM_max_local))
 				I += dI;
 
-			if (RPM_setpoint > RPM_max)
-				RPM_setpoint = RPM_max;
+			if (RPM_setpoint > RPM_max_local)
+				RPM_setpoint = RPM_max_local;
 			else if (RPM_setpoint < RPM_min)
 				RPM_setpoint = RPM_min;
 

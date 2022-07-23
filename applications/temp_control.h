@@ -20,9 +20,13 @@
 #include "commands.h"
 #include "timeout.h"
 
+void write_conf(void);
+
+extern const volatile mc_configuration *mc_cfg;
+
 extern bool manual_mode;
 
-extern float T_tank, T_cond, I_Comp;
+extern float T_tank, T_return, I_Comp;
 extern float U_fan, U_DC;
 
 extern float T_target;
