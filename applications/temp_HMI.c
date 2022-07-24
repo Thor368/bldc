@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <stdlib.h>
 
 static systime_t disp_timer;
 
@@ -59,39 +60,78 @@ char * finddel(char *buf, char *del, uint8_t len)
 	return NULL;
 }
 
-void sm_HMI(void)
+void decode_CMD(char *cmd, char *val)
 {
-	static char rec_buf[30];
-	static uint8_t rec_p = 0;
+	if (!strcmp(cmd, "tempTarget"))
+	{
+		float T_target_tmp = atof(val);
+
+		if (fabs(T_target_tmp - T_target) >= (double) 0.1)
+		{
+			T_target = T_target_tmp;
+
+			write_conf();
+		}
+	}
+}
+
+
+void update_HMI_com(void)
+{
+	static char cmd[30], val[30];
+	static uint8_t pp = 0;
+	static bool cmdval = false;
 
 	msg_t res = sdGetTimeout(&SD6, TIME_IMMEDIATE);
 	while (res != MSG_TIMEOUT)
 	{
-		rec_buf[rec_p++] = (char) res;
-		rec_buf[rec_p] = 0;
-		if (rec_p >= 29)
-			rec_p = 0;
-
-		if (finddel(rec_buf, "\n", rec_p))
+		if (pp >= 29)
 		{
-			if ((rec_p == 8) && (rec_buf[0] == 0x71))
+//			commands_printf("Buffer overflow!");
+		}
+		else if (res == '\n')
+		{
+			if (cmdval)
+				val[pp] = '\0';
+			else
 			{
-				float T_target_tmp = *((uint32_t *) &rec_buf[1]);
-				T_target_tmp /= 10;
-
-				if (fabs(T_target_tmp - T_target) >= (double) 0.1)
-				{
-					T_target = T_target_tmp;
-					write_conf();
-				}
+				cmd[pp] = '\0';
+				val[0] = '\0';
 			}
 
+//			commands_printf("%s=%s", cmd, val);
+			decode_CMD(cmd, val);
 
-			rec_p = 0;
+			cmdval = false;
+			pp = 0;
+			cmd[0] = '\0';
+			val[0] = '\0';
+		}
+		else if (res == '=')
+		{
+//			commands_printf("Command end, value start");
+
+			cmdval = true;
+			cmd[pp] = '\0';
+			pp = 0;
+		}
+		else
+		{
+//			commands_printf("Appending char %c", res);
+
+			if (cmdval)
+				val[pp++] = res;
+			else
+				cmd[pp++] = res;
 		}
 
 		res = sdGetTimeout(&SD6, TIME_IMMEDIATE);
 	}
+}
+
+void sm_HMI(void)
+{
+	update_HMI_com();
 
 	switch (HMI_state)
 	{
@@ -107,7 +147,7 @@ void sm_HMI(void)
 			disp_timer = chVTGetSystemTime();
 
 			char str[30];
-			sprintf(str, "tempSet=%.1f\n", (double) T_target);
+			sprintf(str, "tempTarget=%.1f\n", (double) T_target);
 			sdAsynchronousWrite(&SD6, (uint8_t *) str, strlen(str));
 
 			HMI_state = hst_run;
