@@ -39,7 +39,7 @@ static volatile bool is_running = false;
 #define CURRENT_SLOPE				2
 
 uint32_t CAN_base_adr;
-int32_t DRV_CMD_OFFSET = 0x100;  // +0x100 GT, -0x100 (else)
+int32_t DRV_CMD_OFFSET = -0x100;  // +0x100 GT, -0x100 (else)
 #define CAN_DRIVE_CONTROLS_BASE		(CAN_base_adr + DRV_CMD_OFFSET)
 #define CAN_DATA_BASE				CAN_base_adr
 
@@ -220,21 +220,23 @@ bool rx_callback(uint32_t id, uint8_t *data, uint8_t len)
 
 		if (I_cmd < 0.01)
 			Ph_I_input = 0;
-		else if (v_cmd > 0.01)
+		else if (v_cmd > 1)  // Foward
 			Ph_I_input = I_cmd*mc_conf->l_current_max;
-		else if (v_cmd < -0.01)
+		else if (v_cmd < -1)  // Reverse
+			Ph_I_input = -I_cmd*mc_conf->l_current_max;
+		else  // Brake
 		{
 			static bool break_allowed = false;
-			if (break_allowed)
-				Ph_I_input = -I_cmd*mc_conf->l_current_max;
-
 			if (mc_interface_get_rpm() < RPM_MIN_BREAK)
 				break_allowed = false;
 			else if (mc_interface_get_rpm() > RPM_MAX_BREAK)
 				break_allowed = true;
+
+			if (break_allowed)
+				Ph_I_input = I_cmd*mc_conf->l_current_min;
+			else
+				Ph_I_input = 0;
 		}
-		else
-			Ph_I_input = 0;
 
 		if (plot_timebase > 0)
 		{
