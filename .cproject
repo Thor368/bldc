@@ -26,7 +26,7 @@
 							<option id="fr.ac6.managedbuild.option.gnu.cross.floatabi.169860287" name="Floating-point ABI" superClass="fr.ac6.managedbuild.option.gnu.cross.floatabi"/>
 							<option id="fr.ac6.managedbuild.option.gnu.cross.instructionSet.1908292367" name="Instruction Set" superClass="fr.ac6.managedbuild.option.gnu.cross.instructionSet"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="fr.ac6.managedbuild.targetPlatform.gnu.cross.1211663151" isAbstract="false" osList="all" superClass="fr.ac6.managedbuild.targetPlatform.gnu.cross"/>
-							<builder enableCleanBuild="false" id="fr.ac6.managedbuild.builder.gnu.cross.358838288" incrementalBuildTarget="HSWR4" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="fr.ac6.managedbuild.builder.gnu.cross"/>
+							<builder enableCleanBuild="false" id="fr.ac6.managedbuild.builder.gnu.cross.358838288" incrementalBuildTarget="HSWR_DUAL" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="fr.ac6.managedbuild.builder.gnu.cross"/>
 							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.118494038" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler">
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.881964384" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c"/>
 								<inputType id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s.1712539733" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.s"/>
