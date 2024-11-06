@@ -37,23 +37,23 @@
 #define FAN_OFF()				palClearPad(GPIOB, 10)
 
 /*
- * ADC Vector
- *
- * 0:	IN0		SENS1
- * 1:	IN1		SENS2
- * 2:	IN2		SENS3
- * 3:	IN10	CURR1
- * 4:	IN11	CURR2
- * 5:	IN12	CURR3
- * 6:	IN5		ADC_EXT1
- * 7:	IN6		ADC_EXT2
- * 8:	IN3		TEMP_PCB
- * 9:	IN14	TEMP_MOTOR
- * 10:	IN15	ADC_EXT3
- * 11:	IN13	AN_IN
- * 12:	Vrefint
- * 13:	IN0		SENS1
- * 14:	IN1		SENS2
+ * ADC
+ * IN0		PA0		SENS1		ADC123
+ * IN1		PA1		SENS2		ADC123
+ * IN2		PA2		SENS3		ADC123
+ * IN3		PA3		TEMP_PCB	ADC123
+ * IN4		x
+ * IN5		x
+ * IN6		x
+ * IN7		x
+ * IN8		x
+ * IN9		x
+ * IN10		PC0		CURR1		ADC123
+ * IN11		PC1		CURR2		ADC123
+ * IN12		PC2		CURR3		ADC123
+ * IN13		PC3		DC_U		ADC123
+ * IN14		x
+ * IN15		x
  */
 
 #define HW_ADC_CHANNELS			9
@@ -67,12 +67,10 @@
 #define ADC_IND_CURR1			3
 #define ADC_IND_CURR2			4
 #define ADC_IND_CURR3			5
-#define ADC_IND_VIN_SENS		7
 #define ADC_IND_EXT				6
-#define ADC_IND_EXT2			6
+#define ADC_IND_VIN_SENS		7
 #define ADC_IND_TEMP_MOS		8
-#define ADC_IND_TEMP_MOTOR		6
-#define ADC_IND_VREFINT			6
+#define ADC_IND_TEMP_MOTOR		8
 
 // ADC macros and settings
 

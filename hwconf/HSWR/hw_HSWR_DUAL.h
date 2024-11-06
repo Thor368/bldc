@@ -36,44 +36,41 @@
 #define FAN_OFF()				palClearPad(GPIOB, 10)
 
 /*
- * ADC Vector
- *
- * 0:	IN0		U1_U
- * 1:	IN1		V1_U
- * 2:	IN2		W1_U
- * 3:	IN10	TEMP
- * 4:	IN11	U2_U
- * 5:	IN12	V2_U
- * 6:	IN5		W2_U
- * 7:	IN6		ADC_EXT2
- * 8:	IN3		TEMP_PCB
- * 9:	IN14	TEMP_MOTOR
- * 10:	IN15	ADC_EXT3
- * 11:	IN13	AN_IN
- * 12:	Vrefint
- * 13:	IN0		SENS1
- * 14:	IN1		SENS2
+ * ADC
+ * IN0:		PA0		U1_U		ADC123
+ * IN1:		PA1		V1_U		ADC123
+ * IN2:		PA2		W1_U		ADC123
+ * IN3:		PA3		TEMP_FET	ADC123
+ * IN4:		PA4		U2_U		ADC12
+ * IN5:		PA5		V2_U		ADC12
+ * IN6:		PA6		W2_U		ADC12
+ * IN7:		x
+ * IN8:		x
+ * IN9:		x
+ * IN10:	PC0		U1_I		ADC123
+ * IN11:	PC1		W1_I		ADC123
+ * IN12:	PC2		U2_I		ADC123
+ * IN13:	PC3		W2_I		ADC123
+ * IN14:	PC4		DC_U		ADC12
+ * IN15:	x
  */
 
-#define HW_ADC_CHANNELS			16
+#define HW_ADC_CHANNELS			12
 #define HW_ADC_INJ_CHANNELS		2
 #define HW_ADC_NBR_CONV			4
 
-// ADC Indexes
-// ADC Indexes
-
-#define ADC_IND_CURR1			10
-#define ADC_IND_CURR2			11
-#define ADC_IND_CURR3			12
-#define ADC_IND_CURR4			13
-#define ADC_IND_TEMP_MOS		3
-#define ADC_IND_VIN_SENS		14
-#define ADC_IND_SENS1			0
-#define ADC_IND_SENS2			1
-#define ADC_IND_SENS3			2
-#define ADC_IND_SENS4			4
-#define ADC_IND_SENS5			5
-#define ADC_IND_SENS6			6
+#define ADC_IND_SENS4			0
+#define ADC_IND_SENS5			1
+#define ADC_IND_SENS6			2
+#define ADC_IND_SENS1			3
+#define ADC_IND_SENS2			4
+#define ADC_IND_SENS3			5
+#define ADC_IND_VIN_SENS		6
+#define ADC_IND_CURR1			7
+#define ADC_IND_CURR2			8
+#define ADC_IND_TEMP_MOS		9
+#define ADC_IND_CURR3			10
+#define ADC_IND_CURR4			11
 
 #define ADC_IND_EXT				3
 #define ADC_IND_TEMP_MOTOR		3
